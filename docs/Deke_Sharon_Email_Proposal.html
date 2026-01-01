@@ -1,0 +1,340 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Deke Sharon - AI Agent Ecosystem Proposal</title>
+  <link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600;700&family=Source+Sans+Pro:wght@300;400;600&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --deep-navy: #0a1628;
+      --rich-gold: #d4a84b;
+      --warm-cream: #f8f5f0;
+      --soft-gold: #e8d5a3;
+      --charcoal: #2a2a2a;
+      --muted-blue: #1e3a5f;
+    }
+
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      font-family: 'Source Sans Pro', sans-serif;
+      background: var(--deep-navy);
+      color: var(--warm-cream);
+      line-height: 1.7;
+      min-height: 100vh;
+    }
+
+    .container {
+      max-width: 700px;
+      margin: 0 auto;
+      padding: 40px 20px;
+    }
+
+    /* Header with musical wave motif */
+    .header {
+      text-align: center;
+      padding: 60px 40px;
+      background: linear-gradient(135deg, var(--deep-navy) 0%, var(--muted-blue) 100%);
+      border-bottom: 3px solid var(--rich-gold);
+      position: relative;
+      overflow: hidden;
+    }
+
+    .header::before {
+      content: '';
+      position: absolute;
+      top: 0;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      background-image: 
+        radial-gradient(circle at 20% 80%, rgba(212, 168, 75, 0.1) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(212, 168, 75, 0.08) 0%, transparent 40%);
+      pointer-events: none;
+    }
+
+    .logo-mark {
+      font-family: 'Playfair Display', serif;
+      font-size: 14px;
+      letter-spacing: 4px;
+      text-transform: uppercase;
+      color: var(--rich-gold);
+      margin-bottom: 20px;
+      opacity: 0.9;
+    }
+
+    .header h1 {
+      font-family: 'Playfair Display', serif;
+      font-size: 42px;
+      font-weight: 700;
+      color: var(--warm-cream);
+      margin-bottom: 8px;
+      letter-spacing: 1px;
+    }
+
+    .header-subtitle {
+      font-size: 18px;
+      color: var(--soft-gold);
+      font-weight: 300;
+      letter-spacing: 2px;
+    }
+
+    /* Sound wave decoration */
+    .sound-wave {
+      display: flex;
+      justify-content: center;
+      gap: 4px;
+      margin: 30px 0 0 0;
+      height: 30px;
+      align-items: center;
+    }
+
+    .wave-bar {
+      width: 3px;
+      background: var(--rich-gold);
+      border-radius: 2px;
+      opacity: 0.6;
+    }
+
+    .wave-bar:nth-child(1) { height: 8px; }
+    .wave-bar:nth-child(2) { height: 16px; }
+    .wave-bar:nth-child(3) { height: 24px; }
+    .wave-bar:nth-child(4) { height: 30px; }
+    .wave-bar:nth-child(5) { height: 20px; }
+    .wave-bar:nth-child(6) { height: 28px; }
+    .wave-bar:nth-child(7) { height: 14px; }
+    .wave-bar:nth-child(8) { height: 22px; }
+    .wave-bar:nth-child(9) { height: 10px; }
+
+    /* Main content */
+    .content {
+      background: var(--warm-cream);
+      color: var(--charcoal);
+      padding: 50px 45px;
+    }
+
+    .greeting {
+      font-family: 'Playfair Display', serif;
+      font-size: 24px;
+      color: var(--deep-navy);
+      margin-bottom: 25px;
+    }
+
+    .content p {
+      margin-bottom: 20px;
+      font-size: 16px;
+      color: #444;
+    }
+
+    .highlight-box {
+      background: linear-gradient(135deg, var(--deep-navy) 0%, var(--muted-blue) 100%);
+      color: var(--warm-cream);
+      padding: 30px 35px;
+      border-radius: 8px;
+      margin: 30px 0;
+      border-left: 4px solid var(--rich-gold);
+    }
+
+    .highlight-box h3 {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: var(--rich-gold);
+      margin-bottom: 15px;
+    }
+
+    .highlight-box ul {
+      list-style: none;
+      padding: 0;
+    }
+
+    .highlight-box li {
+      padding: 8px 0;
+      padding-left: 25px;
+      position: relative;
+      font-size: 15px;
+    }
+
+    .highlight-box li::before {
+      content: '♪';
+      position: absolute;
+      left: 0;
+      color: var(--rich-gold);
+    }
+
+    .agent-name {
+      font-weight: 600;
+      color: var(--soft-gold);
+    }
+
+    /* Important notice */
+    .notice {
+      background: #fef9e7;
+      border: 2px solid var(--rich-gold);
+      border-radius: 8px;
+      padding: 25px 30px;
+      margin: 30px 0;
+    }
+
+    .notice-title {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      color: var(--deep-navy);
+      margin-bottom: 10px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .notice-title::before {
+      content: '★';
+      color: var(--rich-gold);
+    }
+
+    .notice p {
+      margin: 0;
+      font-size: 15px;
+      color: #555;
+    }
+
+    /* Signature */
+    .signature {
+      margin-top: 40px;
+      padding-top: 30px;
+      border-top: 1px solid #ddd;
+    }
+
+    .signature-name {
+      font-family: 'Playfair Display', serif;
+      font-size: 20px;
+      color: var(--deep-navy);
+      margin-bottom: 5px;
+    }
+
+    .signature-title {
+      font-size: 14px;
+      color: #777;
+      letter-spacing: 1px;
+    }
+
+    /* Footer */
+    .footer {
+      background: var(--deep-navy);
+      padding: 35px 45px;
+      text-align: center;
+      border-top: 3px solid var(--rich-gold);
+    }
+
+    .footer-brand {
+      font-family: 'Playfair Display', serif;
+      font-size: 16px;
+      color: var(--rich-gold);
+      letter-spacing: 3px;
+      margin-bottom: 10px;
+    }
+
+    .footer-tagline {
+      font-size: 13px;
+      color: var(--soft-gold);
+      opacity: 0.7;
+      font-style: italic;
+    }
+
+    /* Attachment indicator */
+    .attachment {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: #f0f0f0;
+      padding: 12px 20px;
+      border-radius: 6px;
+      margin-top: 20px;
+      font-size: 14px;
+      color: var(--deep-navy);
+    }
+
+    .attachment-icon {
+      width: 20px;
+      height: 20px;
+      background: var(--rich-gold);
+      border-radius: 4px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 12px;
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    
+    <!-- Header -->
+    <div class="header">
+      <div class="logo-mark">The Agent Factory × Deke Sharon</div>
+      <h1>Total Vocal AI</h1>
+      <div class="header-subtitle">Your AI Agent Ecosystem</div>
+      <div class="sound-wave">
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+        <div class="wave-bar"></div>
+      </div>
+    </div>
+
+    <!-- Content -->
+    <div class="content">
+      <p class="greeting">Hey Deke,</p>
+      
+      <p>Put together the first iteration of an AI agent ecosystem designed specifically for your business — 12 specialized agents to capture leads 24/7, automate your booking and quoting process, and unlock new recurring revenue streams.</p>
+
+      <div class="highlight-box">
+        <h3>The Ecosystem at a Glance</h3>
+        <ul>
+          <li><span class="agent-name">HARMONY</span> — Website concierge that never sleeps</li>
+          <li><span class="agent-name">MAESTRO</span> — Arrangement quotes in minutes, not days</li>
+          <li><span class="agent-name">CONDUCTOR</span> — Workshop & coaching booking automation</li>
+          <li><span class="agent-name">VIRTUOSO</span> — AI coaching assistant (the revenue game-changer)</li>
+          <li><span class="agent-name">SCRIBE</span> — Content creation from your existing material</li>
+          <li>...and 7 more specialized agents</li>
+        </ul>
+      </div>
+
+      <p>Full analysis is attached with implementation roadmap and projected impact.</p>
+
+      <div class="notice">
+        <div class="notice-title">Important Note</div>
+        <p>All pricing and investment figures in the attached document are included <strong>for evaluation purposes only</strong> — to give you a sense of what this type of ecosystem would typically cost. There would be no fees for you.</p>
+      </div>
+
+      <p>Let me know when you'd like to walk through it together.</p>
+
+      <div class="attachment">
+        <div class="attachment-icon">📎</div>
+        <span>Deke_Sharon_AI_Agent_Ecosystem.pdf</span>
+      </div>
+
+      <div class="signature">
+        <div class="signature-name">Denis</div>
+        <div class="signature-title">THE AGENT FACTORY</div>
+      </div>
+    </div>
+
+    <!-- Footer -->
+    <div class="footer">
+      <div class="footer-brand">THE AGENT FACTORY</div>
+      <div class="footer-tagline">"Automation that sounds like you, works while you sleep"</div>
+    </div>
+
+  </div>
+</body>
+</html>
