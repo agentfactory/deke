@@ -77,11 +77,8 @@ function calculateEqualSplit(input: SplitInput): SplitOutput {
 
   // Adjust percentages to sum to exactly 100%
   const totalPercent = results.reduce((sum, r) => sum + r.splitPercent, 0)
-  if (Math.abs(totalPercent - 100) > 0.01) {
-    const adjustment = 100 - totalPercent
-    results[results.length - 1].splitPercent += adjustment
-    results[results.length - 1].splitPercent = Number(results[results.length - 1].splitPercent.toFixed(2))
-  }
+  const adjustment = 100 - totalPercent
+  results[results.length - 1].splitPercent = Number((results[results.length - 1].splitPercent + adjustment).toFixed(2))
 
   return {
     participants: results,
@@ -128,12 +125,24 @@ function calculateBySizeWeight(input: SplitInput): SplitOutput {
     }
   })
 
-  // Normalize percentages to sum to 100%
+  // Normalize percentages to sum to exactly 100% with rounding adjustment
   const totalPercent = results.reduce((sum, r) => sum + r.splitPercent, 0)
-  results = results.map(r => ({
-    ...r,
-    splitPercent: (r.splitPercent / totalPercent) * 100
-  }))
+  let allocatedPercent = 0
+  results = results.map((r, index) => {
+    const isLast = index === results.length - 1
+    const splitPercent = isLast
+      ? Number((100 - allocatedPercent).toFixed(2))
+      : Number(((r.splitPercent / totalPercent) * 100).toFixed(2))
+
+    if (!isLast) {
+      allocatedPercent += splitPercent
+    }
+
+    return {
+      ...r,
+      splitPercent
+    }
+  })
 
   // Calculate dollar amounts
   let totalAllocated = 0
@@ -217,10 +226,17 @@ function calculateAutoOptimal(input: SplitInput): SplitOutput {
 
   // Normalize to 100%
   const totalPercent = results.reduce((sum, r) => sum + r.splitPercent, 0)
-  results = results.map(r => ({
-    ...r,
-    splitPercent: (r.splitPercent / totalPercent) * 100
-  }))
+  results = results.map((r, index) => {
+    const isLast = index === results.length - 1
+    const splitPercent = isLast
+      ? 100 - results.slice(0, -1).reduce((sum, prev) => sum + Number(((prev.splitPercent / totalPercent) * 100).toFixed(2)), 0)
+      : Number(((r.splitPercent / totalPercent) * 100).toFixed(2))
+
+    return {
+      ...r,
+      splitPercent
+    }
+  })
 
   // Calculate dollar amounts
   let totalAllocated = 0
