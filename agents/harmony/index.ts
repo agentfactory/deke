@@ -11,6 +11,7 @@
 
 import { BaseAgent } from '../base-agent';
 import { eventBus } from '@/lib/event-bus';
+import { prisma } from '@/lib/db';
 import type {
   AgentConfig,
   AgentResponse,
@@ -38,7 +39,8 @@ CORE RESPONSIBILITIES:
 3. Qualify leads by understanding their needs
 4. Guide visitors to appropriate services
 5. Capture contact information when appropriate
-6. Hand off to specialized agents (MAESTRO for quotes, CONDUCTOR for bookings)
+6. Create bookings directly when visitor is ready to commit
+7. Hand off to specialized agents when needed (MAESTRO for arrangement quotes)
 
 SERVICES KNOWLEDGE:
 - Custom Arrangements: $500-$3,000+, 2-3 week turnaround
@@ -61,6 +63,7 @@ RESPONSE GUIDELINES:
 - Never pressure, always guide`,
   tools: [
     'captureLeadInfo',
+    'createBooking',
     'checkAvailability',
     'getServiceInfo',
     'scheduleConsultation',
@@ -110,8 +113,78 @@ export class HarmonyAgent extends BaseAgent {
         organization: { type: 'string', required: false, description: 'Group/org name' },
       },
       execute: async (params) => {
-        // TODO: Integrate with Prisma to store lead
-        return { success: true, data: { leadId: 'lead_' + Date.now() } };
+        const { email, firstName, lastName, phone, organization } = params;
+
+        // Upsert lead (create or update)
+        const lead = await prisma.lead.upsert({
+          where: { email: email as string },
+          update: {
+            firstName: firstName as string,
+            lastName: (lastName as string) || '',
+            phone: phone as string | null,
+            organization: organization as string | null,
+            lastContactedAt: new Date(),
+          },
+          create: {
+            email: email as string,
+            firstName: firstName as string,
+            lastName: (lastName as string) || '',
+            phone: phone as string | null,
+            organization: organization as string | null,
+            source: 'website_chat',
+            status: 'NEW',
+            score: 0,
+          },
+        });
+
+        return { success: true, data: { leadId: lead.id } };
+      },
+    });
+
+    // Booking Creation Tool
+    this.registerTool({
+      name: 'createBooking',
+      description: 'Create a booking for a lead after capturing their information',
+      parameters: {
+        leadId: { type: 'string', required: true, description: 'Lead ID from captureLeadInfo' },
+        serviceType: {
+          type: 'string',
+          required: true,
+          enum: ['ARRANGEMENT', 'GROUP_COACHING', 'INDIVIDUAL_COACHING', 'WORKSHOP', 'SPEAKING', 'CONSULTATION'],
+          description: 'Type of service being booked',
+        },
+        location: { type: 'string', required: false, description: 'Event location or "Virtual"' },
+        startDate: { type: 'string', required: false, description: 'Start date (ISO 8601)' },
+        endDate: { type: 'string', required: false, description: 'End date (ISO 8601)' },
+        internalNotes: { type: 'string', required: false, description: 'Notes about the booking' },
+      },
+      execute: async (params) => {
+        const { leadId, serviceType, location, startDate, endDate, internalNotes } = params;
+
+        // Create booking
+        const booking = await prisma.booking.create({
+          data: {
+            leadId: leadId as string,
+            serviceType: serviceType as string,
+            location: location as string | null,
+            startDate: startDate ? new Date(startDate as string) : null,
+            endDate: endDate ? new Date(endDate as string) : null,
+            internalNotes: internalNotes as string | null,
+            status: 'PENDING',
+            paymentStatus: 'UNPAID',
+          },
+          include: {
+            lead: {
+              select: {
+                firstName: true,
+                lastName: true,
+                email: true,
+              }
+            }
+          }
+        });
+
+        return { success: true, data: { bookingId: booking.id, booking } };
       },
     });
 

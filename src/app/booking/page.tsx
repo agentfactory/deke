@@ -76,6 +76,8 @@ function BookingContent() {
 
   const [step, setStep] = useState<Step>(initialService ? "details" : "service");
   const [selectedService, setSelectedService] = useState(initialService);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [error, setError] = useState<string | null>(null);
   const [formData, setFormData] = useState({
     // Contact Info
     firstName: "",
@@ -108,10 +110,68 @@ function BookingContent() {
     }));
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const mapServiceType = (formId: string): string => {
+    const map: Record<string, string> = {
+      arrangement: 'ARRANGEMENT',
+      coaching: 'GROUP_COACHING',
+      individual: 'INDIVIDUAL_COACHING',
+      workshop: 'WORKSHOP',
+      speaking: 'SPEAKING',
+      consultation: 'CONSULTATION'
+    };
+    return map[formId] || formId.toUpperCase();
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // TODO: Submit to API / TEMPO agent for onboarding
-    setStep("confirm");
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      // Step 1: Create/update lead
+      const leadResponse = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          email: formData.email,
+          firstName: formData.firstName,
+          lastName: formData.lastName,
+          phone: formData.phone || null,
+          organization: formData.organization || null,
+          source: 'website_booking_form'
+        })
+      });
+
+      if (!leadResponse.ok) {
+        throw new Error('Failed to create lead. Please try again.');
+      }
+
+      const lead = await leadResponse.json();
+
+      // Step 2: Create booking
+      const bookingResponse = await fetch('/api/bookings', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          leadId: lead.id,
+          serviceType: mapServiceType(selectedService),
+          location: formData.eventLocation || null,
+          internalNotes: formData.message || null,
+        })
+      });
+
+      if (!bookingResponse.ok) {
+        throw new Error('Failed to create booking. Please try again.');
+      }
+
+      // Success: Show confirmation
+      setStep("confirm");
+    } catch (err) {
+      console.error('Booking submission error:', err);
+      setError(err instanceof Error ? err.message : 'An unexpected error occurred. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const renderServiceFields = () => {
@@ -406,6 +466,11 @@ function BookingContent() {
             <Card>
               <CardContent className="p-6">
                 <form onSubmit={handleSubmit} className="space-y-6">
+                  {error && (
+                    <div className="rounded-md bg-destructive/10 p-4 text-sm text-destructive">
+                      {error}
+                    </div>
+                  )}
                   <div className="grid gap-4 sm:grid-cols-2">
                     <div className="space-y-2">
                       <Label htmlFor="firstName">First Name *</Label>
@@ -415,6 +480,7 @@ function BookingContent() {
                         value={formData.firstName}
                         onChange={handleInputChange}
                         required
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-2">
@@ -425,6 +491,7 @@ function BookingContent() {
                         value={formData.lastName}
                         onChange={handleInputChange}
                         required
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -437,6 +504,7 @@ function BookingContent() {
                       value={formData.email}
                       onChange={handleInputChange}
                       required
+                      disabled={isSubmitting}
                     />
                   </div>
                   <div className="grid gap-4 sm:grid-cols-2">
@@ -448,6 +516,7 @@ function BookingContent() {
                         type="tel"
                         value={formData.phone}
                         onChange={handleInputChange}
+                        disabled={isSubmitting}
                       />
                     </div>
                     <div className="space-y-2">
@@ -457,6 +526,7 @@ function BookingContent() {
                         name="organization"
                         value={formData.organization}
                         onChange={handleInputChange}
+                        disabled={isSubmitting}
                       />
                     </div>
                   </div>
@@ -465,13 +535,23 @@ function BookingContent() {
                       type="button"
                       variant="outline"
                       onClick={() => setStep("details")}
+                      disabled={isSubmitting}
                     >
                       <ArrowLeft className="mr-2 h-4 w-4" />
                       Back
                     </Button>
-                    <Button type="submit" className="flex-1">
-                      Submit Request
-                      <ArrowRight className="ml-2 h-4 w-4" />
+                    <Button type="submit" className="flex-1" disabled={isSubmitting}>
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Submit Request
+                          <ArrowRight className="ml-2 h-4 w-4" />
+                        </>
+                      )}
                     </Button>
                   </div>
                 </form>
