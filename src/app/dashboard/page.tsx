@@ -1,52 +1,106 @@
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Target, TrendingUp, Users, CheckCircle, Plus, ArrowRight } from "lucide-react";
+import { Badge } from "@/components/ui/badge";
+import { Target, TrendingUp, Users, CheckCircle, Plus, ArrowRight, Mail } from "lucide-react";
 import { DashboardCampaignTable } from "@/components/campaigns/dashboard-campaign-table";
+import { prisma } from "@/lib/db";
+import { mapCampaignsToComponent } from "@/lib/mappers/campaign";
 
 async function getDashboardData() {
-  // Mock data - replace with actual API call
-  return {
-    stats: {
-      totalCampaigns: 12,
-      activeCampaigns: 4,
-      totalLeads: 248,
-      conversionRate: 32,
-    },
-    recentCampaigns: [
-      {
-        id: "1",
-        name: "Spring 2025 Workshop Tour",
-        location: "San Francisco, CA",
-        radiusMiles: 100,
-        status: "ACTIVE" as const,
-        leadCount: 45,
-        createdAt: new Date("2025-01-10").toISOString(),
+  try {
+    // Query 1: Campaign counts
+    const [totalCampaigns, activeCampaigns] = await Promise.all([
+      prisma.campaign.count(),
+      prisma.campaign.count({ where: { status: 'ACTIVE' } })
+    ]);
+
+    // Query 2: Total discovered leads
+    const totalLeads = await prisma.campaignLead.count();
+
+    // Query 3: Conversion rate (BOOKED leads / total leads * 100)
+    const bookedLeads = await prisma.campaignLead.count({
+      where: { status: 'BOOKED' }
+    });
+    const conversionRate = totalLeads > 0
+      ? Math.round((bookedLeads / totalLeads) * 100)
+      : 0;
+
+    // Query 4: Recent campaigns (5 most recent)
+    const recentCampaignsData = await prisma.campaign.findMany({
+      take: 5,
+      orderBy: { createdAt: 'desc' },
+      include: {
+        _count: { select: { leads: true } }
+      }
+    });
+
+    // Query 5: Outreach engagement (opens + clicks / sent * 100)
+    const [sentOutreach, engagedOutreach] = await Promise.all([
+      prisma.outreachLog.count({ where: { status: { in: ['SENT', 'DELIVERED', 'OPENED', 'CLICKED', 'RESPONDED'] } } }),
+      prisma.outreachLog.count({ where: { status: { in: ['OPENED', 'CLICKED', 'RESPONDED'] } } })
+    ]);
+    const engagementRate = sentOutreach > 0
+      ? Math.round((engagedOutreach / sentOutreach) * 100)
+      : 0;
+
+    // Transform to component format
+    const recentCampaigns = mapCampaignsToComponent(recentCampaignsData);
+
+    // Query 6: Bookings without campaigns (last 30 days)
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
+    const bookingsWithoutCampaigns = await prisma.booking.findMany({
+      where: {
+        campaigns: { none: {} }, // No related campaigns
+        createdAt: { gte: thirtyDaysAgo },
+        status: { in: ['CONFIRMED', 'PENDING'] }
       },
-      {
-        id: "2",
-        name: "Summer Masterclass Series",
-        location: "New York, NY",
-        radiusMiles: 150,
-        status: "APPROVED" as const,
-        leadCount: 32,
-        createdAt: new Date("2025-01-08").toISOString(),
+      include: {
+        lead: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            organization: true,
+          }
+        }
       },
-      {
-        id: "3",
-        name: "Fall Coaching Program",
-        location: "Los Angeles, CA",
-        radiusMiles: 120,
-        status: "DRAFT" as const,
-        leadCount: 0,
-        createdAt: new Date("2025-01-05").toISOString(),
+      take: 5,
+      orderBy: { createdAt: 'desc' }
+    });
+
+    return {
+      stats: {
+        totalCampaigns,
+        activeCampaigns,
+        totalLeads,
+        conversionRate,
+        engagementRate,
       },
-    ],
-  };
+      recentCampaigns,
+      bookingsWithoutCampaigns,
+    };
+  } catch (error) {
+    console.error('Error fetching dashboard data:', error);
+    // Return empty state on error
+    return {
+      stats: {
+        totalCampaigns: 0,
+        activeCampaigns: 0,
+        totalLeads: 0,
+        conversionRate: 0,
+        engagementRate: 0,
+      },
+      recentCampaigns: [],
+      bookingsWithoutCampaigns: [],
+    };
+  }
 }
 
 export default async function DashboardPage() {
-  const { stats, recentCampaigns } = await getDashboardData();
+  const { stats, recentCampaigns, bookingsWithoutCampaigns } = await getDashboardData();
 
   return (
     <div className="space-y-8">
@@ -59,7 +113,7 @@ export default async function DashboardPage() {
       </div>
 
       {/* Stats Grid */}
-      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-6 md:grid-cols-2 lg:grid-cols-5">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">
@@ -117,6 +171,21 @@ export default async function DashboardPage() {
             </p>
           </CardContent>
         </Card>
+
+        <Card>
+          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
+            <CardTitle className="text-sm font-medium">
+              Outreach Engagement
+            </CardTitle>
+            <Mail className="h-4 w-4 text-muted-foreground" />
+          </CardHeader>
+          <CardContent>
+            <div className="text-2xl font-bold">{stats.engagementRate}%</div>
+            <p className="text-xs text-muted-foreground mt-1">
+              Opens and clicks rate
+            </p>
+          </CardContent>
+        </Card>
       </div>
 
       {/* Recent Campaigns */}
@@ -141,6 +210,52 @@ export default async function DashboardPage() {
           <DashboardCampaignTable campaigns={recentCampaigns} />
         </CardContent>
       </Card>
+
+      {/* New Bookings - Only show if there are bookings */}
+      {bookingsWithoutCampaigns.length > 0 && (
+        <Card>
+          <CardHeader>
+            <div className="flex items-center justify-between">
+              <div>
+                <CardTitle className="flex items-center gap-2">
+                  New Bookings
+                  <Badge variant="secondary">{bookingsWithoutCampaigns.length}</Badge>
+                </CardTitle>
+                <p className="text-sm text-muted-foreground mt-1">
+                  Recent bookings ready for campaign creation
+                </p>
+              </div>
+            </div>
+          </CardHeader>
+          <CardContent>
+            <div className="space-y-3">
+              {bookingsWithoutCampaigns.map(booking => (
+                <div key={booking.id} className="flex items-center justify-between p-3 border rounded-lg hover:bg-muted/50 transition-colors">
+                  <div className="flex-1">
+                    <p className="font-medium">
+                      {booking.lead.firstName} {booking.lead.lastName}
+                    </p>
+                    <p className="text-sm text-muted-foreground">
+                      {booking.serviceType} • {booking.location || 'Virtual'}
+                    </p>
+                    {booking.lead.organization && (
+                      <p className="text-xs text-muted-foreground mt-1">
+                        {booking.lead.organization}
+                      </p>
+                    )}
+                  </div>
+                  <Link href={`/dashboard/campaigns/new?bookingId=${booking.id}`}>
+                    <Button size="sm">
+                      <Plus className="mr-2 h-4 w-4" />
+                      Create Campaign
+                    </Button>
+                  </Link>
+                </div>
+              ))}
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Quick Actions */}
       <Card>

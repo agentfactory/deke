@@ -51,23 +51,80 @@ export type CampaignFormValues = z.infer<typeof campaignFormSchema>;
 interface CampaignFormProps {
   onSubmit: (values: CampaignFormValues, isDraft: boolean) => void;
   initialValues?: Partial<CampaignFormValues>;
+  initialBooking?: any; // Booking data to pre-populate from
   isLoading?: boolean;
 }
 
 export function CampaignForm({
   onSubmit,
   initialValues,
+  initialBooking,
   isLoading = false,
 }: CampaignFormProps) {
+  // Transform booking data into form values if provided
+  const getInitialValues = (): Partial<CampaignFormValues> => {
+    if (initialValues) return initialValues;
+
+    if (initialBooking) {
+      const serviceTypeMap: Record<string, CampaignFormValues['serviceType']> = {
+        'ARRANGEMENT': 'ARRANGEMENTS',
+        'GROUP_COACHING': 'COACHING',
+        'INDIVIDUAL_COACHING': 'COACHING',
+        'WORKSHOP': 'WORKSHOPS',
+        'SPEAKING': 'SPEAKING',
+        'MASTERCLASS': 'MASTERCLASS',
+      };
+
+      // Auto-generate dates if booking doesn't have them
+      const today = new Date();
+      const thirtyDaysLater = new Date(today);
+      thirtyDaysLater.setDate(thirtyDaysLater.getDate() + 30);
+
+      let startDate = '';
+      let endDate = '';
+
+      if (initialBooking.startDate) {
+        // Use booking's start date if it exists
+        startDate = new Date(initialBooking.startDate).toISOString().split('T')[0];
+
+        // If booking has end date, use it; otherwise add 30 days to start
+        if (initialBooking.endDate) {
+          endDate = new Date(initialBooking.endDate).toISOString().split('T')[0];
+        } else {
+          const autoEndDate = new Date(initialBooking.startDate);
+          autoEndDate.setDate(autoEndDate.getDate() + 30);
+          endDate = autoEndDate.toISOString().split('T')[0];
+        }
+      } else {
+        // No booking date - use today + 30 days
+        startDate = today.toISOString().split('T')[0];
+        endDate = thirtyDaysLater.toISOString().split('T')[0];
+      }
+
+      return {
+        name: `${initialBooking.serviceType} - ${initialBooking.lead.firstName} ${initialBooking.lead.lastName}`,
+        location: initialBooking.location || '',
+        radiusMiles: 100,
+        startDate,
+        endDate,
+        serviceType: serviceTypeMap[initialBooking.serviceType] || 'COACHING',
+      };
+    }
+
+    return {};
+  };
+
+  const computedInitialValues = getInitialValues();
+
   const form = useForm<CampaignFormValues>({
     resolver: zodResolver(campaignFormSchema),
     defaultValues: {
-      name: initialValues?.name || "",
-      location: initialValues?.location || "",
-      radiusMiles: initialValues?.radiusMiles || 100,
-      startDate: initialValues?.startDate || "",
-      endDate: initialValues?.endDate || "",
-      serviceType: initialValues?.serviceType || "COACHING",
+      name: computedInitialValues?.name || "",
+      location: computedInitialValues?.location || "",
+      radiusMiles: computedInitialValues?.radiusMiles || 100,
+      startDate: computedInitialValues?.startDate || "",
+      endDate: computedInitialValues?.endDate || "",
+      serviceType: computedInitialValues?.serviceType || "COACHING",
     },
   });
 

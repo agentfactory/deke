@@ -1,16 +1,44 @@
 "use client";
 
-import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useState, useEffect, Suspense } from "react";
+import { useRouter, useSearchParams } from "next/navigation";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { CampaignForm, CampaignFormValues } from "@/components/campaigns/campaign-form";
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
 
-export default function NewCampaignPage() {
+function NewCampaignContent() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const bookingId = searchParams.get('bookingId');
+
   const [isLoading, setIsLoading] = useState(false);
+  const [bookingData, setBookingData] = useState<any>(null);
+  const [isLoadingBooking, setIsLoadingBooking] = useState(!!bookingId);
+
+  // Fetch booking data if bookingId is provided
+  useEffect(() => {
+    if (bookingId) {
+      const fetchBooking = async () => {
+        try {
+          const response = await fetch(`/api/bookings?limit=100`);
+          if (response.ok) {
+            const data = await response.json();
+            const booking = data.bookings.find((b: any) => b.id === bookingId);
+            if (booking) {
+              setBookingData(booking);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching booking:', error);
+        } finally {
+          setIsLoadingBooking(false);
+        }
+      };
+      fetchBooking();
+    }
+  }, [bookingId]);
 
   const handleSubmit = async (values: CampaignFormValues, isDraft: boolean) => {
     setIsLoading(true);
@@ -25,6 +53,7 @@ export default function NewCampaignPage() {
         endDate: values.endDate,
         serviceType: values.serviceType,
         status: isDraft ? "DRAFT" : "APPROVED",
+        ...(bookingId && { bookingId }), // Include bookingId if present
       };
 
       console.log("Creating campaign:", payload);
@@ -83,7 +112,9 @@ export default function NewCampaignPage() {
         <div>
           <h1 className="font-heading text-3xl font-bold">Create Campaign</h1>
           <p className="text-muted-foreground mt-2">
-            Set up a new outreach campaign to discover potential clients
+            {bookingData
+              ? `Create a campaign for ${bookingData.lead.firstName} ${bookingData.lead.lastName}'s booking`
+              : 'Set up a new outreach campaign to discover potential clients'}
           </p>
         </div>
       </div>
@@ -93,11 +124,23 @@ export default function NewCampaignPage() {
         <CardHeader>
           <CardTitle>Campaign Details</CardTitle>
           <p className="text-sm text-muted-foreground">
-            Fill in the information below to create your campaign
+            {bookingData
+              ? 'Review and adjust the pre-filled information from the booking'
+              : 'Fill in the information below to create your campaign'}
           </p>
         </CardHeader>
         <CardContent>
-          <CampaignForm onSubmit={handleSubmit} isLoading={isLoading} />
+          {isLoadingBooking ? (
+            <div className="flex items-center justify-center py-8">
+              <p className="text-muted-foreground">Loading booking details...</p>
+            </div>
+          ) : (
+            <CampaignForm
+              onSubmit={handleSubmit}
+              isLoading={isLoading}
+              initialBooking={bookingData}
+            />
+          )}
         </CardContent>
       </Card>
 
@@ -120,5 +163,13 @@ export default function NewCampaignPage() {
         </CardContent>
       </Card>
     </div>
+  );
+}
+
+export default function NewCampaignPage() {
+  return (
+    <Suspense fallback={<div className="flex items-center justify-center min-h-screen">Loading...</div>}>
+      <NewCampaignContent />
+    </Suspense>
   );
 }

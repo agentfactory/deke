@@ -120,6 +120,17 @@ model Booking {
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
+  // New relations for travel and group bookings
+  travelExpenses    TravelExpense[]
+  participants      BookingParticipant[]
+
+  // New fields for group bookings
+  isGroupBooking    Boolean  @default(false)
+  totalServiceFee   Float?
+  travelBudget      Float?
+  splitMethod       String?  // EQUAL, BY_SIZE, CUSTOM, AUTO_OPTIMAL
+  splitNotes        String?
+
   // Relations
   campaigns     Campaign[]
 
@@ -132,6 +143,69 @@ model Booking {
 
 // Removed enum BookingStatus - now using String with validation comments
 // Removed enum PaymentStatus - now using String with validation comments
+
+model TravelExpense {
+  id            String   @id @default(cuid())
+  bookingId     String
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  // Flight details
+  flightCarrier     String?
+  flightNumber      String?
+  departureAirport  String?
+  arrivalAirport    String?
+  departureTime     DateTime?
+  arrivalTime       DateTime?
+  flightCost        Float?
+
+  // Hotel details
+  hotelName         String?
+  hotelAddress      String?
+  checkInDate       DateTime?
+  checkOutDate      DateTime?
+  confirmationNumber String?
+  hotelCost         Float?
+
+  // Ground transportation
+  groundTransport   String?  // CAR_RENTAL, TAXI, UBER, OTHER
+  groundTransportDetails String?
+  groundTransportCost    Float?
+
+  // Payment responsibility
+  paymentResponsibility String @default("CLIENT") // CLIENT, DEKE, SPLIT
+  clientPayPercent  Float?  // 0-100
+  dekePayPercent    Float?  // 0-100
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([bookingId])
+}
+
+model BookingParticipant {
+  id            String   @id @default(cuid())
+  bookingId     String
+  booking       Booking  @relation(fields: [bookingId], references: [id], onDelete: Cascade)
+
+  organizationName  String
+  contactName       String?
+  contactEmail      String?
+  contactPhone      String?
+  groupSize         Int?
+
+  // Calculated split
+  splitPercent      Float   @default(0)  // 0-100
+  amountDue         Float   @default(0)
+  travelShareDue    Float   @default(0)
+
+  // Payment status
+  paymentStatus     String  @default("PENDING")  // PENDING, PAID, PARTIAL, OVERDUE
+
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([bookingId])
+}
 
 // ============================================
 // ARRANGEMENTS & ORDERS
