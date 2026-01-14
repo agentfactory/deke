@@ -28,23 +28,54 @@ const quickActions = [
   { label: "Ask a question", action: "general-inquiry" },
 ];
 
-const initialMessages: Message[] = [
-  {
-    id: "welcome",
-    role: "assistant",
-    content:
-      "Hi! I'm Harmony, Deke's virtual assistant. I can help you with arrangements, coaching inquiries, or answer questions about our services. How can I assist you today?",
-    timestamp: new Date(),
-  },
-];
-
 export function HarmonyWidget() {
   const [isOpen, setIsOpen] = useState(false);
   const [isMinimized, setIsMinimized] = useState(false);
-  const [messages, setMessages] = useState<Message[]>(initialMessages);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+
+  // Session ID for conversation persistence
+  const [sessionId] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const stored = localStorage.getItem('harmony-session-id');
+      if (stored) return stored;
+      const newId = `session-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      localStorage.setItem('harmony-session-id', newId);
+      return newId;
+    }
+    return `session-${Date.now()}`;
+  });
+
+  // Load conversation history on mount
+  useEffect(() => {
+    const loadSession = async () => {
+      try {
+        const response = await fetch('/api/chat/history', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ sessionId })
+        })
+
+        if (response.ok) {
+          const data = await response.json()
+          if (data.messages && data.messages.length > 0) {
+            setMessages(data.messages.map((m: any) => ({
+              id: m.id,
+              role: m.role,
+              content: m.content,
+              timestamp: new Date(m.createdAt)
+            })))
+          }
+        }
+      } catch (error) {
+        console.error('Error loading session history:', error)
+      }
+    }
+
+    loadSession()
+  }, [sessionId])
 
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
@@ -68,18 +99,44 @@ export function HarmonyWidget() {
     setInput("");
     setIsLoading(true);
 
-    // TODO: Connect to HARMONY agent API
-    // For now, simulate a response
-    setTimeout(() => {
+    try {
+      // Call backend API
+      const response = await fetch('/api/chat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          message: userMessage.content,
+          sessionId: sessionId
+        })
+      });
+
+      if (!response.ok) {
+        throw new Error(`API error: ${response.status}`);
+      }
+
+      const data = await response.json();
+
       const assistantMessage: Message = {
         id: (Date.now() + 1).toString(),
         role: "assistant",
-        content: getSimulatedResponse(userMessage.content),
+        content: data.message,
         timestamp: new Date(),
       };
       setMessages((prev) => [...prev, assistantMessage]);
+    } catch (error) {
+      console.error('Error sending message:', error);
+      setMessages((prev) => [
+        ...prev,
+        {
+          id: (Date.now() + 1).toString(),
+          content: 'Sorry, I encountered an error. Please try again.',
+          role: 'assistant',
+          timestamp: new Date(),
+        },
+      ]);
+    } finally {
       setIsLoading(false);
-    }, 1000);
+    }
   };
 
   const handleQuickAction = (action: string) => {
@@ -240,25 +297,3 @@ export function HarmonyWidget() {
   );
 }
 
-// Simulated response generator - will be replaced by actual agent
-function getSimulatedResponse(input: string): string {
-  const lowerInput = input.toLowerCase();
-
-  if (lowerInput.includes("quote") || lowerInput.includes("arrangement")) {
-    return "I'd be happy to help you get a quote for a custom arrangement! To provide an accurate estimate, I'll need a few details:\n\n1. What song would you like arranged?\n2. How many voice parts does your group have?\n3. What's your timeline?\n\nFeel free to share these details, or I can connect you with Deke directly for a consultation.";
-  }
-
-  if (lowerInput.includes("coaching") || lowerInput.includes("session")) {
-    return "Great choice! Deke offers both group and individual coaching sessions, available in-person or virtually. Would you like to:\n\n• Learn about group coaching packages\n• Explore individual session options\n• Schedule a free consultation call\n\nJust let me know which interests you most!";
-  }
-
-  if (lowerInput.includes("workshop") || lowerInput.includes("clinic")) {
-    return "Deke's workshops are transformative experiences! He works with schools, festivals, competitions, and corporate events worldwide. What type of workshop are you interested in?\n\n• School program residency\n• Competition preparation\n• Festival clinic\n• Corporate team-building";
-  }
-
-  if (lowerInput.includes("price") || lowerInput.includes("cost")) {
-    return "Pricing varies based on the specific service:\n\n• Arrangements: $500-$3,000+\n• Coaching: $200/hour (individual) or $2,000+ (group)\n• Workshops: From $5,000\n• Speaking: From $15,000\n\nWould you like more details on any of these?";
-  }
-
-  return "Thanks for reaching out! I can help with information about:\n\n• Custom arrangements\n• Coaching sessions\n• Workshops and clinics\n• Speaking engagements\n• Online masterclasses\n\nWhat would you like to know more about?";
-}

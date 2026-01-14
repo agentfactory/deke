@@ -7,6 +7,8 @@ const anthropic = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY
 })
 
+const WELCOME_MESSAGE = "Hi! I'm Harmony, Deke's virtual assistant. I can help you with arrangements, coaching inquiries, or answer questions about our services. How can I assist you today?"
+
 const HARMONY_SYSTEM_PROMPT = `You are Harmony, Deke Sharon's virtual assistant and booking coordinator.
 
 CRITICAL: You MUST maintain conversation context. Remember what the user said in previous messages and build on it. Never reset to a generic greeting mid-conversation.
@@ -85,11 +87,19 @@ export async function POST(request: NextRequest) {
     })
 
     if (!session) {
+      // Create session AND initialize with welcome message in one transaction
       session = await prisma.chatSession.create({
         data: {
           sessionId,
           status: 'ACTIVE',
-          source: 'WEBSITE'
+          source: 'WEBSITE',
+          messages: {
+            create: {
+              role: 'assistant',
+              content: WELCOME_MESSAGE,
+              agentId: 'harmony'
+            }
+          }
         },
         include: { messages: true }
       })
@@ -104,7 +114,7 @@ export async function POST(request: NextRequest) {
 
     // Call Claude API
     const response = await anthropic.messages.create({
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-3-haiku-20240307',
       max_tokens: 2048,
       system: HARMONY_SYSTEM_PROMPT,
       messages: [
@@ -121,13 +131,13 @@ export async function POST(request: NextRequest) {
     await prisma.chatMessage.createMany({
       data: [
         {
-          sessionId,
+          sessionId: session.id,
           role: 'user',
           content: message,
           agentId: 'harmony'
         },
         {
-          sessionId,
+          sessionId: session.id,
           role: 'assistant',
           content: assistantMessage,
           agentId: 'harmony'
