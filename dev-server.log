@@ -1,0 +1,22 @@
+
+> deke@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by process 8120, using available port 3001 instead.
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3001
+- Network:       http://192.168.86.35:3001
+- Environments: .env
+
+✓ Starting...
+✓ Ready in 565ms
+ GET /api/health 200 in 256ms (compile: 232ms, render: 23ms)
+ GET /api/campaigns 200 in 224ms (compile: 216ms, render: 8ms)
+ GET /api/templates 200 in 85ms (compile: 79ms, render: 5ms)
+ GET /api/bookings 200 in 87ms (compile: 81ms, render: 6ms)
+`legacyBehavior` is deprecated and will be removed in a future release. A codemod is available to upgrade your components:
+
+npx @next/codemod@latest new-link .
+
+Learn more: https://nextjs.org/docs/app/building-your-application/upgrading/codemods#remove-a-tags-from-link-components
+ GET / 200 in 2.1s (compile: 1842ms, render: 240ms)

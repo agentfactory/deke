@@ -6,7 +6,11 @@ generator client {
 
 datasource db {
   provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
+
+// Note: DATABASE_URL is loaded from .env automatically in Prisma 7
+// Make sure .env contains: DATABASE_URL="file:./prisma/dev.db"
 
 // ============================================
 // LEADS & CONTACTS
@@ -20,7 +24,7 @@ model Lead {
   phone         String?
   organization  String?
   source        String?   // website, referral, social, etc.
-  status        LeadStatus @default(NEW)
+  status        String    @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL_SENT, NEGOTIATING, WON, LOST, DORMANT
   score         Int       @default(0)  // Lead scoring
 
   // Geographic coordinates for opportunity finder
@@ -40,18 +44,11 @@ model Lead {
 
   @@index([email])
   @@index([status])
+  @@index([latitude, longitude])
+  @@index([lastContactedAt])
 }
 
-enum LeadStatus {
-  NEW
-  CONTACTED
-  QUALIFIED
-  PROPOSAL_SENT
-  NEGOTIATING
-  WON
-  LOST
-  DORMANT
-}
+// Removed enum LeadStatus - now using String with validation comments
 
 // ============================================
 // INQUIRIES & BOOKINGS
@@ -61,11 +58,11 @@ model Inquiry {
   id            String      @id @default(cuid())
   leadId        String
   lead          Lead        @relation(fields: [leadId], references: [id])
-  serviceType   ServiceType
-  status        InquiryStatus @default(PENDING)
+  serviceType   String      // ARRANGEMENT, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
+  status        String      @default("PENDING") // PENDING, QUOTED, ACCEPTED, DECLINED, EXPIRED
 
   // Service-specific details (JSON for flexibility)
-  details       Json?
+  details       String?     // JSON string
   message       String?
 
   // Quote info (from MAESTRO agent)
@@ -83,23 +80,8 @@ model Inquiry {
   @@index([status])
 }
 
-enum ServiceType {
-  ARRANGEMENT
-  GROUP_COACHING
-  INDIVIDUAL_COACHING
-  WORKSHOP
-  SPEAKING
-  MASTERCLASS
-  CONSULTATION
-}
-
-enum InquiryStatus {
-  PENDING
-  QUOTED
-  ACCEPTED
-  DECLINED
-  EXPIRED
-}
+// Removed enum ServiceType - now using String with validation comments
+// Removed enum InquiryStatus - now using String with validation comments
 
 model Booking {
   id            String        @id @default(cuid())
@@ -108,8 +90,8 @@ model Booking {
   inquiryId     String?       @unique
   inquiry       Inquiry?      @relation(fields: [inquiryId], references: [id])
 
-  serviceType   ServiceType
-  status        BookingStatus @default(PENDING)
+  serviceType   String        // ARRANGEMENT, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
+  status        String        @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, RESCHEDULED
 
   // Scheduling
   startDate     DateTime?
@@ -125,7 +107,7 @@ model Booking {
   amount        Float?
   depositPaid   Float?
   balanceDue    Float?
-  paymentStatus PaymentStatus @default(UNPAID)
+  paymentStatus String        @default("UNPAID") // UNPAID, DEPOSIT_PAID, PAID_IN_FULL, REFUNDED, OVERDUE
 
   // Notes
   internalNotes String?
@@ -140,24 +122,12 @@ model Booking {
   @@index([leadId])
   @@index([status])
   @@index([startDate])
+  @@index([latitude, longitude])
+  @@index([status, startDate])
 }
 
-enum BookingStatus {
-  PENDING
-  CONFIRMED
-  IN_PROGRESS
-  COMPLETED
-  CANCELLED
-  RESCHEDULED
-}
-
-enum PaymentStatus {
-  UNPAID
-  DEPOSIT_PAID
-  PAID_IN_FULL
-  REFUNDED
-  OVERDUE
-}
+// Removed enum BookingStatus - now using String with validation comments
+// Removed enum PaymentStatus - now using String with validation comments
 
 // ============================================
 // ARRANGEMENTS & ORDERS
@@ -168,7 +138,7 @@ model Order {
   leadId          String
   lead            Lead        @relation(fields: [leadId], references: [id])
   orderNumber     String      @unique
-  status          OrderStatus @default(PENDING)
+  status          String      @default("PENDING") // PENDING, IN_PROGRESS, REVIEW, REVISION, COMPLETED, DELIVERED, CANCELLED
 
   // Arrangement details
   songTitle       String?
@@ -198,15 +168,7 @@ model Order {
   @@index([orderNumber])
 }
 
-enum OrderStatus {
-  PENDING
-  IN_PROGRESS
-  REVIEW
-  REVISION
-  COMPLETED
-  DELIVERED
-  CANCELLED
-}
+// Removed enum OrderStatus - now using String with validation comments
 
 // ============================================
 // CHAT & CONVERSATIONS (HARMONY Agent)
@@ -224,7 +186,7 @@ model ChatSession {
   ipAddress   String?
 
   // Status
-  status      ChatStatus @default(ACTIVE)
+  status      String     @default("ACTIVE") // ACTIVE, IDLE, ENDED, TRANSFERRED
 
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
@@ -236,12 +198,7 @@ model ChatSession {
   @@index([sessionId])
 }
 
-enum ChatStatus {
-  ACTIVE
-  IDLE
-  ENDED
-  TRANSFERRED  // Transferred to human
-}
+// Removed enum ChatStatus - now using String with validation comments
 
 model ChatMessage {
   id            String      @id @default(cuid())
@@ -266,13 +223,13 @@ model ChatMessage {
 
 model ContentPiece {
   id            String        @id @default(cuid())
-  type          ContentType
+  type          String        // BLOG_POST, SOCIAL_POST, EMAIL, NEWSLETTER, VIDEO_SCRIPT, PODCAST_NOTES
   title         String
   content       String
   excerpt       String?
 
   // Metadata
-  status        ContentStatus @default(DRAFT)
+  status        String        @default("DRAFT") // DRAFT, SCHEDULED, PUBLISHED, ARCHIVED
   publishedAt   DateTime?
   scheduledFor  DateTime?
 
@@ -282,7 +239,7 @@ model ContentPiece {
   metaDesc      String?
 
   // Social
-  socialCopy    Json?         // { twitter, instagram, linkedin, etc. }
+  socialCopy    String?       // JSON string: { twitter, instagram, linkedin, etc. }
 
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
@@ -292,21 +249,8 @@ model ContentPiece {
   @@index([slug])
 }
 
-enum ContentType {
-  BLOG_POST
-  SOCIAL_POST
-  EMAIL
-  NEWSLETTER
-  VIDEO_SCRIPT
-  PODCAST_NOTES
-}
-
-enum ContentStatus {
-  DRAFT
-  SCHEDULED
-  PUBLISHED
-  ARCHIVED
-}
+// Removed enum ContentType - now using String with validation comments
+// Removed enum ContentStatus - now using String with validation comments
 
 // ============================================
 // ANALYTICS (METRICS Agent)
@@ -315,7 +259,7 @@ enum ContentStatus {
 model AnalyticsEvent {
   id          String    @id @default(cuid())
   eventType   String    // page_view, chat_started, booking_completed, etc.
-  eventData   Json?
+  eventData   String?   // JSON string
 
   // Context
   leadId      String?
@@ -332,7 +276,7 @@ model AnalyticsEvent {
 model RevenueMetric {
   id            String    @id @default(cuid())
   period        String    // YYYY-MM format
-  serviceType   ServiceType
+  serviceType   String    // ARRANGEMENT, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
 
   // Metrics
   inquiries     Int       @default(0)
@@ -355,8 +299,8 @@ model AgentLog {
   id          String    @id @default(cuid())
   agentId     String    // harmony, maestro, tempo, etc.
   actionType  String
-  input       Json?
-  output      Json?
+  input       String?   // JSON string
+  output      String?   // JSON string
   success     Boolean
   errorMsg    String?
   durationMs  Int?
@@ -373,7 +317,7 @@ model AgentMemory {
   agentId     String
   memoryType  String    // preference, context, pattern
   key         String
-  value       Json
+  value       String    // JSON string
   importance  Int       @default(5)  // 1-10 scale
 
   expiresAt   DateTime?
@@ -396,7 +340,7 @@ model Campaign {
   latitude      Float
   longitude     Float
   radius        Float          @default(100) // miles, default 100 per user request
-  status        CampaignStatus @default(DRAFT)
+  status        String         @default("DRAFT") // DRAFT, APPROVED, ACTIVE, PAUSED, COMPLETED, CANCELLED
   startDate     DateTime?
   endDate       DateTime?
   createdAt     DateTime       @default(now())
@@ -413,16 +357,10 @@ model Campaign {
 
   @@index([status])
   @@index([startDate])
+  @@index([baseLocation])
 }
 
-enum CampaignStatus {
-  DRAFT
-  APPROVED
-  ACTIVE
-  PAUSED
-  COMPLETED
-  CANCELLED
-}
+// Removed enum CampaignStatus - now using String with validation comments
 
 model CampaignLead {
   id            String              @id @default(cuid())
@@ -432,8 +370,8 @@ model CampaignLead {
   leadId        String
   score         Int                 @default(50) // 0-100
   distance      Float               // miles from campaign base location
-  source        LeadSource          // past_client, dormant, similar_org, ai_research
-  status        CampaignLeadStatus  @default(PENDING)
+  source        String              // PAST_CLIENT, DORMANT, SIMILAR_ORG, AI_RESEARCH, MANUAL_IMPORT
+  status        String              @default("PENDING") // PENDING, CONTACTED, OPENED, CLICKED, RESPONDED, BOOKED, DECLINED, REMOVED
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
@@ -444,24 +382,8 @@ model CampaignLead {
   @@index([score])
 }
 
-enum LeadSource {
-  PAST_CLIENT
-  DORMANT
-  SIMILAR_ORG
-  AI_RESEARCH
-  MANUAL_IMPORT
-}
-
-enum CampaignLeadStatus {
-  PENDING
-  CONTACTED
-  OPENED
-  CLICKED
-  RESPONDED
-  BOOKED
-  DECLINED
-  REMOVED
-}
+// Removed enum LeadSource - now using String with validation comments
+// Removed enum CampaignLeadStatus - now using String with validation comments
 
 model OutreachLog {
   id              String          @id @default(cuid())
@@ -469,8 +391,8 @@ model OutreachLog {
   campaignLeadId  String
   campaign        Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   campaignId      String
-  channel         OutreachChannel
-  status          OutreachStatus  @default(PENDING)
+  channel         String          // EMAIL, SMS, LINKEDIN
+  status          String          @default("PENDING") // PENDING, SENT, DELIVERED, OPENED, CLICKED, RESPONDED, FAILED, BOUNCED
   sentAt          DateTime?
   openedAt        DateTime?
   clickedAt       DateTime?
@@ -484,22 +406,8 @@ model OutreachLog {
   @@index([sentAt])
 }
 
-enum OutreachChannel {
-  EMAIL
-  SMS
-  LINKEDIN
-}
-
-enum OutreachStatus {
-  PENDING
-  SENT
-  DELIVERED
-  OPENED
-  CLICKED
-  RESPONDED
-  FAILED
-  BOUNCED
-}
+// Removed enum OutreachChannel - now using String with validation comments
+// Removed enum OutreachStatus - now using String with validation comments
 
 model GeoPreference {
   id            String   @id @default(cuid())
@@ -516,13 +424,25 @@ model GeoPreference {
 model MessageTemplate {
   id          String          @id @default(cuid())
   name        String
-  serviceType ServiceType?
+  serviceType String?         // ARRANGEMENT, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
   subject     String?         // for emails
   body        String
-  channel     OutreachChannel @default(EMAIL)
+  channel     String          @default("EMAIL") // EMAIL, SMS, LINKEDIN
   variables   String?         // JSON: ["firstName", "location", "dates", etc.]
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
   @@index([serviceType, channel])
+}
+
+model Suppression {
+  id        String   @id @default(cuid())
+  email     String?  @unique
+  phone     String?  @unique
+  reason    String   // opt_out, bounce, complaint, manual
+  source    String   // which campaign triggered suppression
+  createdAt DateTime @default(now())
+
+  @@index([email])
+  @@index([phone])
 }
