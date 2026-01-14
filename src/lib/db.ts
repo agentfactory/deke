@@ -6,13 +6,19 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Prisma 7 with PostgreSQL adapter for production
-// Uses connection pooling via pg Pool for optimal performance
+// Prisma 7 configuration - use DATABASE_URL for everything
 const connectionString = process.env.DATABASE_URL
-const pool = connectionString ? new Pool({ connectionString }) : undefined
 
+if (!connectionString) {
+  throw new Error('DATABASE_URL environment variable is not set')
+}
+
+// Create connection pool
+const pool = new Pool({ connectionString })
+
+// Configure Prisma client with adapter
 export const prisma = globalForPrisma.prisma ?? new PrismaClient({
-  adapter: pool ? new PrismaPg(pool) : undefined,
+  adapter: new PrismaPg(pool),
   log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
 })
 
