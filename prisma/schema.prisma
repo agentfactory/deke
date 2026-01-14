@@ -6,14 +6,15 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  // Prisma 7: url and directUrl moved to runtime configuration in db.ts
+  // Prisma 7: No url here - configured in prisma.config.ts for CLI and db.ts for runtime
 }
 
-// Note: DATABASE_URL is loaded from .env automatically in Prisma 7
-// For Supabase PostgreSQL:
-// - DATABASE_URL: Transaction mode (pooled) for application queries
-// - DIRECT_URL: Session mode (direct) for migrations
-// Example: postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
+// DATABASE_URL configuration:
+// - CLI commands (migrate, db push): Use DIRECT_URL from prisma.config.ts
+// - Runtime queries: Use DATABASE_URL via adapter in db.ts
+// For Supabase:
+//   DATABASE_URL: Transaction pooled mode (port 6543, pgbouncer=true)
+//   DIRECT_URL: Direct session mode (port 5432, no pooling)
 
 // ============================================
 // LEADS & CONTACTS

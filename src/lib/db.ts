@@ -6,7 +6,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Prisma 7 configuration - use DATABASE_URL for everything
+// Prisma 7 runtime configuration with adapter
+// Note: This is separate from prisma.config.ts (used by CLI)
+// Use pooled DATABASE_URL for application queries (Supabase transaction mode)
 const connectionString = process.env.DATABASE_URL
 
 if (!connectionString) {
