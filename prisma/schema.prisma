@@ -1,0 +1,528 @@
+// Deke Sharon AI Agent Ecosystem - Database Schema
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+}
+
+// ============================================
+// LEADS & CONTACTS
+// ============================================
+
+model Lead {
+  id            String    @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String    @unique
+  phone         String?
+  organization  String?
+  source        String?   // website, referral, social, etc.
+  status        LeadStatus @default(NEW)
+  score         Int       @default(0)  // Lead scoring
+
+  // Geographic coordinates for opportunity finder
+  latitude      Float?
+  longitude     Float?
+  lastContactedAt DateTime?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  inquiries     Inquiry[]
+  chatSessions  ChatSession[]
+  bookings      Booking[]
+  orders        Order[]
+  campaignLeads CampaignLead[]
+
+  @@index([email])
+  @@index([status])
+}
+
+enum LeadStatus {
+  NEW
+  CONTACTED
+  QUALIFIED
+  PROPOSAL_SENT
+  NEGOTIATING
+  WON
+  LOST
+  DORMANT
+}
+
+// ============================================
+// INQUIRIES & BOOKINGS
+// ============================================
+
+model Inquiry {
+  id            String      @id @default(cuid())
+  leadId        String
+  lead          Lead        @relation(fields: [leadId], references: [id])
+  serviceType   ServiceType
+  status        InquiryStatus @default(PENDING)
+
+  // Service-specific details (JSON for flexibility)
+  details       Json?
+  message       String?
+
+  // Quote info (from MAESTRO agent)
+  quotedAmount  Float?
+  quotedAt      DateTime?
+  quoteExpiry   DateTime?
+
+  createdAt     DateTime    @default(now())
+  updatedAt     DateTime    @updatedAt
+
+  booking       Booking?
+
+  @@index([leadId])
+  @@index([serviceType])
+  @@index([status])
+}
+
+enum ServiceType {
+  ARRANGEMENT
+  GROUP_COACHING
+  INDIVIDUAL_COACHING
+  WORKSHOP
+  SPEAKING
+  MASTERCLASS
+  CONSULTATION
+}
+
+enum InquiryStatus {
+  PENDING
+  QUOTED
+  ACCEPTED
+  DECLINED
+  EXPIRED
+}
+
+model Booking {
+  id            String        @id @default(cuid())
+  leadId        String
+  lead          Lead          @relation(fields: [leadId], references: [id])
+  inquiryId     String?       @unique
+  inquiry       Inquiry?      @relation(fields: [inquiryId], references: [id])
+
+  serviceType   ServiceType
+  status        BookingStatus @default(PENDING)
+
+  // Scheduling
+  startDate     DateTime?
+  endDate       DateTime?
+  timezone      String?
+  location      String?       // Address or "Virtual"
+
+  // Geographic coordinates for opportunity finder
+  latitude      Float?
+  longitude     Float?
+
+  // Financials
+  amount        Float?
+  depositPaid   Float?
+  balanceDue    Float?
+  paymentStatus PaymentStatus @default(UNPAID)
+
+  // Notes
+  internalNotes String?
+  clientNotes   String?
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  // Relations
+  campaigns     Campaign[]
+
+  @@index([leadId])
+  @@index([status])
+  @@index([startDate])
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  IN_PROGRESS
+  COMPLETED
+  CANCELLED
+  RESCHEDULED
+}
+
+enum PaymentStatus {
+  UNPAID
+  DEPOSIT_PAID
+  PAID_IN_FULL
+  REFUNDED
+  OVERDUE
+}
+
+// ============================================
+// ARRANGEMENTS & ORDERS
+// ============================================
+
+model Order {
+  id              String      @id @default(cuid())
+  leadId          String
+  lead            Lead        @relation(fields: [leadId], references: [id])
+  orderNumber     String      @unique
+  status          OrderStatus @default(PENDING)
+
+  // Arrangement details
+  songTitle       String?
+  songArtist      String?
+  voiceParts      Int?
+  packageTier     String?     // Essential, Professional, Premium
+
+  // Pricing
+  basePrice       Float?
+  rushFee         Float?
+  totalAmount     Float?
+
+  // Delivery
+  dueDate         DateTime?
+  deliveredAt     DateTime?
+  downloadUrl     String?
+
+  // Revisions
+  revisionsUsed   Int         @default(0)
+  revisionsMax    Int         @default(1)
+
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+
+  @@index([leadId])
+  @@index([status])
+  @@index([orderNumber])
+}
+
+enum OrderStatus {
+  PENDING
+  IN_PROGRESS
+  REVIEW
+  REVISION
+  COMPLETED
+  DELIVERED
+  CANCELLED
+}
+
+// ============================================
+// CHAT & CONVERSATIONS (HARMONY Agent)
+// ============================================
+
+model ChatSession {
+  id          String    @id @default(cuid())
+  leadId      String?
+  lead        Lead?     @relation(fields: [leadId], references: [id])
+
+  // Session metadata
+  sessionId   String    @unique  // For anonymous tracking
+  source      String?   // Page URL where chat started
+  userAgent   String?
+  ipAddress   String?
+
+  // Status
+  status      ChatStatus @default(ACTIVE)
+
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+  endedAt     DateTime?
+
+  messages    ChatMessage[]
+
+  @@index([leadId])
+  @@index([sessionId])
+}
+
+enum ChatStatus {
+  ACTIVE
+  IDLE
+  ENDED
+  TRANSFERRED  // Transferred to human
+}
+
+model ChatMessage {
+  id            String      @id @default(cuid())
+  sessionId     String
+  session       ChatSession @relation(fields: [sessionId], references: [id])
+
+  role          String      // user, assistant, system
+  content       String
+
+  // Agent tracking
+  agentId       String?     // Which agent responded
+  toolsUsed     String?     // JSON array of tools/actions taken
+
+  createdAt     DateTime    @default(now())
+
+  @@index([sessionId])
+}
+
+// ============================================
+// CONTENT (SCRIBE Agent)
+// ============================================
+
+model ContentPiece {
+  id            String        @id @default(cuid())
+  type          ContentType
+  title         String
+  content       String
+  excerpt       String?
+
+  // Metadata
+  status        ContentStatus @default(DRAFT)
+  publishedAt   DateTime?
+  scheduledFor  DateTime?
+
+  // SEO
+  slug          String?       @unique
+  metaTitle     String?
+  metaDesc      String?
+
+  // Social
+  socialCopy    Json?         // { twitter, instagram, linkedin, etc. }
+
+  createdAt     DateTime      @default(now())
+  updatedAt     DateTime      @updatedAt
+
+  @@index([type])
+  @@index([status])
+  @@index([slug])
+}
+
+enum ContentType {
+  BLOG_POST
+  SOCIAL_POST
+  EMAIL
+  NEWSLETTER
+  VIDEO_SCRIPT
+  PODCAST_NOTES
+}
+
+enum ContentStatus {
+  DRAFT
+  SCHEDULED
+  PUBLISHED
+  ARCHIVED
+}
+
+// ============================================
+// ANALYTICS (METRICS Agent)
+// ============================================
+
+model AnalyticsEvent {
+  id          String    @id @default(cuid())
+  eventType   String    // page_view, chat_started, booking_completed, etc.
+  eventData   Json?
+
+  // Context
+  leadId      String?
+  sessionId   String?
+  source      String?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([eventType])
+  @@index([leadId])
+  @@index([createdAt])
+}
+
+model RevenueMetric {
+  id            String    @id @default(cuid())
+  period        String    // YYYY-MM format
+  serviceType   ServiceType
+
+  // Metrics
+  inquiries     Int       @default(0)
+  bookings      Int       @default(0)
+  revenue       Float     @default(0)
+  conversionRate Float?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@unique([period, serviceType])
+  @@index([period])
+}
+
+// ============================================
+// AGENT LOGS & MEMORY
+// ============================================
+
+model AgentLog {
+  id          String    @id @default(cuid())
+  agentId     String    // harmony, maestro, tempo, etc.
+  actionType  String
+  input       Json?
+  output      Json?
+  success     Boolean
+  errorMsg    String?
+  durationMs  Int?
+
+  createdAt   DateTime  @default(now())
+
+  @@index([agentId])
+  @@index([actionType])
+  @@index([createdAt])
+}
+
+model AgentMemory {
+  id          String    @id @default(cuid())
+  agentId     String
+  memoryType  String    // preference, context, pattern
+  key         String
+  value       Json
+  importance  Int       @default(5)  // 1-10 scale
+
+  expiresAt   DateTime?
+  createdAt   DateTime  @default(now())
+  updatedAt   DateTime  @updatedAt
+
+  @@unique([agentId, key])
+  @@index([agentId])
+  @@index([memoryType])
+}
+
+// ============================================
+// OPPORTUNITY FINDER - MVP v1.0
+// ============================================
+
+model Campaign {
+  id            String         @id @default(cuid())
+  name          String
+  baseLocation  String         // e.g., "Los Angeles, CA"
+  latitude      Float
+  longitude     Float
+  radius        Float          @default(100) // miles, default 100 per user request
+  status        CampaignStatus @default(DRAFT)
+  startDate     DateTime?
+  endDate       DateTime?
+  createdAt     DateTime       @default(now())
+  updatedAt     DateTime       @updatedAt
+  approvedAt    DateTime?
+  launchedAt    DateTime?
+
+  leads         CampaignLead[]
+  outreachLogs  OutreachLog[]
+
+  // Optional: Link to booking that triggered campaign
+  booking       Booking?       @relation(fields: [bookingId], references: [id])
+  bookingId     String?        @unique
+
+  @@index([status])
+  @@index([startDate])
+}
+
+enum CampaignStatus {
+  DRAFT
+  APPROVED
+  ACTIVE
+  PAUSED
+  COMPLETED
+  CANCELLED
+}
+
+model CampaignLead {
+  id            String              @id @default(cuid())
+  campaign      Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId    String
+  lead          Lead                @relation(fields: [leadId], references: [id])
+  leadId        String
+  score         Int                 @default(50) // 0-100
+  distance      Float               // miles from campaign base location
+  source        LeadSource          // past_client, dormant, similar_org, ai_research
+  status        CampaignLeadStatus  @default(PENDING)
+  createdAt     DateTime            @default(now())
+  updatedAt     DateTime            @updatedAt
+
+  outreachLogs  OutreachLog[]
+
+  @@unique([campaignId, leadId]) // prevent duplicates
+  @@index([campaignId, status])
+  @@index([score])
+}
+
+enum LeadSource {
+  PAST_CLIENT
+  DORMANT
+  SIMILAR_ORG
+  AI_RESEARCH
+  MANUAL_IMPORT
+}
+
+enum CampaignLeadStatus {
+  PENDING
+  CONTACTED
+  OPENED
+  CLICKED
+  RESPONDED
+  BOOKED
+  DECLINED
+  REMOVED
+}
+
+model OutreachLog {
+  id              String          @id @default(cuid())
+  campaignLead    CampaignLead    @relation(fields: [campaignLeadId], references: [id], onDelete: Cascade)
+  campaignLeadId  String
+  campaign        Campaign        @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignId      String
+  channel         OutreachChannel
+  status          OutreachStatus  @default(PENDING)
+  sentAt          DateTime?
+  openedAt        DateTime?
+  clickedAt       DateTime?
+  respondedAt     DateTime?
+  errorMessage    String?
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
+
+  @@index([campaignLeadId, channel])
+  @@index([campaignId, status])
+  @@index([sentAt])
+}
+
+enum OutreachChannel {
+  EMAIL
+  SMS
+  LINKEDIN
+}
+
+enum OutreachStatus {
+  PENDING
+  SENT
+  DELIVERED
+  OPENED
+  CLICKED
+  RESPONDED
+  FAILED
+  BOUNCED
+}
+
+model GeoPreference {
+  id            String   @id @default(cuid())
+  country       String   @unique
+  defaultRadius Float    // miles or km depending on country
+  unit          String   // "miles" or "km"
+  enabled       Boolean  @default(true)
+  createdAt     DateTime @default(now())
+  updatedAt     DateTime @updatedAt
+
+  @@index([country])
+}
+
+model MessageTemplate {
+  id          String          @id @default(cuid())
+  name        String
+  serviceType ServiceType?
+  subject     String?         // for emails
+  body        String
+  channel     OutreachChannel @default(EMAIL)
+  variables   String?         // JSON: ["firstName", "location", "dates", etc.]
+  createdAt   DateTime        @default(now())
+  updatedAt   DateTime        @updatedAt
+
+  @@index([serviceType, channel])
+}
