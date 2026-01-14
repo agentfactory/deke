@@ -1,0 +1,8 @@
+{
+  "permissions": {
+    "allow": [
+      "Skill(commit)",
+      "mcp__grep__searchGitHub"
+    ]
+  }
+}

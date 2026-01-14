@@ -46,3 +46,23 @@ next-env.d.ts
 # prisma database files
 prisma/dev.db
 prisma/dev.db-journal
+
+# Claude Code temp files
+tmpclaude-*-cwd
+nul
+
+# Test artifacts
+test-*.ts
+test-*.js
+verify-*.ts
+
+# Database files
+migration.sql
+*.db-journal
+
+# Logs
+dev-server.log
+
+# Supabase local
+supabase/.branches
+supabase/.temp
