@@ -453,6 +453,11 @@ model CampaignLead {
   createdAt     DateTime            @default(now())
   updatedAt     DateTime            @updatedAt
 
+  // Phase 3: Service Recommendation Engine
+  recommendedServices  String?  // JSON array of service types to pitch
+  recommendationReason String?  // Why these services? (for template variables)
+  recommendationScore  Int?     // 0-15 bonus from recommendations
+
   outreachLogs  OutreachLog[]
 
   @@unique([campaignId, leadId]) // prevent duplicates
@@ -510,6 +515,10 @@ model MessageTemplate {
   createdAt   DateTime        @default(now())
   updatedAt   DateTime        @updatedAt
 
+  // Phase 3: Service Recommendation Engine
+  recommendationContext String?  // "upsell", "cross-sell", "org-specific"
+  targetOrgTypes        String?  // JSON array of OrgType values
+
   @@index([serviceType, channel])
 }
 
@@ -523,4 +532,39 @@ model Suppression {
 
   @@index([email])
   @@index([phone])
+}
+
+// ============================================
+// PHASE 3: SERVICE RECOMMENDATION ENGINE
+// ============================================
+
+model ServiceRecommendation {
+  id                String   @id @default(cuid())
+
+  // Rule definition
+  name              String   // "Workshop → Masterclass", "University → Group Coaching"
+  triggerServiceType String?  // Service that triggers recommendation (null = org-based)
+  recommendedService String  // Service to recommend
+
+  // Organization targeting
+  orgTypes          String?  // JSON array of OrgType values
+  minOrgSize        Int?     // Minimum organization size
+  maxOrgSize        Int?     // Maximum organization size
+
+  // Recommendation strength
+  weight            Float    @default(1.0) // 0.5-2.0, affects scoring
+  priority          Int      @default(5)   // 1-10, higher = more important
+
+  // Messaging
+  messageTemplate   String?  // Custom message template ID
+  pitchPoints       String?  // JSON array of key selling points
+
+  // Metadata
+  active            Boolean  @default(true)
+  createdAt         DateTime @default(now())
+  updatedAt         DateTime @updatedAt
+
+  @@index([triggerServiceType])
+  @@index([recommendedService])
+  @@index([active])
 }

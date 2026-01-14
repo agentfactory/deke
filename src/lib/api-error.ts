@@ -10,6 +10,49 @@ export class ApiError extends Error {
     super(message)
     this.name = 'ApiError'
   }
+
+  // Utility methods for common error responses
+  static badRequest(message: string, code?: string) {
+    return NextResponse.json(
+      { error: message, code },
+      { status: 400 }
+    )
+  }
+
+  static unauthorized(message = 'Unauthorized', code?: string) {
+    return NextResponse.json(
+      { error: message, code },
+      { status: 401 }
+    )
+  }
+
+  static forbidden(message = 'Forbidden', code?: string) {
+    return NextResponse.json(
+      { error: message, code },
+      { status: 403 }
+    )
+  }
+
+  static notFound(message = 'Not found', code?: string) {
+    return NextResponse.json(
+      { error: message, code },
+      { status: 404 }
+    )
+  }
+
+  static conflict(message: string, code?: string) {
+    return NextResponse.json(
+      { error: message, code },
+      { status: 409 }
+    )
+  }
+
+  static internal(message = 'Internal server error', code?: string) {
+    return NextResponse.json(
+      { error: message, code },
+      { status: 500 }
+    )
+  }
 }
 
 export function handleApiError(error: unknown) {

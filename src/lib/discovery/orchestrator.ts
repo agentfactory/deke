@@ -12,6 +12,9 @@ import { discoverSimilarOrgs } from './similar-orgs'
 import { discoverAIResearch } from './ai-research'
 import { calculateScore, calculateScoreStats } from './scorer'
 import { deduplicate, getDeduplicationStats } from './deduplicator'
+import { classifyOrganization } from './org-classifier'
+import { getRecommendations, buildRecommendationReason } from '@/lib/recommendations/engine'
+import { calculateRecommendationBonus } from '@/lib/recommendations/scorer'
 
 export interface DiscoveryResult {
   total: number
@@ -77,10 +80,50 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   // Calculate deduplication statistics
   const deduplicationStats = getDeduplicationStats(originalCount, deduped.length)
 
-  // Score all leads
-  const scored = deduped.map((lead) => ({
+  // Phase 3: Add recommendations to leads
+  // Fetch full lead data with bookings for recommendation matching
+  const leadsWithRecommendations = await Promise.all(
+    deduped.map(async (lead) => {
+      // Fetch full lead data including bookings
+      const fullLead = await prisma.lead.findUnique({
+        where: { id: lead.id },
+        include: {
+          bookings: {
+            select: { serviceType: true },
+            where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+          },
+        },
+      })
+
+      if (!fullLead) {
+        return { ...lead, recommendations: [], recommendationBonus: 0 }
+      }
+
+      // Classify organization type
+      const orgType = classifyOrganization(fullLead.organization || '')
+
+      // Get service recommendations
+      const recommendations = await getRecommendations({
+        lead: fullLead,
+        organizationType: orgType,
+        campaignBooking: campaign.booking,
+      })
+
+      // Calculate recommendation score bonus
+      const recommendationBonus = calculateRecommendationBonus(recommendations)
+
+      return {
+        ...lead,
+        recommendations,
+        recommendationBonus,
+      }
+    })
+  )
+
+  // Score all leads (now includes recommendation bonus)
+  const scored = leadsWithRecommendations.map((lead) => ({
     ...lead,
-    score: calculateScore(lead, campaign),
+    score: calculateScore(lead, campaign) + (lead.recommendationBonus || 0),
   }))
 
   // Calculate score statistics
@@ -117,6 +160,14 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
           distance: lead.distance,
           source: lead.source,
           status: 'PENDING',
+          // Phase 3: Store recommendations
+          recommendedServices: lead.recommendations && lead.recommendations.length > 0
+            ? JSON.stringify(lead.recommendations.map((r) => r.serviceType))
+            : null,
+          recommendationReason: lead.recommendations && lead.recommendations.length > 0
+            ? buildRecommendationReason(lead.recommendations)
+            : null,
+          recommendationScore: lead.recommendationBonus || null,
         })),
       })
     }
