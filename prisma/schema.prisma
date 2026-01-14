@@ -5,12 +5,16 @@ generator client {
 }
 
 datasource db {
-  provider = "sqlite"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
+  directUrl = env("DIRECT_URL")
 }
 
 // Note: DATABASE_URL is loaded from .env automatically in Prisma 7
-// Make sure .env contains: DATABASE_URL="file:./prisma/dev.db"
+// For Supabase PostgreSQL:
+// - DATABASE_URL: Transaction mode (pooled) for application queries
+// - DIRECT_URL: Session mode (direct) for migrations
+// Example: postgresql://postgres:[PASSWORD]@db.[PROJECT-REF].supabase.co:5432/postgres
 
 // ============================================
 // LEADS & CONTACTS
