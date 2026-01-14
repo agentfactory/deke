@@ -10,9 +10,11 @@
  */
 
 import { BaseAgent } from '../base-agent';
+import { eventBus } from '@/lib/event-bus';
 import type {
   AgentConfig,
   AgentResponse,
+  AgentEvent,
   LeadQualification,
   SuggestedAction,
 } from '../types';
@@ -74,6 +76,7 @@ export class HarmonyAgent extends BaseAgent {
   constructor() {
     super(HARMONY_CONFIG);
     this.registerTools();
+    this.initializeHandlers();
   }
 
   private registerTools(): void {
@@ -129,6 +132,29 @@ export class HarmonyAgent extends BaseAgent {
         await this.emitEvent('handoff', params, params.targetAgent as string);
         return { success: true };
       },
+    });
+  }
+
+  /**
+   * Subscribe to events this agent should handle
+   */
+  private initializeHandlers(): void {
+    // Subscribe to acknowledgments from other agents
+    eventBus.subscribe('handoff_acknowledged', async (event: AgentEvent) => {
+      if (event.targetAgent === 'harmony') {
+        console.log('[HARMONY] Handoff acknowledged by:', event.sourceAgent);
+        console.log('[HARMONY] Acknowledgment details:', event.payload);
+        // TODO Phase 5: Update UI or continue conversation flow
+      }
+    });
+
+    // Subscribe to discovery results from SCOUT
+    eventBus.subscribe('discovery_completed', async (event: AgentEvent) => {
+      if (event.targetAgent === 'harmony') {
+        console.log('[HARMONY] Received discovery results from SCOUT');
+        console.log('[HARMONY] Results:', event.payload);
+        // TODO Phase 5: Notify user of opportunities found
+      }
     });
   }
 

@@ -4,7 +4,9 @@ const globalForPrisma = globalThis as unknown as {
   prisma: PrismaClient | undefined
 }
 
-// Standard Prisma 5 initialization for SQLite (no adapter needed)
-export const prisma = globalForPrisma.prisma ?? new PrismaClient()
+// PostgreSQL connection for Supabase with proper logging
+export const prisma = globalForPrisma.prisma ?? new PrismaClient({
+  log: process.env.NODE_ENV === 'development' ? ['query', 'error', 'warn'] : ['error'],
+})
 
 if (process.env.NODE_ENV !== 'production') globalForPrisma.prisma = prisma

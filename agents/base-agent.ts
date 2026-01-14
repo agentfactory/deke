@@ -11,6 +11,7 @@ import type {
   ToolResult,
   AgentEvent,
 } from './types';
+import { eventBus } from '@/lib/event-bus';
 
 export abstract class BaseAgent {
   protected config: AgentConfig;
@@ -114,8 +115,15 @@ export abstract class BaseAgent {
       timestamp: new Date(),
     };
 
-    // TODO: Integrate with event bus
-    console.log('Agent event:', event);
+    try {
+      await eventBus.emit(event);
+    } catch (error) {
+      // Graceful failure - log but don't crash agent
+      console.error(`[${this.config.id}] Failed to emit event:`, {
+        eventType,
+        error: error instanceof Error ? error.message : 'Unknown',
+      });
+    }
   }
 
   /**
