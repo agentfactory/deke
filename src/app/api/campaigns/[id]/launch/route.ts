@@ -143,6 +143,19 @@ export async function POST(
     const sent = results.filter(r => r.success).length
     const failed = results.filter(r => !r.success).length
 
+    // Phase 6: Schedule follow-ups for successful sends
+    const { scheduleFollowUp } = await import('@/lib/follow-up/scheduler')
+    let followUpsScheduled = 0
+    for (const result of results.filter(r => r.success)) {
+      const scheduleResult = await scheduleFollowUp({
+        campaignLeadId: result.jobId,
+        currentFollowUpCount: 0, // Initial send
+      })
+      if (scheduleResult.scheduled) {
+        followUpsScheduled++
+      }
+    }
+
     // Update campaign status to ACTIVE and set launchedAt
     const updatedCampaign = await prisma.campaign.update({
       where: { id },
@@ -168,6 +181,7 @@ export async function POST(
         sent,
         failed,
         channel,
+        followUpsScheduled, // Phase 6: Count of scheduled follow-ups
       },
       results,
     })

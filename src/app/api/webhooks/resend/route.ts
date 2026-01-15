@@ -81,6 +81,10 @@ export async function POST(request: NextRequest) {
           where: { id: outreachLog.campaignLeadId },
           data: { status: 'CLICKED' },
         })
+
+        // Phase 6: Auto-pause follow-ups on click (high intent)
+        const { autoPauseFollowUp } = await import('@/lib/follow-up/scheduler')
+        await autoPauseFollowUp(outreachLog.campaignLeadId, 'clicked')
         break
 
       case 'email.bounced':

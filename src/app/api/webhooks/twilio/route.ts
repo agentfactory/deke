@@ -101,6 +101,10 @@ export async function POST(request: NextRequest) {
             where: { id: outreachLog.campaignLeadId },
             data: { status: 'RESPONDED' },
           })
+
+          // Phase 6: Auto-pause follow-ups on response
+          const { autoPauseFollowUp } = await import('@/lib/follow-up/scheduler')
+          await autoPauseFollowUp(outreachLog.campaignLeadId, 'responded')
         }
       }
 

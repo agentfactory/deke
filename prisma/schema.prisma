@@ -458,11 +458,19 @@ model CampaignLead {
   recommendationReason String?  // Why these services? (for template variables)
   recommendationScore  Int?     // 0-15 bonus from recommendations
 
+  // Phase 6: Follow-up automation
+  scheduledFollowUpDate  DateTime?  // When next follow-up should be sent
+  followUpCount          Int        @default(0)  // How many follow-ups sent (0, 1, 2)
+  followUpsPaused        Boolean    @default(false)  // Auto or manual pause
+  followUpPauseReason    String?    // "clicked", "responded", "booked", "manual"
+  followUpPausedAt       DateTime?  // When paused
+
   outreachLogs  OutreachLog[]
 
   @@unique([campaignId, leadId]) // prevent duplicates
   @@index([campaignId, status])
   @@index([score])
+  @@index([scheduledFollowUpDate, followUpsPaused])  // For cron queries
 }
 
 // Removed enum LeadSource - now using String with validation comments
