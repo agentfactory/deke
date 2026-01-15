@@ -3,6 +3,9 @@ import { CampaignsClient } from './campaigns-client';
 import { mapCampaignsToComponent } from '@/lib/mappers/campaign';
 import type { Campaign } from '@/components/campaigns/campaign-table';
 
+// Disable cache to ensure real-time updates (e.g., after delete operations)
+export const revalidate = 0;
+
 export default async function CampaignsPage() {
   let campaigns: Campaign[] = [];
 

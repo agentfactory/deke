@@ -127,6 +127,78 @@ export default function CampaignDetailPage({
     }
   };
 
+  const handleLaunch = async () => {
+    if (!campaign) return;
+
+    try {
+      setShowLaunchConfirm(false);
+
+      const response = await fetch(`/api/campaigns/${campaign.id}/launch`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          channel: "EMAIL" // Default to email; could make this configurable
+        })
+      });
+
+      if (!response.ok) {
+        const error = await response.json();
+        throw new Error(error.error || "Failed to launch campaign");
+      }
+
+      const result = await response.json();
+
+      // Show success message with details
+      alert(`Campaign launched! Sent: ${result.sent}, Failed: ${result.failed}`);
+
+      // Refresh campaign data to show new status and outreach logs
+      await fetchCampaign();
+    } catch (err) {
+      console.error("Error launching campaign:", err);
+      alert(err instanceof Error ? err.message : "Failed to launch campaign");
+    }
+  };
+
+  const handleDiscoverLeads = async () => {
+    if (!campaign) return;
+
+    try {
+      const response = await fetch(`/api/campaigns/${campaign.id}/discover`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" }
+      });
+
+      if (!response.ok) {
+        throw new Error("Failed to discover leads");
+      }
+
+      const result = await response.json();
+      alert(`Discovered ${result.newLeadsCount} new leads!`);
+      await fetchCampaign(); // Refresh to show new leads
+    } catch (err) {
+      console.error("Error discovering leads:", err);
+      alert("Failed to discover leads");
+    }
+  };
+
+  const handleSendOutreach = () => {
+    // For now, show the launch confirmation dialog
+    // TODO: In Phase 2, this will open lead selection dialog for targeted outreach
+    if (campaign?.status === "APPROVED") {
+      setShowLaunchConfirm(true);
+    } else if (campaign?.status === "ACTIVE") {
+      alert("Campaign already launched. Use lead selection (coming in Phase 2) for targeted follow-ups.");
+    } else {
+      alert("Campaign must be approved before launching outreach.");
+    }
+  };
+
+  const handleViewAnalytics = () => {
+    // Navigate to analytics page (when implemented)
+    // For now, show a placeholder message
+    alert("Analytics dashboard coming soon! Will show open rates, click rates, and conversion metrics.");
+  };
+
   const handleDelete = async () => {
     if (!campaign) return;
 
@@ -427,21 +499,32 @@ export default function CampaignDetailPage({
             <CardTitle>Quick Actions</CardTitle>
           </CardHeader>
           <CardContent className="space-y-3">
-            <Button className="w-full" variant="outline" disabled>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleSendOutreach}
+              disabled={!campaign || campaign.status === "DRAFT"}
+            >
               <Mail className="h-4 w-4 mr-2" />
               Send Outreach Emails
             </Button>
-            <Button className="w-full" variant="outline" disabled>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleDiscoverLeads}
+              disabled={!campaign}
+            >
               <Target className="h-4 w-4 mr-2" />
               Discover More Leads
             </Button>
-            <Button className="w-full" variant="outline" disabled>
+            <Button
+              className="w-full"
+              variant="outline"
+              onClick={handleViewAnalytics}
+            >
               <TrendingUp className="h-4 w-4 mr-2" />
               View Analytics
             </Button>
-            <p className="text-xs text-muted-foreground text-center pt-2">
-              These features are coming soon
-            </p>
           </CardContent>
         </Card>
       </div>
@@ -541,10 +624,7 @@ export default function CampaignDetailPage({
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                handleStatusChange("ACTIVE");
-                setShowLaunchConfirm(false);
-              }}
+              onClick={handleLaunch}
             >
               Confirm Launch
             </Button>
