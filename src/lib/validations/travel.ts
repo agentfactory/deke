@@ -15,8 +15,8 @@ export const paymentResponsibilitySchema = z.enum([
   'SPLIT'
 ])
 
-// Create travel expense schema
-export const createTravelExpenseSchema = z.object({
+// Base travel expense schema (without refinements)
+const baseTravelExpenseSchema = z.object({
   bookingId: z.string().min(1, 'Booking ID is required'),
 
   // Flight details
@@ -45,7 +45,10 @@ export const createTravelExpenseSchema = z.object({
   paymentResponsibility: paymentResponsibilitySchema.default('CLIENT'),
   clientPayPercent: z.number().min(0).max(100).optional().nullable(),
   dekePayPercent: z.number().min(0).max(100).optional().nullable(),
-}).refine((data) => {
+})
+
+// Refinement function for payment responsibility validation
+const validatePaymentResponsibility = (data: any) => {
   // If payment is SPLIT, percentages must sum to 100
   if (data.paymentResponsibility === 'SPLIT') {
     const clientPay = data.clientPayPercent ?? 0
@@ -53,13 +56,28 @@ export const createTravelExpenseSchema = z.object({
     return clientPay + dekePay === 100
   }
   return true
-}, {
-  message: "Split percentages must sum to 100%",
-  path: ["clientPayPercent"]
-})
+}
 
-// Update travel expense schema (partial)
-export const updateTravelExpenseSchema = createTravelExpenseSchema.partial().omit({ bookingId: true })
+// Create travel expense schema (with refinement)
+export const createTravelExpenseSchema = baseTravelExpenseSchema.refine(
+  validatePaymentResponsibility,
+  {
+    message: "Split percentages must sum to 100%",
+    path: ["clientPayPercent"]
+  }
+)
+
+// Update travel expense schema (partial of base, then add refinement)
+export const updateTravelExpenseSchema = baseTravelExpenseSchema
+  .partial()
+  .omit({ bookingId: true })
+  .refine(
+    validatePaymentResponsibility,
+    {
+      message: "Split percentages must sum to 100%",
+      path: ["clientPayPercent"]
+    }
+  )
 
 // Type exports
 export type CreateTravelExpenseInput = z.infer<typeof createTravelExpenseSchema>
