@@ -46,10 +46,19 @@ export async function GET(
         orders: {
           select: {
             id: true,
-            title: true,
-            description: true,
+            orderNumber: true,
+            songTitle: true,
+            songArtist: true,
+            voiceParts: true,
+            packageTier: true,
             status: true,
-            amount: true,
+            basePrice: true,
+            rushFee: true,
+            totalAmount: true,
+            dueDate: true,
+            deliveredAt: true,
+            revisionsUsed: true,
+            revisionsMax: true,
             createdAt: true,
           },
           orderBy: {
