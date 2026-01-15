@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, Suspense } from "react";
+import { useState, useEffect, Suspense } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import {
   Clock,
   User,
   Loader2,
+  Sparkles,
 } from "lucide-react";
 
 const services = [
@@ -70,14 +71,28 @@ const services = [
 
 type Step = "service" | "details" | "contact" | "confirm";
 
+interface LeadData {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string | null;
+  organization: string | null;
+  source: string | null;
+  score: number;
+}
+
 function BookingContent() {
   const searchParams = useSearchParams();
   const initialService = searchParams.get("service") || "";
+  const leadId = searchParams.get("leadId");
 
   const [step, setStep] = useState<Step>(initialService ? "details" : "service");
   const [selectedService, setSelectedService] = useState(initialService);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [leadData, setLeadData] = useState<LeadData | null>(null);
+  const [isLoadingLead, setIsLoadingLead] = useState(false);
   const [formData, setFormData] = useState({
     // Contact Info
     firstName: "",
@@ -95,6 +110,37 @@ function BookingContent() {
     eventType: "",
     message: "",
   });
+
+  // Fetch lead data if leadId is provided
+  useEffect(() => {
+    if (leadId) {
+      setIsLoadingLead(true);
+      fetch(`/api/leads/${leadId}`)
+        .then((res) => {
+          if (!res.ok) throw new Error('Lead not found');
+          return res.json();
+        })
+        .then((lead: LeadData) => {
+          setLeadData(lead);
+          // Pre-populate form fields
+          setFormData((prev) => ({
+            ...prev,
+            firstName: lead.firstName || "",
+            lastName: lead.lastName || "",
+            email: lead.email || "",
+            phone: lead.phone || "",
+            organization: lead.organization || "",
+          }));
+        })
+        .catch((err) => {
+          console.error('Failed to load lead:', err);
+          setError('Failed to load lead information');
+        })
+        .finally(() => {
+          setIsLoadingLead(false);
+        });
+    }
+  }, [leadId]);
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId);
@@ -461,6 +507,22 @@ function BookingContent() {
               <p className="text-muted-foreground">
                 How can I reach you?
               </p>
+              {leadData && (
+                <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
+                  <Sparkles className="h-4 w-4" />
+                  Discovered Lead
+                  {leadData.source && (
+                    <span className="text-xs opacity-75">
+                      • from {leadData.source.replace('_', ' ')}
+                    </span>
+                  )}
+                  {leadData.score > 0 && (
+                    <Badge variant="secondary" className="ml-1 text-xs">
+                      Score: {leadData.score}
+                    </Badge>
+                  )}
+                </div>
+              )}
             </div>
 
             <Card>
