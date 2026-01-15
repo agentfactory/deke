@@ -138,9 +138,9 @@ export async function PATCH(
         organization: validatedData.organization,
         source: validatedData.source,
         status: validatedData.status,
-        score: validatedData.score,
-        latitude: validatedData.latitude,
-        longitude: validatedData.longitude,
+        score: validatedData.score ?? undefined,
+        latitude: validatedData.latitude ?? undefined,
+        longitude: validatedData.longitude ?? undefined,
         lastContactedAt: new Date(),
       },
       include: {
