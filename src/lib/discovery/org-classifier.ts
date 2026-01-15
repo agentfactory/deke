@@ -14,6 +14,11 @@ export type OrgType =
   | 'THEATRE'
   | 'THEATER'
   | 'CHOIR'
+  | 'BARBERSHOP'
+  | 'A_CAPPELLA_GROUP'
+  | 'GOSPEL_CHOIR'
+  | 'COMMUNITY_CHORUS'
+  | 'YOUTH_CHOIR'
   | 'CHURCH'
   | 'SYNAGOGUE'
   | 'TEMPLE'
@@ -65,7 +70,32 @@ const ORG_PATTERNS: OrgPattern[] = [
     priority: 8,
   },
 
-  // Music and arts institutions
+  // Music and arts institutions (high priority for targeted music orgs)
+  {
+    type: 'BARBERSHOP',
+    keywords: ['barbershop', 'sweet adelines', 'sai', 'harmony inc', 'harmony incorporated'],
+    priority: 12,
+  },
+  {
+    type: 'A_CAPPELLA_GROUP',
+    keywords: ['a cappella', 'acappella', 'a-cappella', 'casa'],
+    priority: 11,
+  },
+  {
+    type: 'GOSPEL_CHOIR',
+    keywords: ['gospel choir', 'gospel singers', 'gospel ensemble'],
+    priority: 11,
+  },
+  {
+    type: 'YOUTH_CHOIR',
+    keywords: ['youth choir', 'children choir', 'children\'s choir', 'junior choir', 'student choir'],
+    priority: 10,
+  },
+  {
+    type: 'COMMUNITY_CHORUS',
+    keywords: ['community chorus', 'community choir', 'civic chorus'],
+    priority: 10,
+  },
   {
     type: 'CONSERVATORY',
     keywords: ['conservatory', 'conservatoire'],
@@ -95,8 +125,8 @@ const ORG_PATTERNS: OrgPattern[] = [
   },
   {
     type: 'CHOIR',
-    keywords: ['choir', 'chorale', 'chorus', 'singers', 'vocal ensemble', 'a cappella'],
-    priority: 7,
+    keywords: ['choir', 'chorale', 'chorus', 'singers', 'vocal ensemble'],
+    priority: 9,
   },
   {
     type: 'ARTS_CENTER',

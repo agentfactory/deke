@@ -6,7 +6,10 @@
  * - Geographic proximity (closer = better)
  * - Recency of last contact
  * - Relationship strength (booking count)
+ * - Music relevance (music-specific organizations get bonus points)
  */
+
+import type { OrgType } from './org-classifier'
 
 interface Lead {
   source: 'PAST_CLIENT' | 'DORMANT' | 'SIMILAR_ORG' | 'AI_RESEARCH'
@@ -14,10 +17,49 @@ interface Lead {
   lastContactedAt?: Date | null
   bookings?: Array<{ id: string }> | null
   inquiries?: Array<{ id: string }> | null
+  organization?: string | null
+  orgType?: OrgType | null
 }
 
 interface Campaign {
   radius: number
+}
+
+/**
+ * Calculate music relevance bonus for a lead
+ *
+ * Music-specific organizations get bonus points to prioritize them
+ * in lead discovery and outreach.
+ *
+ * @param lead - The discovered lead
+ * @returns Music bonus score (0-15 points)
+ */
+function calculateMusicBonus(lead: Lead): number {
+  // High-priority music organization types (15 points)
+  const musicOrgTypes: OrgType[] = [
+    'BARBERSHOP',
+    'A_CAPPELLA_GROUP',
+    'GOSPEL_CHOIR',
+    'COMMUNITY_CHORUS',
+    'YOUTH_CHOIR',
+    'CHOIR',
+    'MUSIC_SCHOOL',
+    'CONSERVATORY',
+  ]
+
+  if (lead.orgType && musicOrgTypes.includes(lead.orgType)) {
+    return 15
+  }
+
+  // Music keywords in organization name (10 points)
+  if (lead.organization) {
+    const name = lead.organization.toLowerCase()
+    if (/choir|chorus|barbershop|a\s?cappella|harmony|vocal|singers/i.test(name)) {
+      return 10
+    }
+  }
+
+  return 0
 }
 
 /**
@@ -76,6 +118,10 @@ export function calculateScore(lead: Lead, campaign: Campaign): number {
   } else if (lead.inquiries?.length) {
     score += 1 // Had inquiry but no booking - some interest
   }
+
+  // 5. Music relevance bonus (0-15 points)
+  // Music-specific organizations get prioritized for vocal coaching/workshops
+  score += calculateMusicBonus(lead)
 
   // Clamp score to 0-100 range
   return Math.min(100, Math.max(0, score))

@@ -2,8 +2,8 @@
  * AI Research Discovery (Google Places API)
  *
  * Discovers new leads by scraping geographic data from Google Places API.
- * Finds schools, universities, churches, event venues, and organizations
- * within the campaign radius.
+ * Focuses on music-specific organizations: choirs, barbershop groups,
+ * a cappella ensembles, and youth music education programs.
  */
 
 import { prisma } from '@/lib/db'
@@ -29,26 +29,80 @@ interface DiscoveredLead {
   distance: number
 }
 
-// Organization types to search for (Google Places types)
-const PLACE_TYPES = [
-  'school',
-  'university',
-  'secondary_school',
-  'primary_school',
-  'church',
-  'synagogue',
-  'mosque',
-  'hindu_temple',
-  'place_of_worship',
-  'performing_arts_theater',
-  'art_gallery',
-  'museum',
-  'community_center',
-  'event_venue',
-  'convention_center',
-  'night_club',
-  'concert_hall',
+// Music-specific keywords for targeted search
+// Uses Text Search API for more precise matching than generic place types
+const MUSIC_KEYWORDS = [
+  // Vocal music groups
+  'choir',
+  'chorus',
+  'barbershop quartet',
+  'Sweet Adelines',
+  'Harmony Inc',
+  'CASA a cappella',
+  'a cappella group',
+  'gospel choir',
+  'community chorus',
+
+  // Youth music education
+  'high school choir',
+  'middle school choir',
+  'music school',
+  'conservatory',
+  'youth choir',
 ]
+
+/**
+ * Calculate music relevance score for a place
+ *
+ * Higher scores indicate stronger music focus and better lead quality
+ *
+ * @param place - Google Place result
+ * @returns Music relevance score (0-35 points)
+ */
+function calculateMusicRelevance(place: any): number {
+  let score = 0
+  const name = (place.name || '').toLowerCase()
+
+  // +20 pts: General music keywords in name
+  if (/\bchoir\b|\bchorus\b|\bsingers?\b|\bvocal\b|\bharmony\b|\bbarbershop\b/i.test(name)) {
+    score += 20
+  }
+
+  // +15 pts: Specific music organizations (high-value targets)
+  if (/barbershop|sweet adelines|sai|harmony inc|casa|a\s?cappella/i.test(name)) {
+    score += 15
+  }
+
+  // +15 pts: Music education institutions
+  if (/music\s+school|conservatory|academy.*music|music.*academy/i.test(name)) {
+    score += 15
+  }
+
+  // +10 pts: Youth music programs
+  if (/youth.*choir|children.*choir|student.*choir|school.*choir/i.test(name)) {
+    score += 10
+  }
+
+  return score
+}
+
+/**
+ * Calculate proximity bonus based on distance from campaign center
+ *
+ * Closer organizations get higher scores
+ *
+ * @param distance - Distance in miles
+ * @param maxRadius - Campaign radius in miles
+ * @returns Proximity score (0-15 points)
+ */
+function calculateProximityBonus(distance: number, maxRadius: number): number {
+  const percentage = distance / maxRadius
+
+  if (percentage <= 0.25) return 15 // Inner 25%
+  if (percentage <= 0.50) return 10 // Inner 50%
+  if (percentage <= 0.75) return 5  // Inner 75%
+  return 0 // Outer ring
+}
 
 /**
  * Search Google Places API for organizations in the campaign radius
@@ -71,27 +125,62 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
     // Convert radius from miles to meters (Places API uses meters)
     const radiusMeters = campaign.radius * 1609.34
 
-    // Search for each place type
-    for (const placeType of PLACE_TYPES) {
+    // Search for each music keyword using Text Search API
+    for (const keyword of MUSIC_KEYWORDS) {
       try {
-        const places = await searchPlaces(
+        const places = await searchPlacesByKeyword(
           campaign.latitude,
           campaign.longitude,
+          campaign.baseLocation,
           radiusMeters,
-          placeType,
+          keyword,
           apiKey
         )
         allPlaces.push(...places)
       } catch (error) {
-        console.error(`Error searching for ${placeType}:`, error)
-        // Continue with other types
+        console.error(`Error searching for "${keyword}":`, error)
+        // Continue with other keywords
       }
     }
 
     console.log(`AI Research: Found ${allPlaces.length} raw places from Google`)
 
+    // Score each place by music relevance + proximity
+    const scoredPlaces = allPlaces.map((place) => {
+      const distance = haversineDistance(
+        campaign.latitude,
+        campaign.longitude,
+        place.geometry.location.lat,
+        place.geometry.location.lng
+      )
+
+      return {
+        ...place,
+        musicScore: calculateMusicRelevance(place),
+        proximityScore: calculateProximityBonus(distance, campaign.radius),
+        distance,
+      }
+    })
+
+    // Filter: ONLY organizations with music relevance (score > 0)
+    const musicOrgs = scoredPlaces.filter((p) => p.musicScore > 0)
+
+    console.log(
+      `AI Research: ${musicOrgs.length} music-relevant organizations (filtered from ${allPlaces.length})`
+    )
+
+    // Sort by combined score (music relevance + proximity)
+    const sorted = musicOrgs.sort(
+      (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
+    )
+
+    // LIMIT TO TOP 20 highest-quality leads
+    const top20 = sorted.slice(0, 20)
+
+    console.log(`AI Research: Top 20 music organizations selected`)
+
     // Batch convert places to leads and CREATE them in database
-    const discovered = await placesToLeadsBatch(allPlaces, campaign)
+    const discovered = await placesToLeadsBatch(top20, campaign)
 
     // Deduplicate by organization name
     const uniqueLeads = deduplicateByOrganization(discovered)
@@ -111,21 +200,29 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
 }
 
 /**
- * Search Google Places API for a specific place type
+ * Search Google Places API using keyword-based text search
  *
- * Uses Nearby Search endpoint: https://developers.google.com/maps/documentation/places/web-service/search-nearby
+ * Uses Text Search endpoint: https://developers.google.com/maps/documentation/places/web-service/search-text
+ *
+ * This provides more precise targeting than generic place types,
+ * allowing us to search for "choir" or "barbershop quartet" specifically
  */
-async function searchPlaces(
+async function searchPlacesByKeyword(
   lat: number,
   lng: number,
+  location: string,
   radius: number,
-  type: string,
+  keyword: string,
   apiKey: string
 ): Promise<any[]> {
-  const url = new URL('https://maps.googleapis.com/maps/api/place/nearbysearch/json')
+  const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json')
+
+  // Construct query: "choir in Ottawa" or "barbershop quartet in Ottawa"
+  const query = `${keyword} in ${location}`
+
+  url.searchParams.set('query', query)
   url.searchParams.set('location', `${lat},${lng}`)
   url.searchParams.set('radius', radius.toString())
-  url.searchParams.set('type', type)
   url.searchParams.set('key', apiKey)
 
   const response = await fetch(url.toString())
