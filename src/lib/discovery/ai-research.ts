@@ -105,6 +105,74 @@ function calculateProximityBonus(distance: number, maxRadius: number): number {
 }
 
 /**
+ * Deduplicate places by Google's place_id
+ *
+ * When searching multiple keywords, the same place can appear multiple times.
+ * This function ensures we only keep one instance of each unique place.
+ *
+ * @param places - Array of places (potentially with duplicates)
+ * @returns Deduplicated array of places
+ */
+function deduplicateByPlaceId(places: any[]): any[] {
+  const placeMap = new Map<string, any>()
+
+  for (const place of places) {
+    const placeId = place.place_id
+    if (!placeId) continue
+
+    // Keep first occurrence (all data is the same for same place_id)
+    if (!placeMap.has(placeId)) {
+      placeMap.set(placeId, place)
+    }
+  }
+
+  return Array.from(placeMap.values())
+}
+
+/**
+ * Fetch additional contact details from Google Places Details API
+ *
+ * Gets real phone numbers and website URLs that aren't available
+ * in the Text Search API response.
+ *
+ * @param placeId - Google Place ID
+ * @param apiKey - Google Places API key
+ * @returns Phone number and website (if available)
+ */
+async function fetchPlaceDetails(
+  placeId: string,
+  apiKey: string
+): Promise<{ phone: string | null; website: string | null }> {
+  try {
+    const url = new URL('https://maps.googleapis.com/maps/api/place/details/json')
+    url.searchParams.set('place_id', placeId)
+    url.searchParams.set('fields', 'formatted_phone_number,website')
+    url.searchParams.set('key', apiKey)
+
+    const response = await fetch(url.toString())
+
+    if (!response.ok) {
+      console.error(`Details API error: ${response.statusText}`)
+      return { phone: null, website: null }
+    }
+
+    const data = await response.json()
+
+    if (data.status === 'OK' && data.result) {
+      return {
+        phone: data.result.formatted_phone_number || null,
+        website: data.result.website || null,
+      }
+    }
+
+    return { phone: null, website: null }
+  } catch (error) {
+    console.error(`Failed to fetch details for place ${placeId}:`, error)
+    return { phone: null, website: null }
+  }
+}
+
+/**
  * Search Google Places API for organizations in the campaign radius
  *
  * @param campaign - Campaign with location and radius
@@ -145,8 +213,15 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
 
     console.log(`AI Research: Found ${allPlaces.length} raw places from Google`)
 
-    // Score each place by music relevance + proximity
-    const scoredPlaces = allPlaces.map((place) => {
+    // CRITICAL: Deduplicate by place_id FIRST (same place appears in multiple keyword searches)
+    const uniquePlaces = deduplicateByPlaceId(allPlaces)
+
+    console.log(
+      `AI Research: ${uniquePlaces.length} unique places (removed ${allPlaces.length - uniquePlaces.length} duplicates)`
+    )
+
+    // Score each UNIQUE place by music relevance + proximity
+    const scoredPlaces = uniquePlaces.map((place) => {
       const distance = haversineDistance(
         campaign.latitude,
         campaign.longitude,
@@ -166,7 +241,7 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
     const musicOrgs = scoredPlaces.filter((p) => p.musicScore > 0)
 
     console.log(
-      `AI Research: ${musicOrgs.length} music-relevant organizations (filtered from ${allPlaces.length})`
+      `AI Research: ${musicOrgs.length} music-relevant organizations (filtered from ${uniquePlaces.length})`
     )
 
     // Sort by combined score (music relevance + proximity)
@@ -179,8 +254,24 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
 
     console.log(`AI Research: Top 20 music organizations selected`)
 
+    // Enrich top 20 with REAL contact information from Details API
+    console.log('AI Research: Fetching real contact details (phone, website)...')
+
+    const enrichedPlaces = await Promise.all(
+      top20.map(async (place) => {
+        const details = await fetchPlaceDetails(place.place_id, apiKey)
+        return {
+          ...place,
+          phone: details.phone,
+          website: details.website,
+        }
+      })
+    )
+
+    console.log('AI Research: Contact details enriched')
+
     // Batch convert places to leads and CREATE them in database
-    const discovered = await placesToLeadsBatch(top20, campaign)
+    const discovered = await placesToLeadsBatch(enrichedPlaces, campaign)
 
     // Deduplicate by organization name
     const uniqueLeads = deduplicateByOrganization(discovered)
@@ -307,16 +398,16 @@ async function placesToLeadsBatch(places: any[], campaign: Campaign): Promise<Di
         distance,
       })
     } else {
-      // Generate synthetic contact
+      // Generate contact with REAL data from Details API (or synthetic fallback)
       const firstName = 'Contact'
       const lastName = `at ${organization}`
-      const email = generateOrgEmail(organization)
+      const email = generateContactEmail(organization, place.website || null)
 
       leads.push({
         firstName,
         lastName,
         email,
-        phone: null,
+        phone: place.phone || null, // ← Use REAL phone from Details API
         organization,
         source: 'AI_RESEARCH',
         latitude: place.geometry.location.lat,
@@ -408,6 +499,35 @@ function generateOrgEmail(organization: string): string {
     .substring(0, 50) // Limit length
 
   return `contact@${domain}.com`
+}
+
+/**
+ * Generate contact email using real website domain if available
+ *
+ * Uses actual website domain for more realistic emails (info@realwebsite.org)
+ * Falls back to synthetic email if no website available
+ *
+ * @param organization - Organization name
+ * @param website - Website URL from Places Details API (if available)
+ * @returns Email address
+ */
+function generateContactEmail(organization: string, website: string | null): string {
+  if (website) {
+    try {
+      // Extract domain from website URL
+      const url = new URL(website)
+      const domain = url.hostname.replace(/^www\./, '') // Remove www. prefix
+
+      // Use common email prefixes for organizations
+      return `info@${domain}`
+    } catch (error) {
+      // Invalid URL, fall back to synthetic email
+      console.warn(`Invalid website URL for ${organization}: ${website}`)
+    }
+  }
+
+  // Fallback to synthetic email based on org name
+  return generateOrgEmail(organization)
 }
 
 /**
