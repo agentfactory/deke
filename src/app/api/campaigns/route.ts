@@ -15,10 +15,21 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData: CreateCampaignInput = createCampaignSchema.parse(body)
 
+    // Auto-populate location from booking if bookingId provided
+    let baseLocation = validatedData.baseLocation
+    let latitude = validatedData.latitude
+    let longitude = validatedData.longitude
+
     // Check if booking exists (if bookingId provided)
     if (validatedData.bookingId) {
       const booking = await prisma.booking.findUnique({
-        where: { id: validatedData.bookingId }
+        where: { id: validatedData.bookingId },
+        select: {
+          id: true,
+          location: true,
+          latitude: true,
+          longitude: true,
+        }
       })
 
       if (!booking) {
@@ -33,15 +44,26 @@ export async function POST(request: NextRequest) {
       if (existingCampaign) {
         throw new ApiError(400, 'Campaign already exists for this booking', 'CAMPAIGN_EXISTS')
       }
+
+      // Auto-populate location from booking if not provided in request
+      if (!baseLocation && booking.location) {
+        baseLocation = booking.location
+      }
+      if (!latitude && booking.latitude) {
+        latitude = booking.latitude
+      }
+      if (!longitude && booking.longitude) {
+        longitude = booking.longitude
+      }
     }
 
     // Create campaign
     const campaign = await prisma.campaign.create({
       data: {
         name: validatedData.name,
-        baseLocation: validatedData.baseLocation,
-        latitude: validatedData.latitude,
-        longitude: validatedData.longitude,
+        baseLocation: baseLocation!,
+        latitude: latitude!,
+        longitude: longitude!,
         radius: validatedData.radius ?? 100,
         startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
