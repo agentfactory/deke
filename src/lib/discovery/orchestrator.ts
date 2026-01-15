@@ -59,7 +59,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     discoverPastClients(campaign),
     discoverDormantLeads(campaign),
     discoverSimilarOrgs(campaign),
-    discoverAIResearch(),
+    discoverAIResearch(campaign),
   ])
 
   // Track counts by source before deduplication

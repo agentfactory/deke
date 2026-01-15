@@ -57,6 +57,24 @@ export const bookingFiltersSchema = z.object({
   offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 })
 
+// Update booking schema
+export const updateBookingSchema = z.object({
+  status: bookingStatusSchema.optional(),
+  startDate: z.string().datetime().optional().nullable(),
+  endDate: z.string().datetime().optional().nullable(),
+  timezone: z.string().optional().nullable(),
+  location: z.string().optional().nullable(),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
+  amount: z.number().min(0).optional().nullable(),
+  depositPaid: z.number().min(0).optional().nullable(),
+  balanceDue: z.number().min(0).optional().nullable(),
+  paymentStatus: paymentStatusSchema.optional(),
+  internalNotes: z.string().optional().nullable(),
+  clientNotes: z.string().optional().nullable(),
+})
+
 // Type exports
 export type CreateBookingInput = z.infer<typeof createBookingSchema>
+export type UpdateBookingInput = z.infer<typeof updateBookingSchema>
 export type BookingFilters = z.infer<typeof bookingFiltersSchema>

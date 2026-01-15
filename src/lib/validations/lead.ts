@@ -48,8 +48,22 @@ export const leadFiltersSchema = z.object({
   offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 })
 
+// Update lead schema (email cannot be changed)
+export const updateLeadSchema = z.object({
+  firstName: z.string().min(1).optional(),
+  lastName: z.string().min(1).optional(),
+  phone: z.string().optional().nullable(),
+  organization: z.string().optional().nullable(),
+  source: leadSourceSchema.optional(),
+  status: leadStatusSchema.optional(),
+  score: z.number().min(0).max(100).optional().nullable(),
+  latitude: z.number().min(-90).max(90).optional().nullable(),
+  longitude: z.number().min(-180).max(180).optional().nullable(),
+})
+
 // Type exports
 export type CreateLeadInput = z.infer<typeof createLeadSchema>
+export type UpdateLeadInput = z.infer<typeof updateLeadSchema>
 export type LeadFilters = z.infer<typeof leadFiltersSchema>
 export type LeadStatus = z.infer<typeof leadStatusSchema>
 export type LeadSource = z.infer<typeof leadSourceSchema>

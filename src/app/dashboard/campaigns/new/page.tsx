@@ -7,6 +7,7 @@ import { CampaignForm, CampaignFormValues } from "@/components/campaigns/campaig
 import { ArrowLeft } from "lucide-react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
+import { geocodeAddress } from "@/lib/services/geocoding";
 
 function NewCampaignContent() {
   const router = useRouter();
@@ -44,15 +45,28 @@ function NewCampaignContent() {
     setIsLoading(true);
 
     try {
-      // Prepare the payload
+      // Geocode the location to get latitude and longitude
+      const geocodeResult = await geocodeAddress(values.location);
+
+      if (!geocodeResult) {
+        alert("Unable to geocode the location. Please enter a valid address (e.g., 'San Francisco, CA' or '94102')");
+        setIsLoading(false);
+        return;
+      }
+
+      // Convert date strings to ISO datetime format
+      const startDateTime = new Date(values.startDate).toISOString();
+      const endDateTime = new Date(values.endDate).toISOString();
+
+      // Prepare the payload with correct field names for API
       const payload = {
         name: values.name,
-        location: values.location,
-        radiusMiles: values.radiusMiles,
-        startDate: values.startDate,
-        endDate: values.endDate,
-        serviceType: values.serviceType,
-        status: isDraft ? "DRAFT" : "APPROVED",
+        baseLocation: values.location, // API expects baseLocation, not location
+        latitude: geocodeResult.latitude,
+        longitude: geocodeResult.longitude,
+        radius: values.radiusMiles, // API expects radius, not radiusMiles
+        startDate: startDateTime,
+        endDate: endDateTime,
         ...(bookingId && { bookingId }), // Include bookingId if present
       };
 
@@ -68,16 +82,18 @@ function NewCampaignContent() {
       });
 
       if (!response.ok) {
-        throw new Error("Failed to create campaign");
+        const errorData = await response.json().catch(() => ({}));
+        console.error("Campaign creation failed:", errorData);
+        throw new Error(errorData.message || "Failed to create campaign");
       }
 
       const campaign = await response.json();
 
-      // If not a draft, trigger lead discovery
+      // If not a draft, trigger lead discovery and approve
       if (!isDraft) {
         console.log("Triggering lead discovery for campaign:", campaign.id);
 
-        // Trigger discovery (stub for now)
+        // Trigger discovery
         const discoveryResponse = await fetch(
           `/api/campaigns/${campaign.id}/discover`,
           {
@@ -87,6 +103,18 @@ function NewCampaignContent() {
 
         if (!discoveryResponse.ok) {
           console.error("Lead discovery failed, but campaign was created");
+        } else {
+          // After discovery, approve the campaign
+          const approveResponse = await fetch(
+            `/api/campaigns/${campaign.id}/approve`,
+            {
+              method: "POST",
+            }
+          );
+
+          if (!approveResponse.ok) {
+            console.error("Campaign approval failed, but campaign and leads were created");
+          }
         }
       }
 
@@ -94,7 +122,7 @@ function NewCampaignContent() {
       router.push(`/dashboard/campaigns/${campaign.id}`);
     } catch (error) {
       console.error("Error creating campaign:", error);
-      alert("Failed to create campaign. Please try again.");
+      alert(`Failed to create campaign: ${error instanceof Error ? error.message : 'Please try again.'}`);
     } finally {
       setIsLoading(false);
     }

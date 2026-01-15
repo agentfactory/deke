@@ -17,9 +17,9 @@ export async function GET(request: NextRequest) {
 
     // Parse and validate query parameters
     const queryResult = GetRecommendationsQuerySchema.safeParse({
-      serviceType: searchParams.get('serviceType'),
-      orgType: searchParams.get('orgType'),
-      leadId: searchParams.get('leadId'),
+      serviceType: searchParams.get('serviceType') || undefined,
+      orgType: searchParams.get('orgType') || undefined,
+      leadId: searchParams.get('leadId') || undefined,
     })
 
     if (!queryResult.success) {

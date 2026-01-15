@@ -6,6 +6,7 @@ import {
   bookingFiltersSchema,
   type CreateBookingInput
 } from '@/lib/validations/booking'
+import { geocodeAddress } from '@/lib/services/geocoding'
 
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
@@ -22,6 +23,24 @@ export async function POST(request: NextRequest) {
 
     if (!lead) {
       throw new ApiError(404, 'Lead not found', 'LEAD_NOT_FOUND')
+    }
+
+    // Geocode location if provided but coordinates missing
+    let latitude = validatedData.latitude
+    let longitude = validatedData.longitude
+
+    if (validatedData.location && (!latitude || !longitude)) {
+      console.log(`Geocoding location: ${validatedData.location}`)
+      const geocodingResult = await geocodeAddress(validatedData.location)
+
+      if (geocodingResult) {
+        latitude = geocodingResult.latitude
+        longitude = geocodingResult.longitude
+        console.log(`Geocoding successful: ${latitude}, ${longitude}`)
+      } else {
+        console.warn(`Geocoding failed for location: ${validatedData.location}`)
+        // Continue without coordinates - they're optional
+      }
     }
 
     // Check if inquiry exists (if provided)
@@ -54,8 +73,8 @@ export async function POST(request: NextRequest) {
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
         timezone: validatedData.timezone ?? null,
         location: validatedData.location ?? null,
-        latitude: validatedData.latitude ?? null,
-        longitude: validatedData.longitude ?? null,
+        latitude: latitude ?? null,
+        longitude: longitude ?? null,
         amount: validatedData.amount ?? null,
         depositPaid: validatedData.depositPaid ?? null,
         balanceDue: validatedData.balanceDue ?? null,
