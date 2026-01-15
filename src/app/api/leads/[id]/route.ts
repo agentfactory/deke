@@ -181,7 +181,8 @@ export async function DELETE(
         orders: {
           select: {
             id: true,
-            title: true,
+            songTitle: true,
+            orderNumber: true,
           }
         }
       }

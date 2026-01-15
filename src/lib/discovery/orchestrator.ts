@@ -75,7 +75,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   const originalCount = allLeads.length
 
   // Deduplicate by email (keeping highest score per email)
-  const deduped = deduplicate(allLeads)
+  const deduped = deduplicate(allLeads as any[])
 
   // Calculate deduplication statistics
   const deduplicationStats = getDeduplicationStats(originalCount, deduped.length)
@@ -162,7 +162,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
           status: 'PENDING',
           // Phase 3: Store recommendations
           recommendedServices: lead.recommendations && lead.recommendations.length > 0
-            ? JSON.stringify(lead.recommendations.map((r) => r.serviceType))
+            ? JSON.stringify(lead.recommendations.map((r: any) => r.serviceType))
             : null,
           recommendationReason: lead.recommendations && lead.recommendations.length > 0
             ? buildRecommendationReason(lead.recommendations)
