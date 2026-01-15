@@ -73,7 +73,7 @@ const ORG_PATTERNS: OrgPattern[] = [
   // Music and arts institutions (high priority for targeted music orgs)
   {
     type: 'BARBERSHOP',
-    keywords: ['barbershop', 'sweet adelines', 'sai', 'harmony inc', 'harmony incorporated'],
+    keywords: ['barbershop chorus', 'barbershop quartet', 'barbershop singers', 'sweet adelines', 'sai', 'harmony inc', 'harmony incorporated', 'spebsqsa', 'bhs chorus'],
     priority: 12,
   },
   {

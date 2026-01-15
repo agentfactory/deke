@@ -32,14 +32,17 @@ interface DiscoveredLead {
 // Music-specific keywords for targeted search
 // Uses Text Search API for more precise matching than generic place types
 const MUSIC_KEYWORDS = [
-  // Vocal music groups
+  // Vocal music groups (specific organizations to avoid haircut barbershops)
   'choir',
   'chorus',
-  'barbershop quartet',
+  'chorale',
   'Sweet Adelines',
   'Harmony Inc',
+  'Barbershop Harmony Society',
+  'BHS chorus',
   'CASA a cappella',
   'a cappella group',
+  'vocal ensemble',
   'gospel choir',
   'community chorus',
 
@@ -57,19 +60,32 @@ const MUSIC_KEYWORDS = [
  * Higher scores indicate stronger music focus and better lead quality
  *
  * @param place - Google Place result
- * @returns Music relevance score (0-35 points)
+ * @returns Music relevance score (0-35 points, or 0 if excluded)
  */
 function calculateMusicRelevance(place: any): number {
   let score = 0
   const name = (place.name || '').toLowerCase()
+  const types = place.types || []
 
-  // +20 pts: General music keywords in name
-  if (/\bchoir\b|\bchorus\b|\bsingers?\b|\bvocal\b|\bharmony\b|\bbarbershop\b/i.test(name)) {
+  // CRITICAL: Exclude haircut barbershops (return 0 immediately)
+  const haircutKeywords = /\bcut\b|\bhaircut\b|\bbarber\s*shop\b|\bgrooming\b|\bshave\b|\bfade\b|\btrim\b|\bsalon\b/i
+  if (haircutKeywords.test(name)) {
+    return 0 // Not a music organization - it's a haircut place
+  }
+
+  // Also check Google Place types for hair care
+  const haircutTypes = ['hair_care', 'beauty_salon', 'barber_shop']
+  if (types.some((type: string) => haircutTypes.includes(type))) {
+    return 0 // Definitely a haircut place
+  }
+
+  // +20 pts: General music keywords in name (excluding "barbershop" alone due to ambiguity)
+  if (/\bchoir\b|\bchorus\b|\bchorale\b|\bsingers?\b|\bvocal\b|\bharmony\b/i.test(name)) {
     score += 20
   }
 
   // +15 pts: Specific music organizations (high-value targets)
-  if (/barbershop|sweet adelines|sai|harmony inc|casa|a\s?cappella/i.test(name)) {
+  if (/sweet adelines|sai|harmony inc|harmony incorporated|casa|a\s?cappella/i.test(name)) {
     score += 15
   }
 
