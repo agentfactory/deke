@@ -72,9 +72,13 @@ export async function GET(
           select: {
             id: true,
             organizationName: true,
-            contactPerson: true,
-            sharePercentage: true,
-            amountOwed: true,
+            contactName: true,
+            contactEmail: true,
+            contactPhone: true,
+            groupSize: true,
+            splitPercent: true,
+            amountDue: true,
+            travelShareDue: true,
             paymentStatus: true,
           }
         }
