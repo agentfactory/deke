@@ -29,6 +29,8 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { MessagesTab } from "@/components/campaigns/messages-tab";
 
 interface Campaign {
   id: string;
@@ -62,6 +64,16 @@ interface Campaign {
       status: string;
       score: number;
     };
+    outreachLogs: Array<{
+      id: string;
+      channel: string;
+      status: string;
+      sentAt: string | null;
+      openedAt: string | null;
+      clickedAt: string | null;
+      respondedAt: string | null;
+      errorMessage: string | null;
+    }>;
   }>;
   _count: {
     leads: number;
@@ -373,8 +385,18 @@ export default function CampaignDetailPage({
         </div>
       </div>
 
-      {/* Stats Cards */}
-      <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
+      {/* Tabs */}
+      <Tabs defaultValue="overview" className="space-y-6">
+        <TabsList>
+          <TabsTrigger value="overview">Overview</TabsTrigger>
+          <TabsTrigger value="leads">Leads ({campaign.leads.length})</TabsTrigger>
+          <TabsTrigger value="messages">Messages ({campaign._count.outreachLogs})</TabsTrigger>
+          <TabsTrigger value="analytics">Analytics</TabsTrigger>
+        </TabsList>
+
+        <TabsContent value="overview" className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
             <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
@@ -528,9 +550,11 @@ export default function CampaignDetailPage({
           </CardContent>
         </Card>
       </div>
+        </TabsContent>
 
-      {/* Leads Table */}
-      <Card>
+        <TabsContent value="leads">
+          {/* Leads Table */}
+          <Card>
         <CardHeader>
           <CardTitle>Discovered Leads ({campaign.leads.length})</CardTitle>
         </CardHeader>
@@ -585,6 +609,31 @@ export default function CampaignDetailPage({
           )}
         </CardContent>
       </Card>
+        </TabsContent>
+
+        <TabsContent value="messages">
+          <MessagesTab
+            outreachLogs={campaign.leads.flatMap(cl =>
+              cl.outreachLogs.map(ol => ({
+                ...ol,
+                leadName: `${cl.lead.firstName} ${cl.lead.lastName}`,
+                leadEmail: cl.lead.email
+              }))
+            )}
+          />
+        </TabsContent>
+
+        <TabsContent value="analytics">
+          <Card>
+            <CardContent className="py-12 text-center">
+              <p className="font-medium">Analytics coming soon</p>
+              <p className="text-sm text-muted-foreground mt-2">
+                Track open rates, click rates, and conversion metrics
+              </p>
+            </CardContent>
+          </Card>
+        </TabsContent>
+      </Tabs>
 
       {/* Launch Confirmation Dialog */}
       <Dialog open={showLaunchConfirm} onOpenChange={setShowLaunchConfirm}>
