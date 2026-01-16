@@ -31,7 +31,15 @@ export async function POST(
       campaignLeads.map(cl => ({
         campaignLeadId: cl.id,
         channel: channel as 'EMAIL' | 'SMS',
-        campaignId: id,
+        template: channel === 'EMAIL'
+          ? 'Hey {{firstName}}, just reaching out about {{serviceType}}!'
+          : 'Hi {{firstName}}! Interested in {{serviceType}}? Reply for details.',
+        variables: {
+          firstName: cl.lead.firstName,
+          lastName: cl.lead.lastName,
+          organization: cl.lead.organization || '',
+          serviceType: cl.campaign.booking?.serviceType || 'our services',
+        },
       }))
     )
 

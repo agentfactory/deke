@@ -27,6 +27,16 @@ interface CampaignLead {
     phone: string | null
     organization: string | null
   }
+  outreachLogs?: Array<{
+    id: string
+    channel: string
+    status: string
+    sentAt: string | null
+    openedAt: string | null
+    clickedAt: string | null
+    respondedAt: string | null
+    errorMessage: string | null
+  }>
 }
 
 interface LeadsTableSelectableProps {
