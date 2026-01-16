@@ -38,7 +38,8 @@ export async function POST(
           firstName: cl.lead.firstName,
           lastName: cl.lead.lastName,
           organization: cl.lead.organization || '',
-          serviceType: cl.campaign.booking?.serviceType || 'our services',
+          serviceType: 'our services',
+          baseLocation: cl.campaign.baseLocation,
         },
       }))
     )

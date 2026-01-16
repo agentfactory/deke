@@ -26,6 +26,8 @@ interface CampaignLead {
     email: string
     phone: string | null
     organization: string | null
+    status: string
+    score: number
   }
   outreachLogs?: Array<{
     id: string
