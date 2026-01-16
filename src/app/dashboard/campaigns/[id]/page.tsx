@@ -31,6 +31,8 @@ import {
 } from "@/components/ui/dialog";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesTab } from "@/components/campaigns/messages-tab";
+import { LeadsTableSelectable } from "@/components/campaigns/leads-table-selectable";
+import { BulkActionsToolbar } from "@/components/campaigns/bulk-actions-toolbar";
 
 interface Campaign {
   id: string;
@@ -93,6 +95,7 @@ export default function CampaignDetailPage({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
+  const [selectedLeads, setSelectedLeads] = useState<Campaign['leads']>([]);
 
   const fetchCampaign = async () => {
     try {
@@ -553,62 +556,37 @@ export default function CampaignDetailPage({
         </TabsContent>
 
         <TabsContent value="leads">
-          {/* Leads Table */}
-          <Card>
-        <CardHeader>
-          <CardTitle>Discovered Leads ({campaign.leads.length})</CardTitle>
-        </CardHeader>
-        <CardContent>
-          {campaign.leads.length === 0 ? (
-            <div className="text-center py-8 text-muted-foreground">
-              <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
-              <p className="font-medium">No leads discovered yet</p>
-              <p className="text-sm mt-2">
-                Activate this campaign to start discovering leads in the target area
-              </p>
-            </div>
-          ) : (
-            <div className="space-y-4">
-              {campaign.leads.slice(0, 10).map((campaignLead) => (
-                <div
-                  key={campaignLead.id}
-                  className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                >
-                  <div className="flex-1">
-                    <div className="flex items-center gap-3">
-                      <p className="font-medium">
-                        {campaignLead.lead.firstName}{" "}
-                        {campaignLead.lead.lastName}
-                      </p>
-                      <Badge variant="outline">{campaignLead.status}</Badge>
-                      <span className="text-sm text-muted-foreground">
-                        Score: {campaignLead.score}
-                      </span>
-                    </div>
-                    <div className="flex items-center gap-4 mt-1 text-sm text-muted-foreground">
-                      <span>{campaignLead.lead.email}</span>
-                      {campaignLead.lead.phone && (
-                        <span>{campaignLead.lead.phone}</span>
-                      )}
-                      {campaignLead.lead.organization && (
-                        <span>{campaignLead.lead.organization}</span>
-                      )}
-                    </div>
-                  </div>
-                  <Button variant="ghost" size="sm" disabled>
-                    Contact
-                  </Button>
-                </div>
-              ))}
-              {campaign.leads.length > 10 && (
-                <p className="text-center text-sm text-muted-foreground pt-4">
-                  Showing 10 of {campaign.leads.length} leads
-                </p>
-              )}
-            </div>
-          )}
-        </CardContent>
-      </Card>
+          <div className="space-y-4">
+            <BulkActionsToolbar
+              selectedCount={selectedLeads.length}
+              selectedLeadIds={selectedLeads.map(l => l.id)}
+              campaignId={campaign.id}
+              onActionComplete={() => {
+                setSelectedLeads([])
+                fetchCampaign()
+              }}
+            />
+            {campaign.leads.length === 0 ? (
+              <Card>
+                <CardContent className="py-12 text-center">
+                  <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                  <p className="font-medium">No leads discovered yet</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Activate this campaign to start discovering leads in the target area
+                  </p>
+                </CardContent>
+              </Card>
+            ) : (
+              <Card>
+                <CardContent className="p-0">
+                  <LeadsTableSelectable
+                    leads={campaign.leads}
+                    onSelectionChange={setSelectedLeads}
+                  />
+                </CardContent>
+              </Card>
+            )}
+          </div>
         </TabsContent>
 
         <TabsContent value="messages">
