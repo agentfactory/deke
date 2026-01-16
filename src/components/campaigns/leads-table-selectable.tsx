@@ -29,7 +29,7 @@ interface CampaignLead {
     status: string
     score: number
   }
-  outreachLogs?: Array<{
+  outreachLogs: Array<{
     id: string
     channel: string
     status: string
