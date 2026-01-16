@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Target, BarChart3 } from "lucide-react";
+import { LayoutDashboard, Target, BarChart3, Calendar } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
@@ -42,6 +42,15 @@ export default function DashboardLayout({
                 >
                   <Target className="h-5 w-5" />
                   Campaigns
+                </Button>
+              </Link>
+              <Link href="/dashboard/bookings">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3"
+                >
+                  <Calendar className="h-5 w-5" />
+                  Bookings
                 </Button>
               </Link>
               <Link href="/dashboard/analytics">

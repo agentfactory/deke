@@ -157,7 +157,7 @@ export default function BookingDetailPage({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <BookingStatusBadge status={booking.status as any} />
+          <BookingStatusBadge status={booking.status as 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED'} />
           <Button variant="outline" size="icon" onClick={() => router.push(`/dashboard/bookings/${booking.id}/edit`)}>
             <Edit className="h-4 w-4" />
           </Button>
@@ -195,7 +195,7 @@ export default function BookingDetailPage({
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Status</p>
                   <div className="mt-1">
-                    <BookingStatusBadge status={booking.status as any} />
+                    <BookingStatusBadge status={booking.status as 'PENDING' | 'CONFIRMED' | 'IN_PROGRESS' | 'COMPLETED' | 'CANCELLED' | 'RESCHEDULED'} />
                   </div>
                 </div>
                 <div>
