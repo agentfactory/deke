@@ -1,0 +1,171 @@
+{
+  "_meta": {
+    "models": {
+      "serviceOfferings": "Public-facing service pages that showcase available offerings: Speaking, Coaching, Workshops, Masterclass, and Arrangements."
+    },
+    "relationships": [
+      "Service offerings are standalone public pages",
+      "Visitors can request bookings for any service offering",
+      "Service offerings can be featured on the homepage or linked from navigation"
+    ]
+  },
+  "serviceOfferings": [
+    {
+      "id": "service-001",
+      "title": "Speaking Engagements",
+      "type": "speaking",
+      "slug": "speaking",
+      "tagline": "Inspire your audience with expert insights on vocal performance and leadership",
+      "description": "Dynamic keynote presentations and panel discussions on choral excellence, vocal technique, and music leadership. Perfect for conferences, conventions, and special events.",
+      "pricing": "Starting at $2,500",
+      "duration": "45-90 minutes",
+      "featured": true,
+      "imageUrl": "/images/services/speaking.jpg",
+      "features": [
+        "Customized keynote presentations",
+        "Interactive Q&A sessions",
+        "Pre-event consultation",
+        "Handout materials for attendees",
+        "Virtual or in-person delivery"
+      ],
+      "idealFor": [
+        "Music education conferences",
+        "Choral conventions",
+        "Leadership summits",
+        "Professional development events"
+      ],
+      "testimonial": {
+        "quote": "An electrifying speaker who brings both expertise and heart to every presentation.",
+        "author": "Dr. Maria Santos",
+        "role": "Conference Director, National Choral Association"
+      }
+    },
+    {
+      "id": "service-002",
+      "title": "Personal Coaching",
+      "type": "coaching",
+      "slug": "coaching",
+      "tagline": "One-on-one guidance to elevate your vocal artistry and leadership skills",
+      "description": "Personalized coaching sessions for singers, conductors, and music educators seeking to refine their craft. Whether you're preparing for an audition, competition, or simply want to grow as an artist, receive expert guidance tailored to your goals.",
+      "pricing": "$150-300 per session",
+      "duration": "60-90 minutes",
+      "featured": true,
+      "imageUrl": "/images/services/coaching.jpg",
+      "features": [
+        "Individualized vocal technique coaching",
+        "Performance preparation and review",
+        "Repertoire selection guidance",
+        "Career development strategy",
+        "Video recording and analysis",
+        "Follow-up resources and exercises"
+      ],
+      "idealFor": [
+        "Professional singers",
+        "Emerging conductors",
+        "Music educators",
+        "A cappella group directors"
+      ],
+      "testimonial": {
+        "quote": "The coaching I received transformed my approach to performance and gave me the confidence to audition at the highest level.",
+        "author": "James Chen",
+        "role": "Tenor, Metropolitan Opera Chorus"
+      }
+    },
+    {
+      "id": "service-003",
+      "title": "Group Workshops",
+      "type": "workshop",
+      "slug": "workshops",
+      "tagline": "Hands-on learning experiences for choirs and vocal groups of all levels",
+      "description": "Intensive workshop sessions covering blend, intonation, musicality, and performance technique. Designed for choruses, a cappella groups, and vocal ensembles seeking immediate improvement and long-term growth.",
+      "pricing": "$1,200-2,000 per workshop",
+      "duration": "2-3 hours",
+      "featured": true,
+      "imageUrl": "/images/services/workshops.jpg",
+      "features": [
+        "Focused skill-building sessions",
+        "Sectional and full ensemble work",
+        "Real-time feedback and adjustments",
+        "Warm-up routines and exercises",
+        "Recorded session for future reference",
+        "Post-workshop summary and recommendations"
+      ],
+      "idealFor": [
+        "Community choruses",
+        "Church choirs",
+        "School vocal programs",
+        "A cappella groups",
+        "Professional ensembles"
+      ],
+      "testimonial": {
+        "quote": "Our chorus made more progress in one workshop than we had in months of regular rehearsals. Truly transformative.",
+        "author": "Sarah Mitchell",
+        "role": "Director, Portland Vocal Ensemble"
+      }
+    },
+    {
+      "id": "service-004",
+      "title": "Masterclass Series",
+      "type": "masterclass",
+      "slug": "masterclass",
+      "tagline": "Deep-dive educational experiences for serious vocal musicians",
+      "description": "Multi-session masterclass programs covering advanced topics in vocal performance, choral conducting, and musical interpretation. Includes performance opportunities, individual coaching, and collaborative learning with fellow participants.",
+      "pricing": "$1,500-2,500 per masterclass",
+      "duration": "Half-day or full-day",
+      "featured": false,
+      "imageUrl": "/images/services/masterclass.jpg",
+      "features": [
+        "Comprehensive topic coverage",
+        "Participant performance opportunities",
+        "Individual and group coaching",
+        "Collaborative learning environment",
+        "Extensive handout materials",
+        "Certificate of completion",
+        "Alumni network access"
+      ],
+      "idealFor": [
+        "Advanced vocal students",
+        "Professional development for educators",
+        "Conductors seeking specialized training",
+        "Ensembles preparing for competitions"
+      ],
+      "testimonial": {
+        "quote": "The masterclass experience was worth every penny. I left with practical tools I use in every rehearsal.",
+        "author": "David Rodriguez",
+        "role": "Choral Director, San Francisco Gay Men's Chorus"
+      }
+    },
+    {
+      "id": "service-005",
+      "title": "Custom Arrangements",
+      "type": "arrangements",
+      "slug": "arrangements",
+      "tagline": "Professional vocal arrangements tailored to your ensemble's unique sound",
+      "description": "Commission custom vocal arrangements for your choir or a cappella group. Whether you need a fresh take on a beloved classic or an original arrangement of a contemporary hit, receive professional-quality charts that showcase your ensemble's strengths.",
+      "pricing": "$500-1,500 per arrangement",
+      "duration": "2-4 weeks delivery",
+      "featured": false,
+      "imageUrl": "/images/services/arrangements.jpg",
+      "features": [
+        "Fully customized to your ensemble",
+        "Professional notation and formatting",
+        "Learning tracks available (add-on)",
+        "Revision rounds included",
+        "Performance rights and licensing guidance",
+        "Sheet music in PDF and digital format"
+      ],
+      "idealFor": [
+        "A cappella groups seeking signature sounds",
+        "Choirs wanting unique repertoire",
+        "Special event performances",
+        "Recording projects",
+        "Competition programs"
+      ],
+      "testimonial": {
+        "quote": "The custom arrangement we commissioned became our signature piece. It's perfectly suited to our group's voice and style.",
+        "author": "Emily Thompson",
+        "role": "Music Director, Cascade A Cappella"
+      }
+    }
+  ]
+}

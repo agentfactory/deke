@@ -1,0 +1,398 @@
+{
+  "_meta": {
+    "models": {
+      "groupRequests": "A 'Find a Singing Group' submission from a visitor. Contains age, location, and music preferences to match singers with local singing groups.",
+      "venues": "The actual group, chorus, or music organization where bookings take place. Separate from individual contact persons to maintain organizational information."
+    },
+    "relationships": [
+      "Each GroupRequest can be matched with one or more Venues based on location and preferences",
+      "Venues represent potential singing groups that match request criteria"
+    ]
+  },
+  "groupRequests": [
+    {
+      "id": "req-001",
+      "name": "Sarah Johnson",
+      "email": "sarah.j@example.com",
+      "phone": "(206) 555-0123",
+      "age": 32,
+      "location": "Seattle, WA",
+      "zipCode": "98101",
+      "preferences": {
+        "genres": ["Contemporary A Cappella", "Pop", "Jazz"],
+        "experience": "intermediate",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "I sang in college and I'm looking to get back into it. I love contemporary music and would prefer a smaller group where I can really connect with people.",
+      "status": "new",
+      "matchScore": 92,
+      "suggestedVenues": ["venue-002"],
+      "submittedDate": "2024-02-15",
+      "lastUpdated": "2024-02-15"
+    },
+    {
+      "id": "req-002",
+      "name": "Michael Chen",
+      "email": "m.chen@example.com",
+      "phone": "(415) 555-0145",
+      "age": 67,
+      "location": "San Francisco, CA",
+      "zipCode": "94102",
+      "preferences": {
+        "genres": ["Barbershop", "Traditional", "Gospel"],
+        "experience": "advanced",
+        "commitment": "twice-weekly",
+        "performanceInterest": true
+      },
+      "message": "Retired barbershop singer looking for a competitive group. I have 40 years of experience and I'm ready to commit serious time to the craft.",
+      "status": "in-progress",
+      "matchScore": 88,
+      "suggestedVenues": ["venue-008"],
+      "submittedDate": "2024-02-12",
+      "lastUpdated": "2024-02-14"
+    },
+    {
+      "id": "req-003",
+      "name": "Emily Rodriguez",
+      "email": "emily.rod@example.com",
+      "phone": "(617) 555-0167",
+      "age": 19,
+      "location": "Cambridge, MA",
+      "zipCode": "02138",
+      "preferences": {
+        "genres": ["Collegiate A Cappella", "Pop", "Indie"],
+        "experience": "beginner",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "I'm a college freshman who's always wanted to join an a cappella group but missed auditions. Are there groups that accept new members mid-year?",
+      "status": "matched",
+      "matchScore": 95,
+      "suggestedVenues": ["venue-005"],
+      "submittedDate": "2024-02-10",
+      "lastUpdated": "2024-02-13"
+    },
+    {
+      "id": "req-004",
+      "name": "James Patterson",
+      "email": "j.patterson@example.com",
+      "phone": "(503) 555-0189",
+      "age": 45,
+      "location": "Portland, OR",
+      "zipCode": "97201",
+      "preferences": {
+        "genres": ["Classical", "Chamber Music", "Sacred"],
+        "experience": "advanced",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "Professional vocalist looking for a serious chamber ensemble. I have extensive classical training and I'm seeking high-level repertoire.",
+      "status": "responded",
+      "matchScore": 90,
+      "suggestedVenues": ["venue-003"],
+      "submittedDate": "2024-02-08",
+      "lastUpdated": "2024-02-14"
+    },
+    {
+      "id": "req-005",
+      "name": "Lisa Washington",
+      "email": "lwashington@example.com",
+      "phone": "(206) 555-0198",
+      "age": 28,
+      "location": "Seattle, WA",
+      "zipCode": "98115",
+      "preferences": {
+        "genres": ["Gospel", "R&B", "Soul"],
+        "experience": "intermediate",
+        "commitment": "monthly-gatherings",
+        "performanceInterest": false
+      },
+      "message": "I just want to sing for fun and fellowship. Not interested in performing, just looking for a supportive community to make music with.",
+      "status": "new",
+      "matchScore": 75,
+      "suggestedVenues": ["venue-001"],
+      "submittedDate": "2024-02-14",
+      "lastUpdated": "2024-02-14"
+    },
+    {
+      "id": "req-006",
+      "name": "Daniel Kim",
+      "email": "dan.kim@example.com",
+      "phone": "(512) 555-0211",
+      "age": 41,
+      "location": "Austin, TX",
+      "zipCode": "78701",
+      "preferences": {
+        "genres": ["Contemporary", "Folk", "World Music"],
+        "experience": "beginner",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "I've never sung in a group before but I've always wanted to. I'm willing to learn and commit to regular practice. What groups would welcome a beginner?",
+      "status": "new",
+      "matchScore": 82,
+      "suggestedVenues": ["venue-010"],
+      "submittedDate": "2024-02-15",
+      "lastUpdated": "2024-02-15"
+    },
+    {
+      "id": "req-007",
+      "name": "Rachel Goldman",
+      "email": "rgoldman@example.com",
+      "phone": "(415) 555-0234",
+      "age": 15,
+      "location": "San Francisco, CA",
+      "zipCode": "94110",
+      "preferences": {
+        "genres": ["Pop", "Musical Theater", "Contemporary"],
+        "experience": "intermediate",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "I'm a high school sophomore looking for a youth chorus. I love musical theater and I want to improve my performance skills.",
+      "status": "in-progress",
+      "matchScore": 93,
+      "suggestedVenues": ["venue-007"],
+      "submittedDate": "2024-02-11",
+      "lastUpdated": "2024-02-13"
+    },
+    {
+      "id": "req-008",
+      "name": "Robert Thompson",
+      "email": "r.thompson@example.com",
+      "phone": "(617) 555-0256",
+      "age": 55,
+      "location": "Boston, MA",
+      "zipCode": "02115",
+      "preferences": {
+        "genres": ["Traditional", "Folk", "Spiritual"],
+        "experience": "intermediate",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": false
+      },
+      "message": "Looking for a community chorus that sings for the joy of it. I don't need performances or competitions, just good people and good music.",
+      "status": "matched",
+      "matchScore": 87,
+      "suggestedVenues": ["venue-004"],
+      "submittedDate": "2024-02-09",
+      "lastUpdated": "2024-02-12"
+    },
+    {
+      "id": "req-009",
+      "name": "Maria Santos",
+      "email": "maria.s@example.com",
+      "phone": "(408) 555-0278",
+      "age": 36,
+      "location": "San Jose, CA",
+      "zipCode": "95110",
+      "preferences": {
+        "genres": ["Pop", "Contemporary", "Latin"],
+        "experience": "beginner",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "I sing in the car all the time and my friends say I should join a group. I'd love to try but I've never had formal training. Are there beginner-friendly groups?",
+      "status": "new",
+      "matchScore": 79,
+      "suggestedVenues": ["venue-009"],
+      "submittedDate": "2024-02-15",
+      "lastUpdated": "2024-02-15"
+    },
+    {
+      "id": "req-010",
+      "name": "Kevin O'Brien",
+      "email": "kevin.obrien@example.com",
+      "phone": "(206) 555-0290",
+      "age": 72,
+      "location": "Seattle, WA",
+      "zipCode": "98122",
+      "preferences": {
+        "genres": ["Classical", "Opera", "Art Song"],
+        "experience": "advanced",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "Retired opera singer looking to stay active in the vocal community. I have a strong classical background and I'm seeking a group with high artistic standards.",
+      "status": "in-progress",
+      "matchScore": 85,
+      "suggestedVenues": ["venue-001"],
+      "submittedDate": "2024-02-13",
+      "lastUpdated": "2024-02-15"
+    },
+    {
+      "id": "req-011",
+      "name": "Amanda Foster",
+      "email": "afoster@example.com",
+      "phone": "(971) 555-0301",
+      "age": 24,
+      "location": "Portland, OR",
+      "zipCode": "97214",
+      "preferences": {
+        "genres": ["Indie", "Folk", "Contemporary A Cappella"],
+        "experience": "intermediate",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "I just moved to Portland and I'm looking for a creative, collaborative group. I love arranging and I'd be excited to contribute original arrangements.",
+      "status": "new",
+      "matchScore": 91,
+      "suggestedVenues": ["venue-003"],
+      "submittedDate": "2024-02-14",
+      "lastUpdated": "2024-02-14"
+    },
+    {
+      "id": "req-012",
+      "name": "Chris Martinez",
+      "email": "c.martinez@example.com",
+      "phone": "(415) 555-0323",
+      "age": 29,
+      "location": "San Francisco, CA",
+      "zipCode": "94103",
+      "preferences": {
+        "genres": ["LGBTQ+ Chorus", "Pop", "Show Tunes"],
+        "experience": "beginner",
+        "commitment": "weekly-rehearsals",
+        "performanceInterest": true
+      },
+      "message": "Looking for an inclusive LGBTQ+ chorus where I can be myself and make music. I don't have much experience but I'm enthusiastic and committed.",
+      "status": "matched",
+      "matchScore": 96,
+      "suggestedVenues": ["venue-006"],
+      "submittedDate": "2024-02-07",
+      "lastUpdated": "2024-02-11"
+    }
+  ],
+  "venues": [
+    {
+      "id": "venue-001",
+      "name": "Seattle Men's Chorus",
+      "type": "chorus",
+      "city": "Seattle",
+      "state": "WA",
+      "zipCode": "98101",
+      "website": "https://seattlemenschorus.org",
+      "memberCount": 60,
+      "genre": "SATB Chorus",
+      "acceptsBeginners": false,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-002",
+      "name": "Cascade A Cappella",
+      "type": "a-cappella-group",
+      "city": "Seattle",
+      "state": "WA",
+      "zipCode": "98115",
+      "website": "https://cascadeacappella.com",
+      "memberCount": 12,
+      "genre": "Contemporary A Cappella",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-003",
+      "name": "Portland Vocal Ensemble",
+      "type": "chorus",
+      "city": "Portland",
+      "state": "OR",
+      "zipCode": "97201",
+      "website": "https://portlandvocalensemble.org",
+      "memberCount": 35,
+      "genre": "Chamber Choir",
+      "acceptsBeginners": false,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-004",
+      "name": "Boston Harmony Project",
+      "type": "chorus",
+      "city": "Boston",
+      "state": "MA",
+      "zipCode": "02115",
+      "website": "https://bostonharmony.org",
+      "memberCount": 45,
+      "genre": "Community Chorus",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-005",
+      "name": "Cambridge A Cappella Society",
+      "type": "a-cappella-group",
+      "city": "Cambridge",
+      "state": "MA",
+      "zipCode": "02138",
+      "website": "https://cambridgeacappella.com",
+      "memberCount": 18,
+      "genre": "Collegiate A Cappella",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-006",
+      "name": "San Francisco Gay Men's Chorus",
+      "type": "chorus",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94102",
+      "website": "https://sfgmc.org",
+      "memberCount": 120,
+      "genre": "TTBB Chorus",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "twice-weekly"
+    },
+    {
+      "id": "venue-007",
+      "name": "Bay Area Youth Chorus",
+      "type": "chorus",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94110",
+      "website": "https://bayareayouthchorus.org",
+      "memberCount": 28,
+      "genre": "Youth Chorus",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-008",
+      "name": "Golden Gate Harmony",
+      "type": "barbershop",
+      "city": "San Francisco",
+      "state": "CA",
+      "zipCode": "94102",
+      "website": "https://goldengateharmony.org",
+      "memberCount": 32,
+      "genre": "Barbershop Quartet/Chorus",
+      "acceptsBeginners": false,
+      "rehearsalSchedule": "twice-weekly"
+    },
+    {
+      "id": "venue-009",
+      "name": "Silicon Valley Voices",
+      "type": "chorus",
+      "city": "San Jose",
+      "state": "CA",
+      "zipCode": "95110",
+      "website": "https://svvoices.com",
+      "memberCount": 40,
+      "genre": "Corporate/Community Chorus",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "weekly-rehearsals"
+    },
+    {
+      "id": "venue-010",
+      "name": "Austin Vocal Arts Ensemble",
+      "type": "chorus",
+      "city": "Austin",
+      "state": "TX",
+      "zipCode": "78701",
+      "website": "https://austinvocalarts.org",
+      "memberCount": 24,
+      "genre": "Chamber Ensemble",
+      "acceptsBeginners": true,
+      "rehearsalSchedule": "weekly-rehearsals"
+    }
+  ]
+}
