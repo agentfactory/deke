@@ -42,28 +42,28 @@ export function SequenceCard({
   // Status styling
   const statusConfig = {
     active: {
-      bg: 'bg-violet-100 dark:bg-violet-900/30',
-      text: 'text-violet-700 dark:text-violet-300',
-      border: 'border-violet-200 dark:border-violet-800',
-      dot: 'bg-violet-500 animate-pulse'
+      bg: 'bg-lime-100 dark:bg-lime-900/30',
+      text: 'text-lime-700 dark:text-lime-300',
+      border: 'border-lime-200 dark:border-lime-800',
+      dot: 'bg-lime-500 animate-pulse'
     },
     paused: {
-      bg: 'bg-cyan-100 dark:bg-cyan-900/30',
-      text: 'text-cyan-700 dark:text-cyan-300',
-      border: 'border-cyan-200 dark:border-cyan-800',
-      dot: 'bg-cyan-500'
+      bg: 'bg-lime-100 dark:bg-lime-900/30',
+      text: 'text-lime-700 dark:text-lime-300',
+      border: 'border-lime-200 dark:border-lime-800',
+      dot: 'bg-lime-500'
     },
     draft: {
-      bg: 'bg-slate-100 dark:bg-slate-800',
-      text: 'text-slate-700 dark:text-slate-300',
-      border: 'border-slate-200 dark:border-slate-700',
-      dot: 'bg-slate-400'
+      bg: 'bg-stone-100 dark:bg-stone-800',
+      text: 'text-stone-700 dark:text-stone-300',
+      border: 'border-stone-200 dark:border-stone-700',
+      dot: 'bg-stone-400'
     },
     archived: {
-      bg: 'bg-slate-100 dark:bg-slate-800',
-      text: 'text-slate-700 dark:text-slate-300',
-      border: 'border-slate-200 dark:border-slate-700',
-      dot: 'bg-slate-400'
+      bg: 'bg-stone-100 dark:bg-stone-800',
+      text: 'text-stone-700 dark:text-stone-300',
+      border: 'border-stone-200 dark:border-stone-700',
+      dot: 'bg-stone-400'
     }
   }
 
@@ -71,13 +71,13 @@ export function SequenceCard({
 
   return (
     <div
-      className="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 dark:hover:shadow-violet-500/5 transition-all duration-300 overflow-hidden"
+      className="group relative bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm hover:shadow-xl hover:shadow-lime-500/10 dark:hover:shadow-lime-500/5 transition-all duration-300 overflow-hidden"
       style={{
         animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
       }}
     >
       {/* Gradient accent border on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 via-cyan-500/0 to-violet-500/0 group-hover:from-violet-500/5 group-hover:via-cyan-500/5 group-hover:to-violet-500/5 transition-all duration-300 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-lime-500/0 via-lime-500/0 to-lime-500/0 group-hover:from-lime-500/5 group-hover:via-lime-500/5 group-hover:to-lime-500/5 transition-all duration-300 pointer-events-none" />
 
       <div className="relative p-5 sm:p-6">
         {/* Header */}
@@ -89,10 +89,10 @@ export function SequenceCard({
                 {sequence.status}
               </span>
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight">
+            <h3 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-white tracking-tight">
               {sequence.name}
             </h3>
-            <p className="mt-1 text-sm text-slate-600 dark:text-slate-400 line-clamp-2">
+            <p className="mt-1 text-sm text-stone-600 dark:text-stone-400 line-clamp-2">
               {sequence.description}
             </p>
           </div>
@@ -101,10 +101,10 @@ export function SequenceCard({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
               aria-label="Sequence actions"
             >
-              <MoreVertical className="w-4 h-4 text-slate-400" />
+              <MoreVertical className="w-4 h-4 text-stone-400" />
             </button>
 
             {showMenu && (
@@ -113,13 +113,13 @@ export function SequenceCard({
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-20">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden z-20">
                   <button
                     onClick={() => {
                       onView?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     View Details
@@ -129,7 +129,7 @@ export function SequenceCard({
                       onToggle?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-2"
                   >
                     {sequence.status === 'active' ? (
                       <>
@@ -148,7 +148,7 @@ export function SequenceCard({
                       onEdit?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
                   >
                     Edit Sequence
                   </button>
@@ -157,12 +157,12 @@ export function SequenceCard({
                       onViewAnalytics?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-2"
                   >
                     <BarChart3 className="w-4 h-4" />
                     View Analytics
                   </button>
-                  <div className="h-px bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-px bg-stone-200 dark:bg-stone-700" />
                   <button
                     onClick={() => {
                       onDelete?.()
@@ -180,69 +180,69 @@ export function SequenceCard({
 
         {/* Sequence Details */}
         <div className="space-y-3 mb-5">
-          <div className="flex items-center gap-4 text-sm text-slate-600 dark:text-slate-400">
+          <div className="flex items-center gap-4 text-sm text-stone-600 dark:text-stone-400">
             <div className="flex items-center gap-1.5">
-              <Mail className="w-4 h-4 text-violet-500" />
+              <Mail className="w-4 h-4 text-lime-500" />
               <span className="font-medium">{sequence.stageCount} stages</span>
             </div>
             <div className="flex items-center gap-1.5">
-              <Users className="w-4 h-4 text-cyan-500" />
+              <Users className="w-4 h-4 text-lime-500" />
               <span className="font-medium">{sequence.totalContacts} contacts</span>
             </div>
           </div>
 
-          <div className="text-xs text-slate-500 dark:text-slate-400">
+          <div className="text-xs text-stone-500 dark:text-stone-400">
             Last run: {lastRunFormatted}
           </div>
         </div>
 
         {/* Engagement Metrics Grid */}
         <div className="grid grid-cols-2 gap-3 mb-5">
-          <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+          <div className="bg-gradient-to-br from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 p-3 rounded-xl border border-stone-200 dark:border-stone-800">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">
               Open Rate
             </p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white">
+            <p className="text-xl font-bold text-stone-900 dark:text-white">
               {openRate}%
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+          <div className="bg-gradient-to-br from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 p-3 rounded-xl border border-stone-200 dark:border-stone-800">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">
               Reply Rate
             </p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white">
+            <p className="text-xl font-bold text-stone-900 dark:text-white">
               {replyRate}%
             </p>
           </div>
         </div>
 
         {/* Engagement Summary */}
-        <div className="space-y-2 mb-5 pb-5 border-b border-slate-200 dark:border-slate-800">
+        <div className="space-y-2 mb-5 pb-5 border-b border-stone-200 dark:border-stone-800">
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Sent</span>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="text-stone-600 dark:text-stone-400">Sent</span>
+            <span className="font-semibold text-stone-900 dark:text-white">
               {sequence.sentCount}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Opened</span>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="text-stone-600 dark:text-stone-400">Opened</span>
+            <span className="font-semibold text-stone-900 dark:text-white">
               {sequence.openedCount}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Replied</span>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="text-stone-600 dark:text-stone-400">Replied</span>
+            <span className="font-semibold text-stone-900 dark:text-white">
               {sequence.repliedCount}
             </span>
           </div>
-          <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
-            <span className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-violet-500" />
+          <div className="flex items-center justify-between text-sm pt-2 border-t border-stone-200 dark:border-stone-800">
+            <span className="font-medium text-stone-900 dark:text-white flex items-center gap-1.5">
+              <TrendingUp className="w-4 h-4 text-lime-500" />
               Converted
             </span>
-            <span className="text-lg font-bold bg-gradient-to-br from-violet-600 to-cyan-600 bg-clip-text text-transparent">
+            <span className="text-lg font-bold bg-gradient-to-br from-lime-600 to-lime-600 bg-clip-text text-transparent">
               {sequence.convertedCount} ({sequence.conversionRate.toFixed(1)}%)
             </span>
           </div>
@@ -252,7 +252,7 @@ export function SequenceCard({
         <div className="flex gap-2">
           <button
             onClick={onView}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-200 font-medium text-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-br from-lime-600 to-lime-700 hover:from-lime-700 hover:to-lime-800 text-white rounded-xl shadow-lg shadow-lime-500/25 hover:shadow-xl hover:shadow-lime-500/30 transition-all duration-200 font-medium text-sm"
           >
             <Eye className="w-4 h-4" />
             View Details
@@ -260,7 +260,7 @@ export function SequenceCard({
 
           <button
             onClick={onToggle}
-            className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors"
+            className="px-3 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl transition-colors"
             aria-label={sequence.status === 'active' ? 'Pause sequence' : 'Resume sequence'}
           >
             {sequence.status === 'active' ? (
@@ -272,7 +272,7 @@ export function SequenceCard({
 
           <button
             onClick={onViewAnalytics}
-            className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors"
+            className="px-3 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl transition-colors"
             aria-label="View analytics"
           >
             <BarChart3 className="w-4 h-4" />

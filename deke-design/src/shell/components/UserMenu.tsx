@@ -29,7 +29,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
       {/* Trigger */}
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="flex items-center gap-2 rounded-lg border border-slate-200 dark:border-slate-700 px-3 py-1.5 hover:bg-slate-50 dark:hover:bg-slate-900 transition-colors"
+        className="flex items-center gap-2 rounded-lg border border-stone-200 dark:border-stone-700 px-3 py-1.5 hover:bg-stone-100 dark:hover:bg-stone-800 transition-colors"
       >
         {user.avatarUrl ? (
           <img
@@ -38,16 +38,16 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
             className="w-6 h-6 rounded-full"
           />
         ) : (
-          <div className="w-6 h-6 rounded-full bg-violet-100 dark:bg-violet-900/30 flex items-center justify-center">
-            <User size={14} className="text-violet-600 dark:text-violet-400" />
+          <div className="w-6 h-6 rounded-full bg-lime-100 dark:bg-lime-900/30 flex items-center justify-center">
+            <User size={14} className="text-lime-600 dark:text-lime-400" />
           </div>
         )}
-        <span className="text-sm font-medium text-slate-700 dark:text-slate-300 hidden sm:inline">
+        <span className="text-sm font-medium text-stone-700 dark:text-stone-300 hidden sm:inline">
           {user.name}
         </span>
         <ChevronDown
           size={16}
-          className={`text-slate-500 dark:text-slate-400 transition-transform ${
+          className={`text-stone-500 dark:text-stone-400 transition-transform ${
             isOpen ? 'rotate-180' : ''
           }`}
         />
@@ -55,14 +55,14 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
 
       {/* Dropdown */}
       {isOpen && (
-        <div className="absolute top-full left-0 mt-2 w-56 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-900 shadow-lg overflow-hidden z-50">
+        <div className="absolute top-full left-0 mt-2 w-56 rounded-lg border border-stone-200 dark:border-stone-700 bg-white dark:bg-stone-900 shadow-lg overflow-hidden z-50">
           {/* User Info */}
-          <div className="px-4 py-3 border-b border-slate-200 dark:border-slate-800">
-            <div className="text-sm font-medium text-slate-900 dark:text-white">
+          <div className="px-4 py-3 border-b border-stone-200 dark:border-stone-800">
+            <div className="text-sm font-medium text-stone-900 dark:text-white">
               {user.name}
             </div>
             {user.email && (
-              <div className="text-xs text-slate-500 dark:text-slate-400 mt-0.5">
+              <div className="text-xs text-stone-500 dark:text-stone-400 mt-0.5">
                 {user.email}
               </div>
             )}
@@ -75,7 +75,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
                 setIsOpen(false)
                 // Handle profile navigation
               }}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
             >
               <User size={16} />
               Profile
@@ -85,7 +85,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
                 setIsOpen(false)
                 // Handle settings navigation
               }}
-              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-800 transition-colors"
+              className="w-full flex items-center gap-3 px-4 py-2 text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-800 transition-colors"
             >
               <Settings size={16} />
               Settings
@@ -93,7 +93,7 @@ export function UserMenu({ user, onLogout }: UserMenuProps) {
           </div>
 
           {/* Logout */}
-          <div className="border-t border-slate-200 dark:border-slate-800 py-1">
+          <div className="border-t border-stone-200 dark:border-stone-800 py-1">
             <button
               onClick={() => {
                 setIsOpen(false)

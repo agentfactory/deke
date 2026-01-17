@@ -42,43 +42,43 @@ export default function ShellPreview() {
       >
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8 py-12">
           <div className="max-w-3xl">
-            <h1 className="text-3xl font-bold text-slate-900 dark:text-white mb-4">
+            <h1 className="text-3xl font-bold text-stone-900 dark:text-white mb-4">
               {isAuthenticated ? 'Dashboard' : 'Welcome to Coach OS'}
             </h1>
-            <p className="text-slate-600 dark:text-slate-400 mb-8">
+            <p className="text-stone-600 dark:text-stone-400 mb-8">
               {isAuthenticated
                 ? 'Manage your trips, discover leads, and automate outreach.'
                 : 'The modern platform for traveling coaches and their communities.'}
             </p>
 
             {/* Toggle for preview purposes */}
-            <div className="rounded-lg border border-slate-200 dark:border-slate-800 bg-slate-50 dark:bg-slate-900 p-6">
-              <h2 className="text-sm font-semibold text-slate-900 dark:text-white mb-3">
+            <div className="rounded-lg border border-stone-200 dark:border-stone-800 bg-stone-100 dark:bg-stone-800 p-6">
+              <h2 className="text-sm font-semibold text-stone-900 dark:text-white mb-3">
                 Shell Preview Controls
               </h2>
               <button
                 onClick={() => setIsAuthenticated(!isAuthenticated)}
-                className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600 transition-colors"
+                className="rounded-lg bg-lime-600 px-4 py-2 text-sm font-medium text-white hover:bg-lime-700 dark:bg-lime-500 dark:hover:bg-lime-600 transition-colors"
               >
                 Toggle to {isAuthenticated ? 'Public' : 'Authenticated'} View
               </button>
-              <p className="text-xs text-slate-500 dark:text-slate-400 mt-3">
+              <p className="text-xs text-stone-500 dark:text-stone-400 mt-3">
                 Current state: <span className="font-semibold">{isAuthenticated ? 'Authenticated' : 'Public'}</span>
               </p>
             </div>
 
             <div className="mt-8 space-y-4">
-              <div className="rounded-lg border border-slate-200 dark:border-slate-800 p-6">
-                <h3 className="text-lg font-semibold text-slate-900 dark:text-white mb-2">
+              <div className="rounded-lg border border-stone-200 dark:border-stone-800 p-6">
+                <h3 className="text-lg font-semibold text-stone-900 dark:text-white mb-2">
                   Shell Features
                 </h3>
-                <ul className="space-y-2 text-sm text-slate-600 dark:text-slate-400">
+                <ul className="space-y-2 text-sm text-stone-600 dark:text-stone-400">
                   <li>• Adaptive navigation (public/authenticated)</li>
                   <li>• Context-aware logo behavior</li>
                   <li>• User menu with dropdown (authenticated)</li>
                   <li>• Mobile responsive with hamburger menu</li>
                   <li>• Light and dark mode support</li>
-                  <li>• Violet/cyan design tokens applied</li>
+                  <li>• Stone/lime design tokens applied</li>
                 </ul>
               </div>
             </div>

@@ -27,8 +27,8 @@ export function MainNav({
             onClick={() => onNavigate?.(item.href)}
             className={`text-sm font-medium transition-colors ${
               item.isActive
-                ? 'text-violet-600 dark:text-violet-400'
-                : 'text-slate-700 dark:text-slate-300 hover:text-violet-600 dark:hover:text-violet-400'
+                ? 'text-lime-600 dark:text-lime-400'
+                : 'text-stone-700 dark:text-stone-300 hover:text-lime-600 dark:hover:text-lime-400'
             }`}
           >
             {item.label}
@@ -37,7 +37,7 @@ export function MainNav({
         {!isAuthenticated && (
           <button
             onClick={onLogin}
-            className="rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600 transition-colors"
+            className="rounded-lg bg-lime-600 px-4 py-2 text-sm font-medium text-white hover:bg-lime-700 dark:bg-lime-500 dark:hover:bg-lime-600 transition-colors"
           >
             Login
           </button>
@@ -47,7 +47,7 @@ export function MainNav({
       {/* Mobile Menu Toggle */}
       <button
         onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
-        className="md:hidden p-2 text-slate-700 dark:text-slate-300 hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+        className="md:hidden p-2 text-stone-700 dark:text-stone-300 hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
         aria-label="Toggle menu"
       >
         {mobileMenuOpen ? <X size={24} /> : <Menu size={24} />}
@@ -55,7 +55,7 @@ export function MainNav({
 
       {/* Mobile Navigation */}
       {mobileMenuOpen && (
-        <div className="absolute top-16 left-0 right-0 bg-white dark:bg-slate-950 border-b border-slate-200 dark:border-slate-800 md:hidden z-50">
+        <div className="absolute top-16 left-0 right-0 bg-stone-50 dark:bg-stone-900 border-b border-stone-200 dark:border-stone-800 md:hidden z-50">
           <div className="px-4 py-4 space-y-3">
             {navigationItems.map((item) => (
               <button
@@ -66,8 +66,8 @@ export function MainNav({
                 }}
                 className={`block w-full text-left px-3 py-2 rounded-lg text-sm font-medium transition-colors ${
                   item.isActive
-                    ? 'bg-violet-50 dark:bg-violet-950/30 text-violet-600 dark:text-violet-400'
-                    : 'text-slate-700 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-900'
+                    ? 'bg-lime-50 dark:bg-lime-950/30 text-lime-600 dark:text-lime-400'
+                    : 'text-stone-700 dark:text-stone-300 hover:bg-stone-100 dark:hover:bg-stone-800'
                 }`}
               >
                 {item.label}
@@ -79,7 +79,7 @@ export function MainNav({
                   onLogin?.()
                   setMobileMenuOpen(false)
                 }}
-                className="block w-full rounded-lg bg-violet-600 px-4 py-2 text-sm font-medium text-white hover:bg-violet-700 dark:bg-violet-500 dark:hover:bg-violet-600 transition-colors"
+                className="block w-full rounded-lg bg-lime-600 px-4 py-2 text-sm font-medium text-white hover:bg-lime-700 dark:bg-lime-500 dark:hover:bg-lime-600 transition-colors"
               >
                 Login
               </button>

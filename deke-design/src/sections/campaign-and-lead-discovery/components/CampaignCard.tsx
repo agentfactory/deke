@@ -38,22 +38,22 @@ export function CampaignCard({
   // Status styling
   const statusConfig = {
     pending: {
-      bg: 'bg-slate-100 dark:bg-slate-800',
-      text: 'text-slate-700 dark:text-slate-300',
-      border: 'border-slate-200 dark:border-slate-700',
-      dot: 'bg-slate-400'
+      bg: 'bg-stone-100 dark:bg-stone-800',
+      text: 'text-stone-700 dark:text-stone-300',
+      border: 'border-stone-200 dark:border-stone-700',
+      dot: 'bg-stone-400'
     },
     'in-progress': {
-      bg: 'bg-cyan-100 dark:bg-cyan-900/30',
-      text: 'text-cyan-700 dark:text-cyan-300',
-      border: 'border-cyan-200 dark:border-cyan-800',
-      dot: 'bg-cyan-500 animate-pulse'
+      bg: 'bg-lime-100 dark:bg-lime-900/30',
+      text: 'text-lime-700 dark:text-lime-300',
+      border: 'border-lime-200 dark:border-lime-800',
+      dot: 'bg-lime-500 animate-pulse'
     },
     completed: {
-      bg: 'bg-violet-100 dark:bg-violet-900/30',
-      text: 'text-violet-700 dark:text-violet-300',
-      border: 'border-violet-200 dark:border-violet-800',
-      dot: 'bg-violet-500'
+      bg: 'bg-lime-100 dark:bg-lime-900/30',
+      text: 'text-lime-700 dark:text-lime-300',
+      border: 'border-lime-200 dark:border-lime-800',
+      dot: 'bg-lime-500'
     },
     cancelled: {
       bg: 'bg-red-100 dark:bg-red-900/30',
@@ -67,8 +67,8 @@ export function CampaignCard({
 
   // Source badges
   const sourceBadges = {
-    choralnet: { label: 'ChoralNet', color: 'bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-300' },
-    casa: { label: 'CASA', color: 'bg-cyan-100 dark:bg-cyan-900/30 text-cyan-700 dark:text-cyan-300' },
+    choralnet: { label: 'ChoralNet', color: 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-300' },
+    casa: { label: 'CASA', color: 'bg-lime-100 dark:bg-lime-900/30 text-lime-700 dark:text-lime-300' },
     facebook: { label: 'Facebook', color: 'bg-blue-100 dark:bg-blue-900/30 text-blue-700 dark:text-blue-300' },
     instagram: { label: 'Instagram', color: 'bg-pink-100 dark:bg-pink-900/30 text-pink-700 dark:text-pink-300' },
     google: { label: 'Google', color: 'bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300' }
@@ -76,13 +76,13 @@ export function CampaignCard({
 
   return (
     <div
-      className="group relative bg-white dark:bg-slate-900 rounded-2xl border border-slate-200 dark:border-slate-800 shadow-sm hover:shadow-xl hover:shadow-violet-500/10 dark:hover:shadow-violet-500/5 transition-all duration-300 overflow-hidden"
+      className="group relative bg-white dark:bg-stone-900 rounded-2xl border border-stone-200 dark:border-stone-800 shadow-sm hover:shadow-xl hover:shadow-lime-500/10 dark:hover:shadow-lime-500/5 transition-all duration-300 overflow-hidden"
       style={{
         animation: `fadeInUp 0.5s ease-out ${index * 0.1}s both`
       }}
     >
       {/* Gradient accent border on hover */}
-      <div className="absolute inset-0 bg-gradient-to-br from-violet-500/0 via-cyan-500/0 to-violet-500/0 group-hover:from-violet-500/5 group-hover:via-cyan-500/5 group-hover:to-violet-500/5 transition-all duration-300 pointer-events-none" />
+      <div className="absolute inset-0 bg-gradient-to-br from-lime-500/0 via-lime-500/0 to-lime-500/0 group-hover:from-lime-500/5 group-hover:via-lime-500/5 group-hover:to-lime-500/5 transition-all duration-300 pointer-events-none" />
 
       <div className="relative p-5 sm:p-6">
         {/* Header */}
@@ -94,7 +94,7 @@ export function CampaignCard({
                 {campaign.status.replace('-', ' ')}
               </span>
             </div>
-            <h3 className="text-lg sm:text-xl font-bold text-slate-900 dark:text-white tracking-tight truncate">
+            <h3 className="text-lg sm:text-xl font-bold text-stone-900 dark:text-white tracking-tight truncate">
               {campaign.name}
             </h3>
           </div>
@@ -103,10 +103,10 @@ export function CampaignCard({
           <div className="relative">
             <button
               onClick={() => setShowMenu(!showMenu)}
-              className="p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+              className="p-2 hover:bg-stone-100 dark:hover:bg-stone-800 rounded-lg transition-colors"
               aria-label="Campaign actions"
             >
-              <MoreVertical className="w-4 h-4 text-slate-400" />
+              <MoreVertical className="w-4 h-4 text-stone-400" />
             </button>
 
             {showMenu && (
@@ -115,13 +115,13 @@ export function CampaignCard({
                   className="fixed inset-0 z-10"
                   onClick={() => setShowMenu(false)}
                 />
-                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-slate-800 rounded-xl shadow-xl border border-slate-200 dark:border-slate-700 overflow-hidden z-20">
+                <div className="absolute right-0 top-full mt-1 w-48 bg-white dark:bg-stone-800 rounded-xl shadow-xl border border-stone-200 dark:border-stone-700 overflow-hidden z-20">
                   <button
                     onClick={() => {
                       onView?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-2"
                   >
                     <Eye className="w-4 h-4" />
                     View Details
@@ -131,7 +131,7 @@ export function CampaignCard({
                       onViewLeads?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors flex items-center gap-2"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors flex items-center gap-2"
                   >
                     <Search className="w-4 h-4" />
                     View Leads
@@ -141,11 +141,11 @@ export function CampaignCard({
                       onEdit?.()
                       setShowMenu(false)
                     }}
-                    className="w-full px-4 py-2.5 text-left text-sm text-slate-700 dark:text-slate-300 hover:bg-slate-50 dark:hover:bg-slate-700 transition-colors"
+                    className="w-full px-4 py-2.5 text-left text-sm text-stone-700 dark:text-stone-300 hover:bg-stone-50 dark:hover:bg-stone-700 transition-colors"
                   >
                     Edit Campaign
                   </button>
-                  <div className="h-px bg-slate-200 dark:bg-slate-700" />
+                  <div className="h-px bg-stone-200 dark:bg-stone-700" />
                   <button
                     onClick={() => {
                       onDelete?.()
@@ -163,21 +163,21 @@ export function CampaignCard({
 
         {/* Campaign Details */}
         <div className="space-y-3 mb-5">
-          <div className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-violet-500" />
+          <div className="flex items-start gap-2 text-sm text-stone-600 dark:text-stone-400">
+            <MapPin className="w-4 h-4 mt-0.5 flex-shrink-0 text-lime-500" />
             <span className="font-medium">{campaign.location}</span>
-            <span className="text-slate-400 dark:text-slate-500">•</span>
+            <span className="text-stone-400 dark:text-stone-500">•</span>
             <span>{campaign.radius}mi radius</span>
           </div>
 
-          <div className="flex items-start gap-2 text-sm text-slate-600 dark:text-slate-400">
-            <Target className="w-4 h-4 mt-0.5 flex-shrink-0 text-cyan-500" />
+          <div className="flex items-start gap-2 text-sm text-stone-600 dark:text-stone-400">
+            <Target className="w-4 h-4 mt-0.5 flex-shrink-0 text-lime-500" />
             <span>Created {createdDate}</span>
           </div>
         </div>
 
         {/* Source Tags */}
-        <div className="flex flex-wrap gap-1.5 mb-5 pb-5 border-b border-slate-200 dark:border-slate-800">
+        <div className="flex flex-wrap gap-1.5 mb-5 pb-5 border-b border-stone-200 dark:border-stone-800">
           {campaign.sources.map(source => (
             <span
               key={source}
@@ -190,29 +190,29 @@ export function CampaignCard({
 
         {/* Lead Metrics Grid */}
         <div className="grid grid-cols-3 gap-3 mb-5">
-          <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+          <div className="bg-gradient-to-br from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 p-3 rounded-xl border border-stone-200 dark:border-stone-800">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">
               Total
             </p>
-            <p className="text-xl font-bold text-slate-900 dark:text-white">
+            <p className="text-xl font-bold text-stone-900 dark:text-white">
               {campaign.totalLeads}
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-violet-50 to-white dark:from-violet-900/20 dark:to-slate-900 p-3 rounded-xl border border-violet-200 dark:border-violet-800">
-            <p className="text-xs font-medium text-violet-600 dark:text-violet-400 mb-1">
+          <div className="bg-gradient-to-br from-lime-50 to-white dark:from-lime-900/20 dark:to-stone-900 p-3 rounded-xl border border-lime-200 dark:border-lime-800">
+            <p className="text-xs font-medium text-lime-600 dark:text-lime-400 mb-1">
               High Score
             </p>
-            <p className="text-xl font-bold bg-gradient-to-br from-violet-600 to-violet-700 bg-clip-text text-transparent">
+            <p className="text-xl font-bold bg-gradient-to-br from-lime-600 to-lime-700 bg-clip-text text-transparent">
               {campaign.highScoreLeads}
             </p>
           </div>
 
-          <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
-            <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
+          <div className="bg-gradient-to-br from-stone-50 to-white dark:from-stone-800 dark:to-stone-900 p-3 rounded-xl border border-stone-200 dark:border-stone-800">
+            <p className="text-xs font-medium text-stone-500 dark:text-stone-400 mb-1">
               Rate
             </p>
-            <p className="text-xl font-bold bg-gradient-to-br from-cyan-600 to-cyan-700 bg-clip-text text-transparent">
+            <p className="text-xl font-bold bg-gradient-to-br from-lime-600 to-lime-700 bg-clip-text text-transparent">
               {conversionRate}%
             </p>
           </div>
@@ -222,28 +222,28 @@ export function CampaignCard({
         <div className="space-y-2 mb-5">
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-violet-500" />
-              <span className="text-slate-600 dark:text-slate-400">High (80-100)</span>
+              <div className="h-2 w-2 rounded-full bg-lime-500" />
+              <span className="text-stone-600 dark:text-stone-400">High (80-100)</span>
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="font-semibold text-stone-900 dark:text-white">
               {campaign.highScoreLeads}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-cyan-500" />
-              <span className="text-slate-600 dark:text-slate-400">Medium (60-79)</span>
+              <div className="h-2 w-2 rounded-full bg-lime-500" />
+              <span className="text-stone-600 dark:text-stone-400">Medium (60-79)</span>
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="font-semibold text-stone-900 dark:text-white">
               {campaign.mediumScoreLeads}
             </span>
           </div>
           <div className="flex items-center justify-between text-sm">
             <div className="flex items-center gap-2">
-              <div className="h-2 w-2 rounded-full bg-slate-400" />
-              <span className="text-slate-600 dark:text-slate-400">Low (0-59)</span>
+              <div className="h-2 w-2 rounded-full bg-stone-400" />
+              <span className="text-stone-600 dark:text-stone-400">Low (0-59)</span>
             </div>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <span className="font-semibold text-stone-900 dark:text-white">
               {campaign.lowScoreLeads}
             </span>
           </div>
@@ -253,7 +253,7 @@ export function CampaignCard({
         <div className="flex gap-2">
           <button
             onClick={onViewLeads}
-            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800 text-white rounded-xl shadow-lg shadow-violet-500/25 hover:shadow-xl hover:shadow-violet-500/30 transition-all duration-200 font-medium text-sm"
+            className="flex-1 flex items-center justify-center gap-2 px-4 py-2.5 bg-gradient-to-br from-lime-600 to-lime-700 hover:from-lime-700 hover:to-lime-800 text-white rounded-xl shadow-lg shadow-lime-500/25 hover:shadow-xl hover:shadow-lime-500/30 transition-all duration-200 font-medium text-sm"
           >
             <Search className="w-4 h-4" />
             View Leads
@@ -261,7 +261,7 @@ export function CampaignCard({
 
           <button
             onClick={onView}
-            className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors"
+            className="px-3 py-2.5 bg-stone-100 dark:bg-stone-800 hover:bg-stone-200 dark:hover:bg-stone-700 text-stone-700 dark:text-stone-300 rounded-xl transition-colors"
             aria-label="View details"
           >
             <Eye className="w-4 h-4" />

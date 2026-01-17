@@ -34,16 +34,16 @@ export function AppShell({
   onLogout,
 }: AppShellProps) {
   return (
-    <div className="min-h-screen bg-white dark:bg-slate-950">
+    <div className="min-h-screen bg-stone-50 dark:bg-stone-900">
       {/* Header */}
-      <header className="border-b border-slate-200 dark:border-slate-800">
+      <header className="border-b border-stone-200 dark:border-stone-800">
         <div className="mx-auto max-w-7xl px-4 sm:px-6 lg:px-8">
           <div className="flex h-16 items-center justify-between">
             {/* Left: Logo + User Menu (if authenticated) */}
             <div className="flex items-center gap-4">
               <button
                 onClick={() => onNavigate?.(isAuthenticated ? '/dashboard' : '/')}
-                className="text-xl font-bold text-slate-900 dark:text-white hover:text-violet-600 dark:hover:text-violet-400 transition-colors"
+                className="text-xl font-bold text-stone-900 dark:text-white hover:text-lime-600 dark:hover:text-lime-400 transition-colors"
               >
                 Coach OS
               </button>
