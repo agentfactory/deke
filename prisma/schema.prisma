@@ -55,6 +55,31 @@ model Lead {
 // Removed enum LeadStatus - now using String with validation comments
 
 // ============================================
+// TRIPS & TRAVEL MANAGEMENT
+// ============================================
+
+model Trip {
+  id            String    @id @default(cuid())
+  name          String    // e.g., "Montreal Weekend", "California Tour"
+  location      String    // Primary city/region
+  startDate     DateTime
+  endDate       DateTime
+  status        String    @default("upcoming") // upcoming, in-progress, completed, cancelled
+
+  // Notes
+  notes         String?
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  bookings      Booking[]
+
+  @@index([status])
+  @@index([startDate])
+}
+
+// ============================================
 // INQUIRIES & BOOKINGS
 // ============================================
 
@@ -93,6 +118,10 @@ model Booking {
   lead          Lead          @relation(fields: [leadId], references: [id])
   inquiryId     String?       @unique
   inquiry       Inquiry?      @relation(fields: [inquiryId], references: [id])
+
+  // Trip relation
+  tripId        String?
+  trip          Trip?         @relation(fields: [tripId], references: [id])
 
   serviceType   String        // ARRANGEMENT, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
   status        String        @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, RESCHEDULED
@@ -135,6 +164,7 @@ model Booking {
   campaigns     Campaign[]
 
   @@index([leadId])
+  @@index([tripId])
   @@index([status])
   @@index([startDate])
   @@index([latitude, longitude])
