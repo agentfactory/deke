@@ -1,5 +1,5 @@
 import type { Campaign, Lead } from '@/../product/sections/campaign-and-lead-discovery/types'
-import { MapPin, Target, TrendingUp, MoreVertical, Eye, Search } from 'lucide-react'
+import { MapPin, Target, MoreVertical, Eye, Search } from 'lucide-react'
 import { useState } from 'react'
 
 interface CampaignCardProps {
@@ -14,7 +14,7 @@ interface CampaignCardProps {
 
 export function CampaignCard({
   campaign,
-  leads,
+  leads: _leads,
   onView,
   onEdit,
   onDelete,

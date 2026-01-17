@@ -1,14 +1,15 @@
 import data from '@/../product/sections/outreach-and-automation/data.json'
+import type { EmailSequence, Message, Template, Contact, Lead } from '@/../product/sections/outreach-and-automation/types'
 import { SequenceList } from './components/SequenceList'
 
 export default function SequenceListPreview() {
   return (
     <SequenceList
-      emailSequences={data.emailSequences}
-      messages={data.messages}
-      templates={data.templates}
-      contacts={data.contacts}
-      leads={data.leads}
+      emailSequences={data.emailSequences as EmailSequence[]}
+      messages={data.messages as Message[]}
+      templates={data.templates as Template[]}
+      contacts={data.contacts as Contact[]}
+      leads={data.leads as Lead[]}
       onViewSequence={(id) => console.log('View sequence:', id)}
       onCreateSequence={() => console.log('Create new sequence')}
       onEditSequence={(id) => console.log('Edit sequence:', id)}

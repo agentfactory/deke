@@ -1,5 +1,5 @@
 import type { GroupRequest, Venue } from '@/../product/sections/find-a-singing-group/types'
-import { User, MapPin, Calendar, Award, MoreVertical, Eye, Mail, Check } from 'lucide-react'
+import { MapPin, Calendar, Award, MoreVertical, Eye, Mail, Check } from 'lucide-react'
 import { useState } from 'react'
 
 interface RequestCardProps {
@@ -21,7 +21,7 @@ export function RequestCard({
   onView,
   onMarkInProgress,
   onMarkMatched,
-  onMarkResponded,
+  onMarkResponded: _onMarkResponded,
   onRespond,
   onViewSuggestedVenues,
   onArchive,

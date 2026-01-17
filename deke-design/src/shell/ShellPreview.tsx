@@ -1,4 +1,4 @@
-import React, { useState } from 'react'
+import { useState } from 'react'
 import { AppShell } from './components/AppShell'
 
 export default function ShellPreview() {

@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect } from 'react'
 import { ChevronDown, User, Settings, LogOut } from 'lucide-react'
 import type { User as UserType } from './AppShell'
 

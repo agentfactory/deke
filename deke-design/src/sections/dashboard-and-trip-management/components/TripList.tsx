@@ -14,19 +14,19 @@ import { Plus } from 'lucide-react'
 export function TripList({
   trips,
   bookings,
-  expenses,
-  participants,
-  venues,
+  expenses: _expenses,
+  participants: _participants,
+  venues: _venues,
   onViewTrip,
   onCreateTrip,
   onEditTrip,
   onDeleteTrip,
   onAddBooking,
-  onEditBooking,
-  onDeleteBooking,
+  onEditBooking: _onEditBooking,
+  onDeleteBooking: _onDeleteBooking,
   onAddExpense,
-  onEditExpense,
-  onDeleteExpense,
+  onEditExpense: _onEditExpense,
+  onDeleteExpense: _onDeleteExpense,
   onViewProfitability
 }: DashboardProps) {
   // Calculate summary metrics

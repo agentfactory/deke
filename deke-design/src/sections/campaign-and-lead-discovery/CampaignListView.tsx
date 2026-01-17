@@ -1,13 +1,14 @@
 import data from '@/../product/sections/campaign-and-lead-discovery/data.json'
+import type { Campaign, Lead, Venue, Contact } from '@/../product/sections/campaign-and-lead-discovery/types'
 import { CampaignList } from './components/CampaignList'
 
 export default function CampaignListPreview() {
   return (
     <CampaignList
-      campaigns={data.campaigns}
-      leads={data.leads}
-      venues={data.venues}
-      contacts={data.contacts}
+      campaigns={data.campaigns as Campaign[]}
+      leads={data.leads as Lead[]}
+      venues={data.venues as Venue[]}
+      contacts={data.contacts as Contact[]}
       onViewCampaign={(id) => console.log('View campaign:', id)}
       onCreateCampaign={() => console.log('Create new campaign')}
       onEditCampaign={(id) => console.log('Edit campaign:', id)}

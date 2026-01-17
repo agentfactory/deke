@@ -14,19 +14,19 @@ import { Plus, Target } from 'lucide-react'
 export function CampaignList({
   campaigns,
   leads,
-  venues,
-  contacts,
+  venues: _venues,
+  contacts: _contacts,
   onViewCampaign,
   onCreateCampaign,
   onEditCampaign,
   onDeleteCampaign,
-  onViewLead,
-  onContactLead,
-  onConvertLead,
-  onDisqualifyLead,
-  onFilterByScore,
-  onFilterBySource,
-  onFilterByStatus
+  onViewLead: _onViewLead,
+  onContactLead: _onContactLead,
+  onConvertLead: _onConvertLead,
+  onDisqualifyLead: _onDisqualifyLead,
+  onFilterByScore: _onFilterByScore,
+  onFilterBySource: _onFilterBySource,
+  onFilterByStatus: _onFilterByStatus
 }: CampaignListProps) {
   // Calculate summary metrics
   const totalLeads = campaigns.reduce((sum, c) => sum + c.totalLeads, 0)

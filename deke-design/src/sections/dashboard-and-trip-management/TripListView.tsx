@@ -1,14 +1,15 @@
 import data from '@/../product/sections/dashboard-and-trip-management/data.json'
+import type { Trip, Booking, Expense, Participant, Venue } from '@/../product/sections/dashboard-and-trip-management/types'
 import { TripList } from './components/TripList'
 
 export default function TripListPreview() {
   return (
     <TripList
-      trips={data.trips}
-      bookings={data.bookings}
-      expenses={data.expenses}
-      participants={data.participants}
-      venues={data.venues}
+      trips={data.trips as Trip[]}
+      bookings={data.bookings as Booking[]}
+      expenses={data.expenses as Expense[]}
+      participants={data.participants as Participant[]}
+      venues={data.venues as Venue[]}
       onViewTrip={(id) => console.log('View trip:', id)}
       onCreateTrip={() => console.log('Create new trip')}
       onEditTrip={(id) => console.log('Edit trip:', id)}

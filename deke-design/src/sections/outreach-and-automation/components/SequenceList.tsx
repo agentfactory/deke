@@ -13,20 +13,20 @@ import { Plus } from 'lucide-react'
  */
 export function SequenceList({
   emailSequences,
-  messages,
+  messages: _messages,
   templates,
-  contacts,
-  leads,
+  contacts: _contacts,
+  leads: _leads,
   onViewSequence,
   onCreateSequence,
   onEditSequence,
   onDeleteSequence,
   onToggleSequence,
-  onViewTemplate,
-  onCreateTemplate,
-  onEditTemplate,
-  onDeleteTemplate,
-  onViewMessage,
+  onViewTemplate: _onViewTemplate,
+  onCreateTemplate: _onCreateTemplate,
+  onEditTemplate: _onEditTemplate,
+  onDeleteTemplate: _onDeleteTemplate,
+  onViewMessage: _onViewMessage,
   onViewAnalytics
 }: OutreachProps) {
   // Calculate summary metrics
