@@ -21,6 +21,7 @@ const footerLinks = {
     { label: "Contact", href: "/contact" },
     { label: "Press Kit", href: "/press" },
     { label: "Testimonials", href: "/testimonials" },
+    { label: "Artwork", href: "/artwork" },
   ],
 };
 
