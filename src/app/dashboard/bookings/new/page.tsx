@@ -1,6 +1,6 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
@@ -26,7 +26,7 @@ interface Trip {
   location: string;
 }
 
-export default function NewBookingPage() {
+function NewBookingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedTripId = searchParams.get('tripId');
@@ -306,5 +306,17 @@ export default function NewBookingPage() {
         </Card>
       </div>
     </div>
+  );
+}
+
+export default function NewBookingPage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
+      </div>
+    }>
+      <NewBookingForm />
+    </Suspense>
   );
 }
