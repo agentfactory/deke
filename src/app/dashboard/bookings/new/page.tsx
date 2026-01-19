@@ -29,6 +29,7 @@ export default function NewBookingPage() {
         paymentStatus: values.paymentStatus,
         internalNotes: values.internalNotes || null,
         clientNotes: values.clientNotes || null,
+        tripId: values.tripId || null,
       };
 
       const response = await fetch('/api/bookings', {
