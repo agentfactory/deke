@@ -114,22 +114,25 @@ function NewBookingForm() {
   };
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-stone-50 via-lime-50/30 to-stone-50/20 dark:from-stone-950 dark:via-lime-950/20 dark:to-stone-950/10">
-      <div className="max-w-2xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-6">
-          <Button variant="ghost" size="sm" onClick={() => router.back()}>
-            <ArrowLeft className="h-4 w-4 mr-2" />
-            Back
-          </Button>
+    <div className="space-y-6">
+      <div className="flex items-center gap-4">
+        <Button variant="ghost" onClick={() => router.back()}>
+          <ArrowLeft className="h-4 w-4 mr-2" />
+          Back
+        </Button>
+        <div>
+          <h1 className="text-3xl font-bold">New Booking</h1>
+          <p className="text-muted-foreground">Enter client and booking details</p>
         </div>
+      </div>
 
-        <Card>
-          <CardHeader>
-            <CardTitle>New Booking</CardTitle>
-            <p className="text-sm text-muted-foreground">
-              Enter client and booking details. Lead will be auto-created if new.
-            </p>
-          </CardHeader>
+      <Card className="max-w-2xl">
+        <CardHeader>
+          <CardTitle>Booking Details</CardTitle>
+          <p className="text-sm text-muted-foreground">
+            Lead will be auto-created if this is a new client email.
+          </p>
+        </CardHeader>
           <CardContent>
             <form onSubmit={handleSubmit} className="space-y-6">
               {error && (
@@ -271,12 +274,12 @@ function NewBookingForm() {
                   <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Trip (Optional)</h3>
                   <div>
                     <Label htmlFor="tripId">Associate with Trip</Label>
-                    <Select value={form.tripId} onValueChange={(v) => handleChange('tripId', v)}>
+                    <Select value={form.tripId || "none"} onValueChange={(v) => handleChange('tripId', v === "none" ? "" : v)}>
                       <SelectTrigger>
                         <SelectValue placeholder="No trip - standalone booking" />
                       </SelectTrigger>
                       <SelectContent>
-                        <SelectItem value="">No trip - standalone booking</SelectItem>
+                        <SelectItem value="none">No trip - standalone booking</SelectItem>
                         {trips.map((trip) => (
                           <SelectItem key={trip.id} value={trip.id}>
                             {trip.name} ({trip.location})
@@ -304,7 +307,6 @@ function NewBookingForm() {
             </form>
           </CardContent>
         </Card>
-      </div>
     </div>
   );
 }
@@ -312,7 +314,7 @@ function NewBookingForm() {
 export default function NewBookingPage() {
   return (
     <Suspense fallback={
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="flex items-center justify-center py-12">
         <Loader2 className="h-8 w-8 animate-spin text-muted-foreground" />
       </div>
     }>
