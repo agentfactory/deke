@@ -254,6 +254,87 @@ export default function ArrangementsPage() {
         </div>
       </section>
 
+      {/* Samples */}
+      <section id="samples" className="py-20 md:py-28">
+        <div className="container px-4 md:px-6">
+          <div className="text-center mb-12">
+            <Badge variant="outline" className="mb-4">
+              <FileMusic className="h-3 w-3 mr-1" />
+              Sample Work
+            </Badge>
+            <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
+              Hear the Difference
+            </h2>
+            <p className="text-muted-foreground max-w-2xl mx-auto">
+              Listen to examples of arrangements created for groups of all levels
+              and styles.
+            </p>
+          </div>
+
+          <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto">
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Music className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Pop/Contemporary</h3>
+                    <p className="text-sm text-muted-foreground">Competition winning</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Modern arrangements with complex harmonies and driving vocal percussion.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Music className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Jazz Standards</h3>
+                    <p className="text-sm text-muted-foreground">Classic reimagined</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Rich jazz voicings and sophisticated harmonic progressions.
+                </p>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10">
+                    <Music className="h-6 w-6 text-primary" />
+                  </div>
+                  <div>
+                    <h3 className="font-semibold">Holiday/Seasonal</h3>
+                    <p className="text-sm text-muted-foreground">Audience favorites</p>
+                  </div>
+                </div>
+                <p className="text-sm text-muted-foreground">
+                  Fresh takes on beloved classics perfect for holiday performances.
+                </p>
+              </CardContent>
+            </Card>
+          </div>
+
+          <div className="text-center mt-8">
+            <p className="text-sm text-muted-foreground mb-4">
+              Audio samples available during consultation
+            </p>
+            <Button variant="outline" asChild>
+              <Link href="/booking?service=arrangement">
+                Request a Consultation
+              </Link>
+            </Button>
+          </div>
+        </div>
+      </section>
+
       {/* CTA */}
       <section className="py-20 md:py-28 bg-primary text-primary-foreground">
         <div className="container px-4 md:px-6 text-center">

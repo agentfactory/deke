@@ -1,6 +1,9 @@
+"use client";
+
+import { useState } from "react";
 import Link from "next/link";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -12,14 +15,9 @@ import {
   Clock,
   ArrowRight,
   Calendar,
-  Phone,
+  CheckCircle,
+  Loader2,
 } from "lucide-react";
-
-export const metadata = {
-  title: "Contact",
-  description:
-    "Get in touch with Deke Sharon for custom arrangements, coaching, workshops, or speaking engagements.",
-};
 
 const contactMethods = [
   {
@@ -68,7 +66,65 @@ const faqs = [
   },
 ];
 
+interface FormData {
+  firstName: string;
+  lastName: string;
+  email: string;
+  subject: string;
+  message: string;
+}
+
 export default function ContactPage() {
+  const [formData, setFormData] = useState<FormData>({
+    firstName: "",
+    lastName: "",
+    email: "",
+    subject: "",
+    message: "",
+  });
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isSubmitted, setIsSubmitted] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const handleChange = (
+    e: React.ChangeEvent<HTMLInputElement | HTMLTextAreaElement>
+  ) => {
+    const { id, value } = e.target;
+    setFormData((prev) => ({ ...prev, [id]: value }));
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setError(null);
+
+    try {
+      const response = await fetch("/api/contact", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(formData),
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || "Failed to send message");
+      }
+
+      setIsSubmitted(true);
+      setFormData({
+        firstName: "",
+        lastName: "",
+        email: "",
+        subject: "",
+        message: "",
+      });
+    } catch (err) {
+      setError(err instanceof Error ? err.message : "Failed to send message");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <>
       {/* Hero */}
@@ -132,48 +188,105 @@ export default function ContactPage() {
               <h2 className="font-heading text-2xl md:text-3xl font-bold mb-6">
                 Send a Message
               </h2>
-              <form className="space-y-6">
-                <div className="grid gap-4 sm:grid-cols-2">
-                  <div className="space-y-2">
-                    <Label htmlFor="firstName">First Name</Label>
-                    <Input id="firstName" placeholder="John" required />
+
+              {isSubmitted ? (
+                <div className="p-8 rounded-lg bg-primary/5 border border-primary/20 text-center">
+                  <CheckCircle className="h-12 w-12 text-primary mx-auto mb-4" />
+                  <h3 className="font-heading text-xl font-semibold mb-2">
+                    Message Sent!
+                  </h3>
+                  <p className="text-muted-foreground mb-4">
+                    Thank you for reaching out. I'll get back to you within
+                    24-48 hours.
+                  </p>
+                  <Button
+                    variant="outline"
+                    onClick={() => setIsSubmitted(false)}
+                  >
+                    Send Another Message
+                  </Button>
+                </div>
+              ) : (
+                <form onSubmit={handleSubmit} className="space-y-6">
+                  {error && (
+                    <div className="p-4 rounded-lg bg-destructive/10 border border-destructive/20 text-destructive text-sm">
+                      {error}
+                    </div>
+                  )}
+                  <div className="grid gap-4 sm:grid-cols-2">
+                    <div className="space-y-2">
+                      <Label htmlFor="firstName">First Name</Label>
+                      <Input
+                        id="firstName"
+                        placeholder="John"
+                        required
+                        value={formData.firstName}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
+                    <div className="space-y-2">
+                      <Label htmlFor="lastName">Last Name</Label>
+                      <Input
+                        id="lastName"
+                        placeholder="Smith"
+                        required
+                        value={formData.lastName}
+                        onChange={handleChange}
+                        disabled={isSubmitting}
+                      />
+                    </div>
                   </div>
                   <div className="space-y-2">
-                    <Label htmlFor="lastName">Last Name</Label>
-                    <Input id="lastName" placeholder="Smith" required />
+                    <Label htmlFor="email">Email</Label>
+                    <Input
+                      id="email"
+                      type="email"
+                      placeholder="john@example.com"
+                      required
+                      value={formData.email}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
                   </div>
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="email">Email</Label>
-                  <Input
-                    id="email"
-                    type="email"
-                    placeholder="john@example.com"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="subject">Subject</Label>
-                  <Input
-                    id="subject"
-                    placeholder="What's this regarding?"
-                    required
-                  />
-                </div>
-                <div className="space-y-2">
-                  <Label htmlFor="message">Message</Label>
-                  <Textarea
-                    id="message"
-                    placeholder="Tell me about your project or question..."
-                    rows={6}
-                    required
-                  />
-                </div>
-                <Button type="submit" size="lg">
-                  Send Message
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </form>
+                  <div className="space-y-2">
+                    <Label htmlFor="subject">Subject</Label>
+                    <Input
+                      id="subject"
+                      placeholder="What's this regarding?"
+                      required
+                      value={formData.subject}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <div className="space-y-2">
+                    <Label htmlFor="message">Message</Label>
+                    <Textarea
+                      id="message"
+                      placeholder="Tell me about your project or question..."
+                      rows={6}
+                      required
+                      value={formData.message}
+                      onChange={handleChange}
+                      disabled={isSubmitting}
+                    />
+                  </div>
+                  <Button type="submit" size="lg" disabled={isSubmitting}>
+                    {isSubmitting ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Sending...
+                      </>
+                    ) : (
+                      <>
+                        Send Message
+                        <ArrowRight className="ml-2 h-4 w-4" />
+                      </>
+                    )}
+                  </Button>
+                </form>
+              )}
             </div>
 
             {/* FAQs */}
@@ -195,9 +308,9 @@ export default function ContactPage() {
                   <span className="font-semibold">Response Time</span>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  I typically respond to all inquiries within 24-48 hours
-                  during business days. For urgent matters, please indicate
-                  so in your subject line.
+                  I typically respond to all inquiries within 24-48 hours during
+                  business days. For urgent matters, please indicate so in your
+                  subject line.
                 </p>
               </div>
             </div>

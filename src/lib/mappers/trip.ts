@@ -13,9 +13,9 @@ type TripWithRelations = PrismaTrip & {
 
 export function mapTripToComponent(trip: TripWithRelations): Trip {
   // Calculate totals from bookings
-  const totalRevenue = trip.bookings.reduce((sum, booking) => sum + (booking.amount || 0), 0)
-  const totalExpenses = trip.bookings.reduce((sum, booking) => {
-    const bookingExpenses = booking.travelExpenses.reduce((expSum, exp) => {
+  const totalRevenue = trip.bookings.reduce((sum: number, booking) => sum + (booking.amount || 0), 0)
+  const totalExpenses = trip.bookings.reduce((sum: number, booking) => {
+    const bookingExpenses = booking.travelExpenses.reduce((expSum: number, exp) => {
       return expSum + (exp.flightCost || 0) + (exp.hotelCost || 0) + (exp.groundTransportCost || 0)
     }, 0)
     return sum + bookingExpenses

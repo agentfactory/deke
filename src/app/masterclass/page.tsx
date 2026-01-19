@@ -118,9 +118,9 @@ export default function MasterclassPage() {
                 </Link>
               </Button>
               <Button size="lg" variant="outline" asChild>
-                <Link href="/masterclass/preview">
+                <Link href="#courses">
                   <Play className="mr-2 h-4 w-4" />
-                  Watch Free Preview
+                  View Courses
                 </Link>
               </Button>
             </div>
