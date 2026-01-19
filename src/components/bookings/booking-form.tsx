@@ -1,5 +1,6 @@
 'use client';
 
+import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
@@ -50,9 +51,25 @@ const bookingFormSchema = z.object({
   paymentStatus: z.enum(PAYMENT_STATUSES).optional(),
   internalNotes: z.string().optional(),
   clientNotes: z.string().optional(),
+  tripId: z.string().optional(),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
+
+interface Lead {
+  id: string;
+  firstName: string;
+  lastName: string;
+  email: string;
+  organization: string | null;
+}
+
+interface Trip {
+  id: string;
+  name: string;
+  location: string;
+  startDate: string;
+}
 
 interface BookingFormProps {
   initialValues?: Partial<BookingFormValues>;
@@ -67,6 +84,37 @@ export function BookingForm({
   isLoading = false,
   submitLabel = 'Create Booking',
 }: BookingFormProps) {
+  const [leads, setLeads] = useState<Lead[]>([]);
+  const [trips, setTrips] = useState<Trip[]>([]);
+  const [loadingLeads, setLoadingLeads] = useState(true);
+
+  useEffect(() => {
+    async function fetchData() {
+      try {
+        const [leadsRes, tripsRes] = await Promise.all([
+          fetch('/api/leads'),
+          fetch('/api/trips'),
+        ]);
+
+        if (leadsRes.ok) {
+          const leadsData = await leadsRes.json();
+          setLeads(leadsData);
+        }
+
+        if (tripsRes.ok) {
+          const tripsData = await tripsRes.json();
+          setTrips(tripsData);
+        }
+      } catch (error) {
+        console.error('Error fetching data:', error);
+      } finally {
+        setLoadingLeads(false);
+      }
+    }
+
+    fetchData();
+  }, []);
+
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
@@ -82,6 +130,7 @@ export function BookingForm({
       paymentStatus: initialValues?.paymentStatus || 'UNPAID',
       internalNotes: initialValues?.internalNotes || '',
       clientNotes: initialValues?.clientNotes || '',
+      tripId: initialValues?.tripId || '',
     },
   });
 
@@ -94,12 +143,64 @@ export function BookingForm({
           name="leadId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Lead ID</FormLabel>
-              <FormControl>
-                <Input placeholder="Enter lead ID" {...field} />
-              </FormControl>
+              <FormLabel>Lead / Client</FormLabel>
+              {loadingLeads ? (
+                <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading leads...
+                </div>
+              ) : leads.length === 0 ? (
+                <div className="text-sm text-muted-foreground">
+                  No leads found. Create a lead first via the contact form or campaigns.
+                </div>
+              ) : (
+                <Select onValueChange={field.onChange} value={field.value}>
+                  <FormControl>
+                    <SelectTrigger>
+                      <SelectValue placeholder="Select a lead" />
+                    </SelectTrigger>
+                  </FormControl>
+                  <SelectContent>
+                    {leads.map((lead) => (
+                      <SelectItem key={lead.id} value={lead.id}>
+                        {lead.firstName} {lead.lastName} {lead.organization ? `(${lead.organization})` : ''} - {lead.email}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              )}
               <FormDescription>
-                The ID of the lead this booking is for
+                The person or organization this booking is for
+              </FormDescription>
+              <FormMessage />
+            </FormItem>
+          )}
+        />
+
+        {/* Trip Selection (Optional) */}
+        <FormField
+          control={form.control}
+          name="tripId"
+          render={({ field }) => (
+            <FormItem>
+              <FormLabel>Trip (Optional)</FormLabel>
+              <Select onValueChange={field.onChange} value={field.value}>
+                <FormControl>
+                  <SelectTrigger>
+                    <SelectValue placeholder="Select a trip (optional)" />
+                  </SelectTrigger>
+                </FormControl>
+                <SelectContent>
+                  <SelectItem value="">No trip</SelectItem>
+                  {trips.map((trip) => (
+                    <SelectItem key={trip.id} value={trip.id}>
+                      {trip.name} - {trip.location}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+              <FormDescription>
+                Associate this booking with a trip for tracking
               </FormDescription>
               <FormMessage />
             </FormItem>
@@ -317,7 +418,7 @@ export function BookingForm({
         />
 
         {/* Submit */}
-        <Button type="submit" disabled={isLoading} className="w-full">
+        <Button type="submit" disabled={isLoading || loadingLeads} className="w-full">
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {submitLabel}
         </Button>
