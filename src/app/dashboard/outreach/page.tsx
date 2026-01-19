@@ -108,7 +108,7 @@ export default async function OutreachPage() {
                   No message templates yet. Create your first template to get started.
                 </p>
               ) : (
-                messageTemplates.map((template) => (
+                messageTemplates.map((template: { id: string; name: string; channel: string; serviceType: string | null }) => (
                   <div
                     key={template.id}
                     className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
