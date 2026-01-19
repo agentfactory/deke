@@ -23,15 +23,30 @@ export async function POST(request: NextRequest) {
 
     const { firstName, lastName, email, subject, message } = result.data;
 
-    // Store the contact message as an inquiry
+    // Find or create lead
+    let lead = await prisma.lead.findUnique({
+      where: { email },
+    });
+
+    if (!lead) {
+      lead = await prisma.lead.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          source: "website_contact",
+          status: "NEW",
+        },
+      });
+    }
+
+    // Create an inquiry linked to the lead
     const inquiry = await prisma.inquiry.create({
       data: {
-        firstName,
-        lastName,
-        email,
+        leadId: lead.id,
+        serviceType: "CONSULTATION",
+        status: "PENDING",
         message: `Subject: ${subject}\n\n${message}`,
-        serviceType: "OTHER",
-        status: "NEW",
       },
     });
 
