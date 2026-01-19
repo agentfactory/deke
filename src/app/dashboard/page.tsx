@@ -2,6 +2,10 @@ import { TripList } from '@/components/trips/trip-list'
 import { prisma } from '@/lib/db'
 import { mapTripsToComponent, mapBookingToTripBooking } from '@/lib/mappers/trip'
 
+// Disable caching for this page to always show fresh data
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
 async function getDashboardData() {
   try {
     // Fetch all trips with their bookings and expenses
