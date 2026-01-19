@@ -22,14 +22,18 @@ async function getGroupRequests(): Promise<{
   stats: { total: number; pending: number; responded: number }
 }> {
   try {
-    // Use inquiries with serviceType OTHER as group requests
+    // Use inquiries with serviceType CONSULTATION or OTHER as group requests
     const inquiries = await prisma.inquiry.findMany({
       where: {
         OR: [
+          { serviceType: 'CONSULTATION' },
           { serviceType: 'OTHER' },
           { message: { contains: 'group', mode: 'insensitive' } },
           { message: { contains: 'sing', mode: 'insensitive' } },
         ],
+      },
+      include: {
+        lead: true,
       },
       orderBy: { createdAt: 'desc' },
       take: 20,
@@ -37,9 +41,9 @@ async function getGroupRequests(): Promise<{
 
     const requests: GroupRequest[] = inquiries.map((i) => ({
       id: i.id,
-      name: `${i.firstName} ${i.lastName}`,
-      email: i.email,
-      location: 'Location pending', // We'll add location to inquiries later
+      name: `${i.lead.firstName} ${i.lead.lastName}`,
+      email: i.lead.email,
+      location: i.lead.organization || 'Location pending',
       message: i.message || '',
       status: i.status,
       createdAt: i.createdAt,
