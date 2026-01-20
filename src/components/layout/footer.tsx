@@ -1,7 +1,6 @@
 import Link from "next/link";
-import { Mail, MapPin, ArrowRight } from "lucide-react";
+import { Mail, MapPin } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
-import { Button } from "@/components/ui/button";
 
 const footerLinks = {
   services: [
@@ -36,22 +35,6 @@ export function Footer() {
   return (
     <footer className="bg-background border-t border-border">
       <div className="container px-4 md:px-6 py-16 md:py-20">
-        {/* Top CTA Section */}
-        <div className="text-center mb-16 pb-16 border-b border-border">
-          <h3 className="font-heading text-2xl md:text-3xl font-semibold tracking-tight mb-4">
-            Ready to Start Your Journey?
-          </h3>
-          <p className="text-muted-foreground text-base max-w-xl mx-auto mb-8">
-            Let's create something amazing together. First consultation is always free.
-          </p>
-          <Button size="lg" asChild>
-            <Link href="/booking">
-              Book Free Consultation
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
-        </div>
-
         {/* Main Footer Grid */}
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-12">
           {/* Brand Column */}

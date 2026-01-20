@@ -1,4 +1,7 @@
+"use client";
+
 import Link from "next/link";
+import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -6,19 +9,12 @@ import {
   Calendar,
   MapPin,
   Users,
-  Clock,
   ArrowRight,
   CheckCircle2,
   GraduationCap,
   Trophy,
   Building2,
 } from "lucide-react";
-
-export const metadata = {
-  title: "Workshops & Clinics",
-  description:
-    "Intensive a cappella workshops for schools, festivals, and competitions. Transform your program in a single event.",
-};
 
 const workshopTypes = [
   {
@@ -96,160 +92,206 @@ const upcomingEvents = [
   },
 ];
 
+const fadeInUp = {
+  initial: { opacity: 0, y: 20 },
+  animate: { opacity: 1, y: 0 },
+  transition: { duration: 0.5 }
+};
+
+const staggerContainer = {
+  animate: {
+    transition: {
+      staggerChildren: 0.1
+    }
+  }
+};
+
 export default function WorkshopsPage() {
   return (
     <>
       {/* Hero */}
-      <section className="bg-gradient-to-br from-primary/5 via-background to-accent/5 py-16 md:py-24">
-        <div className="container px-4 md:px-6">
-          <div className="max-w-3xl">
-            <Badge variant="secondary" className="mb-4">
+      <section className="relative overflow-hidden bg-gradient-hero py-20 md:py-28">
+        <div className="absolute inset-0 overflow-hidden">
+          <div className="absolute top-1/4 left-1/4 w-[600px] h-[600px] bg-white/[0.02] rounded-full blur-3xl" />
+          <div className="absolute bottom-1/4 right-1/4 w-[400px] h-[400px] bg-white/[0.02] rounded-full blur-3xl" />
+        </div>
+
+        <div className="container relative z-10 px-4 md:px-6">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6 }}
+            className="max-w-3xl text-white"
+          >
+            <Badge variant="outline" className="mb-4 border-white/20 text-white/80 bg-white/5">
               <Calendar className="h-3 w-3 mr-1" />
               Workshops & Clinics
             </Badge>
-            <h1 className="font-heading text-4xl md:text-5xl font-bold mb-6">
-              Transform Your Program in Days
+            <h1 className="font-heading text-4xl md:text-5xl lg:text-6xl font-semibold tracking-tight mb-6">
+              Transform Your Program{" "}
+              <span className="text-gold">in Days</span>
             </h1>
-            <p className="text-lg text-muted-foreground mb-8">
+            <p className="text-xl text-white/70 mb-8 leading-relaxed">
               From single-day intensives to week-long residencies, I bring
               three decades of experience directly to your ensemble, school,
               or event.
             </p>
             <div className="flex flex-col sm:flex-row gap-4">
-              <Button size="lg" asChild>
+              <Button variant="accent" size="lg" asChild>
                 <Link href="/booking?service=workshop">
                   Request a Workshop
                   <ArrowRight className="ml-2 h-4 w-4" />
                 </Link>
               </Button>
-              <Button size="lg" variant="outline" asChild>
+              <Button variant="outline" size="lg" className="border-white/20 text-white hover:bg-white/10 hover:text-white" asChild>
                 <Link href="#upcoming">Upcoming Events</Link>
               </Button>
             </div>
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Workshop Types */}
       <section className="py-20 md:py-28">
         <div className="container px-4 md:px-6">
-          <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">
-              Workshop Types
-            </Badge>
-            <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-heading text-3xl md:text-4xl font-semibold tracking-tight mb-4">
               Choose Your Experience
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Every workshop is customized to your specific needs, goals, and
               participant skill levels.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid gap-8 md:grid-cols-2">
+          <motion.div
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="grid gap-8 md:grid-cols-2"
+          >
             {workshopTypes.map((workshop) => (
-              <Card key={workshop.title}>
-                <CardHeader>
-                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-2">
-                    <workshop.icon className="h-6 w-6" />
-                  </div>
-                  <CardTitle className="font-heading text-xl">
-                    {workshop.title}
-                  </CardTitle>
-                </CardHeader>
-                <CardContent>
-                  <p className="text-muted-foreground mb-4">
-                    {workshop.description}
-                  </p>
-                  <ul className="grid grid-cols-2 gap-2 mb-4">
-                    {workshop.features.map((feature) => (
-                      <li key={feature} className="flex items-center gap-2 text-sm">
-                        <CheckCircle2 className="h-4 w-4 text-primary" />
-                        {feature}
-                      </li>
-                    ))}
-                  </ul>
-                  <Button variant="outline" className="w-full" asChild>
-                    <Link href={`/booking?service=workshop&type=${workshop.title.toLowerCase().replace(/ /g, '-')}`}>
-                      Learn More
-                    </Link>
-                  </Button>
-                </CardContent>
-              </Card>
+              <motion.div key={workshop.title} variants={fadeInUp}>
+                <Card className="h-full transition-shadow hover:shadow-elevated">
+                  <CardHeader>
+                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-muted text-foreground mb-2">
+                      <workshop.icon className="h-6 w-6" />
+                    </div>
+                    <CardTitle className="font-heading text-xl">
+                      {workshop.title}
+                    </CardTitle>
+                  </CardHeader>
+                  <CardContent>
+                    <p className="text-muted-foreground mb-4">
+                      {workshop.description}
+                    </p>
+                    <ul className="grid grid-cols-2 gap-2 mb-4">
+                      {workshop.features.map((feature) => (
+                        <li key={feature} className="flex items-center gap-2 text-sm">
+                          <CheckCircle2 className="h-4 w-4 text-primary shrink-0" />
+                          {feature}
+                        </li>
+                      ))}
+                    </ul>
+                    <Button variant="outline" className="w-full" asChild>
+                      <Link href={`/booking?service=workshop&type=${workshop.title.toLowerCase().replace(/ /g, '-')}`}>
+                        Learn More
+                      </Link>
+                    </Button>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* Upcoming Events */}
-      <section id="upcoming" className="py-20 md:py-28 bg-muted/30">
+      <section id="upcoming" className="py-20 md:py-28 bg-section-alt">
         <div className="container px-4 md:px-6">
-          <div className="text-center mb-12">
-            <Badge variant="outline" className="mb-4">
-              Events
-            </Badge>
-            <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            className="text-center mb-12"
+          >
+            <h2 className="font-heading text-3xl md:text-4xl font-semibold tracking-tight mb-4">
               Upcoming Workshops
             </h2>
-            <p className="text-muted-foreground max-w-2xl mx-auto">
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
               Join an open workshop or festival clinic near you.
             </p>
-          </div>
+          </motion.div>
 
-          <div className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto">
+          <motion.div
+            initial="initial"
+            whileInView="animate"
+            viewport={{ once: true }}
+            variants={staggerContainer}
+            className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto"
+          >
             {upcomingEvents.map((event) => (
-              <Card key={event.title}>
-                <CardContent className="pt-6">
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
-                    <Calendar className="h-4 w-4" />
-                    {event.date}
-                  </div>
-                  <h3 className="font-heading font-semibold text-lg mb-2">
-                    {event.title}
-                  </h3>
-                  <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
-                    <MapPin className="h-4 w-4" />
-                    {event.location}
-                  </div>
-                  <div className="flex items-center justify-between">
-                    <Badge variant="secondary">
-                      <Users className="h-3 w-3 mr-1" />
-                      {event.spots} spots left
-                    </Badge>
-                    <Button size="sm" asChild>
-                      <Link href={`/booking?event=${event.title.toLowerCase().replace(/ /g, '-')}`}>
-                        Register
-                      </Link>
-                    </Button>
-                  </div>
-                </CardContent>
-              </Card>
+              <motion.div key={event.title} variants={fadeInUp}>
+                <Card className="h-full transition-shadow hover:shadow-elevated">
+                  <CardContent className="pt-6">
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-2">
+                      <Calendar className="h-4 w-4" />
+                      {event.date}
+                    </div>
+                    <h3 className="font-heading font-semibold text-lg mb-2">
+                      {event.title}
+                    </h3>
+                    <div className="flex items-center gap-2 text-sm text-muted-foreground mb-4">
+                      <MapPin className="h-4 w-4" />
+                      {event.location}
+                    </div>
+                    <div className="flex items-center justify-between">
+                      <Badge variant="secondary">
+                        <Users className="h-3 w-3 mr-1" />
+                        {event.spots} spots left
+                      </Badge>
+                      <Button size="sm" asChild>
+                        <Link href={`/booking?event=${event.title.toLowerCase().replace(/ /g, '-')}`}>
+                          Register
+                        </Link>
+                      </Button>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 
       {/* CTA */}
-      <section className="py-20 md:py-28 bg-primary text-primary-foreground">
+      <section className="py-20 md:py-28 bg-gradient-hero text-white">
         <div className="container px-4 md:px-6 text-center">
-          <h2 className="font-heading text-3xl md:text-4xl font-bold mb-4">
-            Bring the Workshop to You
-          </h2>
-          <p className="text-primary-foreground/80 max-w-2xl mx-auto mb-8">
-            I travel worldwide to work with groups, schools, and organizations.
-            Let's design the perfect experience for your needs.
-          </p>
-          <Button
-            size="lg"
-            variant="secondary"
-            className="bg-white text-primary hover:bg-white/90"
-            asChild
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
           >
-            <Link href="/booking?service=workshop">
-              Request a Custom Workshop
-              <ArrowRight className="ml-2 h-4 w-4" />
-            </Link>
-          </Button>
+            <h2 className="font-heading text-3xl md:text-4xl font-semibold tracking-tight mb-4">
+              Bring the Workshop to You
+            </h2>
+            <p className="text-white/70 max-w-2xl mx-auto mb-8 text-lg">
+              I travel worldwide to work with groups, schools, and organizations.
+              Let's design the perfect experience for your needs.
+            </p>
+            <Button variant="accent" size="lg" asChild>
+              <Link href="/booking?service=workshop">
+                Request a Custom Workshop
+                <ArrowRight className="ml-2 h-4 w-4" />
+              </Link>
+            </Button>
+          </motion.div>
         </div>
       </section>
     </>
