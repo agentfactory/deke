@@ -1,10 +1,14 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { PlayCircle, Video } from "lucide-react";
+import { Dialog, DialogContent } from "@/components/ui/dialog";
 
 export function VideoSection() {
+  const [isVideoOpen, setIsVideoOpen] = useState(false);
+
   return (
     <section className="py-16 md:py-24 bg-white">
       <div className="container px-4 md:px-6">
@@ -34,7 +38,10 @@ export function VideoSection() {
           transition={{ duration: 0.6 }}
           className="max-w-5xl mx-auto"
         >
-          <div className="relative aspect-video rounded-2xl overflow-hidden border border-border group cursor-pointer hover:border-accent/50 transition-all duration-300 shadow-lg hover:shadow-xl">
+          <button
+            onClick={() => setIsVideoOpen(true)}
+            className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border group cursor-pointer hover:border-accent/50 transition-all duration-300 shadow-lg hover:shadow-xl"
+          >
             {/* Video Thumbnail - Using Carnegie Hall image */}
             <Image
               src="/images/deke/big-img-41.jpg"
@@ -69,9 +76,26 @@ export function VideoSection() {
                 From Pitch Perfect to Carnegie Hall — 2 minute overview
               </p>
             </div>
-          </div>
+          </button>
         </motion.div>
       </div>
+
+      {/* Video Modal */}
+      <Dialog open={isVideoOpen} onOpenChange={setIsVideoOpen}>
+        <DialogContent className="sm:max-w-4xl p-0 overflow-hidden bg-black border-0">
+          <div className="relative aspect-video w-full">
+            {isVideoOpen && (
+              <iframe
+                src="https://www.youtube.com/embed/fRc3KT6d1UI?autoplay=1"
+                title="Deke Sharon Highlight Reel"
+                allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
+                allowFullScreen
+                className="absolute inset-0 w-full h-full"
+              />
+            )}
+          </div>
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }

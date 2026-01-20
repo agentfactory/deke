@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { handleApiError, ApiError } from "@/lib/api-error";
+import { sendBookingNotification } from "@/lib/notifications/booking-notification";
 
 // Zero-friction booking creation
 // Auto-creates Lead if needed, creates Booking, optionally links to Trip
@@ -102,6 +103,22 @@ export async function POST(request: NextRequest) {
           },
         },
       },
+    });
+
+    // Send booking notification emails (async - don't block response)
+    sendBookingNotification({
+      bookingId: booking.id,
+      leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
+      leadEmail: booking.lead.email,
+      organization: booking.lead.organization,
+      serviceType: booking.serviceType,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      location: booking.location,
+      amount: booking.amount,
+      clientNotes: booking.internalNotes,
+    }).catch((error) => {
+      console.error('Failed to send booking notification:', error);
     });
 
     return NextResponse.json(booking, { status: 201 });

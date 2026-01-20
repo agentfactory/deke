@@ -41,7 +41,7 @@ const steps = [
 export function BookingProcessSection() {
   return (
     <section className="py-20 md:py-28 bg-gradient-to-b from-secondary/30 to-white">
-      <div className="container px-4 md:px-6 max-w-5xl">
+      <div className="container px-4 md:px-6 max-w-5xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

@@ -7,6 +7,7 @@ import {
   type CreateBookingInput
 } from '@/lib/validations/booking'
 import { geocodeAddress } from '@/lib/services/geocoding'
+import { sendBookingNotification } from '@/lib/notifications/booking-notification'
 
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
@@ -94,6 +95,23 @@ export async function POST(request: NextRequest) {
         },
         inquiry: true,
       }
+    })
+
+    // Send booking notification emails (async - don't block response)
+    sendBookingNotification({
+      bookingId: booking.id,
+      leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
+      leadEmail: booking.lead.email,
+      leadPhone: booking.lead.phone,
+      organization: booking.lead.organization,
+      serviceType: booking.serviceType,
+      startDate: booking.startDate,
+      endDate: booking.endDate,
+      location: booking.location,
+      amount: booking.amount,
+      clientNotes: booking.clientNotes,
+    }).catch((error) => {
+      console.error('Failed to send booking notification:', error)
     })
 
     return NextResponse.json(booking, { status: 201 })
