@@ -86,7 +86,7 @@ export function VideoSection() {
           <div className="relative aspect-video w-full">
             {isVideoOpen && (
               <iframe
-                src="https://www.youtube.com/embed/fRc3KT6d1UI?autoplay=1"
+                src="https://www.youtube.com/embed/piLs3_iPc6U?autoplay=1"
                 title="Deke Sharon Highlight Reel"
                 allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture"
                 allowFullScreen
