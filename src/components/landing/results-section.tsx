@@ -30,7 +30,7 @@ const results = [
 export function ResultsSection() {
   return (
     <section className="py-20 md:py-28 bg-white">
-      <div className="container px-4 md:px-6">
+      <div className="container px-4 md:px-6 max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
