@@ -35,14 +35,6 @@ const projectTypes = [
   { value: "other", label: "Other / Not Sure Yet" },
 ];
 
-const budgetRanges = [
-  { value: "under-5k", label: "Under $5k" },
-  { value: "5k-15k", label: "$5k-$15k" },
-  { value: "15k-50k", label: "$15k-$50k" },
-  { value: "50k-100k", label: "$50k-$100k" },
-  { value: "100k-plus", label: "$100k+" },
-  { value: "discuss", label: "Prefer to discuss" },
-];
 
 export function ContactSection() {
   return (
@@ -142,19 +134,8 @@ export function ContactSection() {
                       <Input id="date" type="date" />
                     </div>
                     <div className="space-y-2">
-                      <Label htmlFor="budget">Budget Range</Label>
-                      <Select>
-                        <SelectTrigger id="budget">
-                          <SelectValue placeholder="Select range" />
-                        </SelectTrigger>
-                        <SelectContent>
-                          {budgetRanges.map((range) => (
-                            <SelectItem key={range.value} value={range.value}>
-                              {range.label}
-                            </SelectItem>
-                          ))}
-                        </SelectContent>
-                      </Select>
+                      <Label htmlFor="budget">Target Budget</Label>
+                      <Input id="budget" placeholder="Your budget" />
                     </div>
                   </div>
 

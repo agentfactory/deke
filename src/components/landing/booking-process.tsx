@@ -11,7 +11,7 @@ const steps = [
     items: [
       "Project type (production, event, workshop, recording, arrangement)",
       "Dates, location, scope",
-      "Budget range",
+      "Target budget",
       "Timeline",
     ],
   },
