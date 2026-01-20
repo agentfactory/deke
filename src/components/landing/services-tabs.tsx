@@ -67,9 +67,6 @@ const tabs = [
         "30+ specialized seminar topics",
         "Custom content tailored to your group",
       ],
-      pricing: {
-        range: "$5,000–$15,000/day",
-      },
       formats: [
         "Single sessions",
         "Ongoing coaching",
@@ -134,11 +131,6 @@ export function ServicesTabsSection() {
                         <tab.icon className="h-5 w-5 md:h-6 md:w-6 text-accent" />
                       </div>
                       {tab.title}
-                      {tab.content.pricing && (
-                        <div className="ml-auto bg-accent text-accent-foreground px-4 md:px-6 py-2 md:py-3 rounded-lg text-lg md:text-2xl font-bold">
-                          {tab.content.pricing.range}
-                        </div>
-                      )}
                     </CardTitle>
                   </CardHeader>
                   <CardContent className="space-y-6">

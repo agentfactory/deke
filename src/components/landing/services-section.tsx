@@ -22,8 +22,6 @@ const services = [
     title: "For Festivals & Universities",
     description: "Headline clinician, multi-day workshops, masterclasses, keynote experiences, custom events",
     badges: ["TotalVocal Carnegie Hall", "30+ workshop topics", "International tours"],
-    pricing: "$5,000–$15,000/day",
-    pricingNote: "Multi-day residencies available",
     cta: "View Workshop Topics",
     href: "#workshops",
     featured: true,
@@ -102,16 +100,6 @@ export function ServicesSection() {
                   </CardDescription>
                 </CardHeader>
                 <CardContent className="space-y-4">
-                  {service.pricing && (
-                    <div className="bg-accent/10 border border-accent/20 rounded-lg p-4 text-center">
-                      <p className="text-xl md:text-2xl font-bold text-accent mb-1">
-                        {service.pricing}
-                      </p>
-                      <p className="text-sm text-muted-foreground">
-                        {service.pricingNote}
-                      </p>
-                    </div>
-                  )}
                   <div className="flex flex-wrap gap-2">
                     {service.badges.map((badge) => (
                       <Badge

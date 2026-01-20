@@ -16,9 +16,9 @@ const faqs = [
       "Deke works globally throughout the year. For best availability, book 3-6 months in advance for major events. Rush projects may be accommodated based on schedule.",
   },
   {
-    question: "What's included in a workshop day rate?",
+    question: "What's included in a workshop day?",
     answer:
-      "Day rates ($5,000-$15,000 depending on scope) include up to 8 hours of instruction, travel time prep, custom content tailoring, and follow-up materials. Multi-day residencies receive preferred pricing.",
+      "Workshop days include up to 8 hours of instruction, travel time prep, custom content tailoring, and follow-up materials. Multi-day residencies are available. Contact us for a custom quote.",
   },
   {
     question: "Can you work with groups of any skill level?",
