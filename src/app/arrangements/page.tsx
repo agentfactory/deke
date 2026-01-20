@@ -19,7 +19,6 @@ import {
 const packages = [
   {
     name: "Essential",
-    price: "$500",
     description: "Perfect for simple pop songs and straightforward arrangements",
     features: [
       "Up to 4 voice parts",
@@ -32,7 +31,6 @@ const packages = [
   },
   {
     name: "Professional",
-    price: "$1,500",
     description: "Ideal for competition-ready pieces with complex harmonies",
     features: [
       "Up to 8 voice parts",
@@ -47,7 +45,6 @@ const packages = [
   },
   {
     name: "Premium",
-    price: "$3,000+",
     description: "Full production for recording, broadcast, or major performances",
     features: [
       "Unlimited voice parts",
@@ -242,9 +239,6 @@ export default function ArrangementsPage() {
                     <CardTitle className="font-heading text-xl">
                       {pkg.name}
                     </CardTitle>
-                    <div className="text-4xl font-semibold text-foreground mt-2">
-                      {pkg.price}
-                    </div>
                     <p className="text-sm text-muted-foreground mt-2">
                       {pkg.description}
                     </p>

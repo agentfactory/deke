@@ -5,7 +5,6 @@ export interface ServiceOffering {
   slug: string
   tagline: string
   description: string
-  pricing: string
   duration: string
   featured: boolean
   imageUrl: string

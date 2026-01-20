@@ -20,7 +20,6 @@ import {
 const groupPackages = [
   {
     name: "Group Intensive",
-    price: "$2,000",
     duration: "Half-day (4 hours)",
     description: "Focused session on specific challenges or repertoire",
     features: [
@@ -34,7 +33,6 @@ const groupPackages = [
   },
   {
     name: "Full Day Workshop",
-    price: "$4,000",
     duration: "Full day (8 hours)",
     description: "Comprehensive transformation for competition-ready groups",
     popular: true,
@@ -50,7 +48,6 @@ const groupPackages = [
   },
   {
     name: "Season Package",
-    price: "$10,000",
     duration: "4 sessions over 3 months",
     description: "Long-term development for serious groups",
     features: [
@@ -68,19 +65,16 @@ const groupPackages = [
 const individualOptions = [
   {
     name: "Single Session",
-    price: "$200",
     duration: "1 hour",
     description: "Perfect for specific challenges or quick tune-ups",
   },
   {
     name: "5-Session Pack",
-    price: "$900",
     duration: "5 hours total",
     description: "Consistent development with dedicated focus areas",
   },
   {
     name: "Monthly Mentorship",
-    price: "$500/month",
     duration: "2 sessions + support",
     description: "Ongoing guidance for directors and arrangers",
   },
@@ -227,9 +221,6 @@ export default function CoachingPage() {
                     <CardTitle className="font-heading text-xl">
                       {pkg.name}
                     </CardTitle>
-                    <div className="text-4xl font-semibold text-foreground mt-2">
-                      {pkg.price}
-                    </div>
                     <p className="text-sm text-muted-foreground mt-2">
                       {pkg.description}
                     </p>
@@ -289,9 +280,6 @@ export default function CoachingPage() {
               <motion.div key={option.name} variants={fadeInUp}>
                 <Card className="h-full">
                   <CardContent className="pt-6 text-center">
-                    <div className="text-3xl font-semibold text-foreground mb-1">
-                      {option.price}
-                    </div>
                     <div className="font-heading font-semibold text-lg mb-1">
                       {option.name}
                     </div>

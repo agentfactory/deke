@@ -24,7 +24,6 @@ export const metadata = {
 const courses = [
   {
     title: "A Cappella Arranging Fundamentals",
-    price: "$99",
     description:
       "Master the building blocks of creating compelling a cappella arrangements.",
     duration: "6 hours",
@@ -41,7 +40,6 @@ const courses = [
   },
   {
     title: "Advanced Arranging Techniques",
-    price: "$199",
     description:
       "Take your arrangements from good to competition-winning.",
     duration: "10 hours",
@@ -58,7 +56,6 @@ const courses = [
   },
   {
     title: "The Complete A Cappella Director",
-    price: "$299",
     description:
       "Everything you need to lead a successful vocal group.",
     duration: "15 hours",
@@ -181,9 +178,6 @@ export default function MasterclassPage() {
                   <CardTitle className="font-heading text-xl">
                     {course.title}
                   </CardTitle>
-                  <div className="text-4xl font-bold text-primary mt-2">
-                    {course.price}
-                  </div>
                   <p className="text-sm text-muted-foreground mt-2">
                     {course.description}
                   </p>

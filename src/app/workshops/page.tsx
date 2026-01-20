@@ -24,7 +24,6 @@ const workshopTypes = [
   {
     icon: GraduationCap,
     title: "School Programs",
-    price: "From $5,000",
     description:
       "Multi-day residencies for high school and college programs looking to establish or elevate their a cappella offerings.",
     features: [
@@ -38,7 +37,6 @@ const workshopTypes = [
   {
     icon: Trophy,
     title: "Competition Prep",
-    price: "From $7,500",
     description:
       "Intensive preparation for ICCA, ICHSA, Harmony Sweepstakes, and other major competitions.",
     features: [
@@ -52,7 +50,6 @@ const workshopTypes = [
   {
     icon: Calendar,
     title: "Festival Clinics",
-    price: "From $10,000",
     description:
       "Multi-group sessions at festivals, conferences, and special events.",
     features: [
@@ -66,7 +63,6 @@ const workshopTypes = [
   {
     icon: Building2,
     title: "Corporate Events",
-    price: "From $15,000",
     description:
       "Team-building through music for corporate retreats and conferences.",
     features: [
@@ -154,11 +150,8 @@ export default function WorkshopsPage() {
             {workshopTypes.map((workshop) => (
               <Card key={workshop.title}>
                 <CardHeader>
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary">
-                      <workshop.icon className="h-6 w-6" />
-                    </div>
-                    <Badge variant="secondary">{workshop.price}</Badge>
+                  <div className="flex h-12 w-12 items-center justify-center rounded-lg bg-primary/10 text-primary mb-2">
+                    <workshop.icon className="h-6 w-6" />
                   </div>
                   <CardTitle className="font-heading text-xl">
                     {workshop.title}

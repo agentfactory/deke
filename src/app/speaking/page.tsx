@@ -55,25 +55,21 @@ const formats = [
   {
     name: "Keynote Address",
     duration: "45-60 minutes",
-    price: "From $15,000",
     description: "Inspiring main-stage presentation with interactive elements",
   },
   {
     name: "Workshop Session",
     duration: "2-3 hours",
-    price: "From $10,000",
     description: "Hands-on learning experience with practical takeaways",
   },
   {
     name: "Full-Day Intensive",
     duration: "6-8 hours",
-    price: "From $25,000",
     description: "Deep dive combining keynote, workshops, and coaching",
   },
   {
     name: "Conference Package",
     duration: "Multi-day",
-    price: "From $40,000",
     description: "Multiple sessions, panels, and private consultations",
   },
 ];
@@ -195,9 +191,6 @@ export default function SpeakingPage() {
                   <h3 className="font-heading font-semibold text-lg mb-2">
                     {format.name}
                   </h3>
-                  <div className="text-2xl font-bold text-primary mb-2">
-                    {format.price}
-                  </div>
                   <p className="text-sm text-muted-foreground">
                     {format.description}
                   </p>

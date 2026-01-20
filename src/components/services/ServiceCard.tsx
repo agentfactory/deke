@@ -1,7 +1,7 @@
 'use client'
 
 import type { ServiceOffering } from '@/types/service-offerings'
-import { Calendar, DollarSign, Star, ArrowRight, Quote } from 'lucide-react'
+import { Calendar, Star, ArrowRight, Quote } from 'lucide-react'
 
 interface ServiceCardProps {
   service: ServiceOffering
@@ -71,16 +71,8 @@ export function ServiceCard({
             </p>
           </div>
 
-          {/* Pricing & Duration */}
+          {/* Duration */}
           <div className="flex flex-wrap gap-3 mb-5 pb-5 border-b border-slate-200 dark:border-slate-800">
-            <div className="flex items-center gap-2 text-sm">
-              <div className="p-2 bg-violet-100 dark:bg-violet-900/30 rounded-lg">
-                <DollarSign className="w-4 h-4 text-violet-600 dark:text-violet-400" />
-              </div>
-              <span className="font-semibold text-slate-900 dark:text-white">
-                {service.pricing}
-              </span>
-            </div>
             <div className="flex items-center gap-2 text-sm">
               <div className="p-2 bg-cyan-100 dark:bg-cyan-900/30 rounded-lg">
                 <Calendar className="w-4 h-4 text-cyan-600 dark:text-cyan-400" />
