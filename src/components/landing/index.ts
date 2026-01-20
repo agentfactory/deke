@@ -3,6 +3,7 @@ export { CredentialsBar } from "./credentials-bar";
 export { ServicesSection } from "./services-section";
 export { VideoSection } from "./video-section";
 export { SignatureWorkSection } from "./signature-work";
+export { PhotoGallery } from "./photo-gallery";
 export { TestimonialsSection } from "./testimonials-section";
 export { ServicesTabsSection } from "./services-tabs";
 export { WorkshopTopicsSection } from "./workshop-topics";

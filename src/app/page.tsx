@@ -4,6 +4,7 @@ import {
   ServicesSection,
   VideoSection,
   SignatureWorkSection,
+  PhotoGallery,
   TestimonialsSection,
   ServicesTabsSection,
   WorkshopTopicsSection,
@@ -21,6 +22,7 @@ export default function HomePage() {
       <ServicesSection />
       <VideoSection />
       <SignatureWorkSection />
+      <PhotoGallery />
       <TestimonialsSection />
       <ServicesTabsSection />
       <WorkshopTopicsSection />

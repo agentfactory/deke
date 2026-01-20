@@ -1,10 +1,11 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Calendar, ChevronDown, Play } from "lucide-react";
+import { ArrowRight, Calendar, ChevronDown } from "lucide-react";
 
 const fadeIn = {
   initial: { opacity: 0, y: 20 },
@@ -32,17 +33,17 @@ const trustLogos = [
 export function HeroSection() {
   return (
     <section className="relative min-h-[100svh] flex items-center justify-center overflow-hidden">
-      {/* Gradient Background */}
-      <div className="absolute inset-0 bg-gradient-hero" />
-
-      {/* Animated Background Pattern */}
-      <div className="absolute inset-0 opacity-[0.03]">
-        <div
-          className="absolute inset-0"
-          style={{
-            backgroundImage: `url("data:image/svg+xml,%3Csvg width='60' height='60' viewBox='0 0 60 60' xmlns='http://www.w3.org/2000/svg'%3E%3Cg fill='none' fill-rule='evenodd'%3E%3Cg fill='%23ffffff' fill-opacity='1'%3E%3Cpath d='M36 34v-4h-2v4h-4v2h4v4h2v-4h4v-2h-4zm0-30V0h-2v4h-4v2h4v4h2V6h4V4h-4zM6 34v-4H4v4H0v2h4v4h2v-4h4v-2H6zM6 4V0H4v4H0v2h4v4h2V6h4V4H6z'/%3E%3C/g%3E%3C/g%3E%3C/svg%3E")`,
-          }}
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <Image
+          src="/images/deke/facebook.jpg"
+          alt="Deke Sharon"
+          fill
+          className="object-cover object-center"
+          priority
         />
+        <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-primary/70" />
+        <div className="absolute inset-0 bg-gradient-to-t from-primary via-transparent to-primary/50" />
       </div>
 
       {/* Subtle Gradient Orbs */}
@@ -156,28 +157,23 @@ export function HeroSection() {
             </motion.div>
           </div>
 
-          {/* Hero Visual */}
+          {/* Hero Visual - Portrait Photo */}
           <motion.div
             variants={fadeIn}
-            className="relative aspect-[4/5] lg:aspect-[3/4] rounded-2xl overflow-hidden hidden lg:block"
+            className="relative aspect-[3/4] rounded-2xl overflow-hidden hidden lg:block shadow-2xl"
           >
-            {/* Placeholder for actual image */}
-            <div className="absolute inset-0 bg-gradient-to-br from-white/10 to-white/5 backdrop-blur-sm border border-white/10 rounded-2xl flex items-center justify-center">
-              <div className="text-center p-8">
-                <div className="w-24 h-24 mx-auto mb-6 rounded-full bg-white/10 flex items-center justify-center">
-                  <Play className="h-10 w-10 text-white/60" />
-                </div>
-                <p className="text-white/60 text-lg font-medium mb-2">
-                  Watch the Reel
-                </p>
-                <p className="text-white/40 text-sm">
-                  2 min highlight video
-                </p>
-              </div>
-            </div>
+            <Image
+              src="/images/deke/deke2-photographer-Nikki-Davis-Jones.jpg"
+              alt="Deke Sharon - Professional Portrait"
+              fill
+              className="object-cover"
+              priority
+            />
+            {/* Gradient overlay */}
+            <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
 
             {/* Floating Stats Card */}
-            <div className="absolute bottom-6 left-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4 hidden xl:block">
+            <div className="absolute bottom-6 left-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4">
               <div className="flex items-center justify-between text-white">
                 <div>
                   <p className="text-sm text-white/60">Grammy Nominated</p>
