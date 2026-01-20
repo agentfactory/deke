@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Music2, Mail, MapPin, Heart, Sparkles, ArrowRight } from "lucide-react";
+import { Mail, MapPin, ArrowRight } from "lucide-react";
 import { Separator } from "@/components/ui/separator";
 import { Button } from "@/components/ui/button";
 
@@ -26,35 +26,28 @@ const footerLinks = {
 };
 
 const socialLinks = [
-  { label: "Twitter", href: "https://twitter.com/dekesharon", icon: "𝕏" },
-  { label: "Instagram", href: "https://instagram.com/dekesharon", icon: "📸" },
-  { label: "YouTube", href: "https://youtube.com/dekesharon", icon: "▶️" },
+  { label: "Twitter", href: "https://twitter.com/dekesharon", icon: "X" },
+  { label: "Instagram", href: "https://instagram.com/dekesharon", icon: "IG" },
+  { label: "YouTube", href: "https://youtube.com/dekesharon", icon: "YT" },
   { label: "LinkedIn", href: "https://linkedin.com/in/dekesharon", icon: "in" },
 ];
 
 export function Footer() {
   return (
-    <footer className="bg-gradient-hero text-white relative overflow-hidden">
-      {/* Decorative elements */}
-      <div className="absolute inset-0 overflow-hidden pointer-events-none">
-        <div className="absolute top-10 left-10 w-64 h-64 bg-white/5 rounded-full blur-3xl" />
-        <div className="absolute bottom-10 right-10 w-96 h-96 bg-white/5 rounded-full blur-3xl" />
-      </div>
-
-      <div className="container relative z-10 px-4 md:px-6 py-16 md:py-20">
+    <footer className="bg-background border-t border-border">
+      <div className="container px-4 md:px-6 py-16 md:py-20">
         {/* Top CTA Section */}
-        <div className="text-center mb-16 pb-16 border-b border-white/20">
-          <h3 className="font-heading text-3xl md:text-4xl font-bold mb-4">
+        <div className="text-center mb-16 pb-16 border-b border-border">
+          <h3 className="font-heading text-2xl md:text-3xl font-semibold tracking-tight mb-4">
             Ready to Start Your Journey?
           </h3>
-          <p className="text-white/80 text-lg max-w-xl mx-auto mb-8">
-            Let's create something amazing together. First consultation is always free!
+          <p className="text-muted-foreground text-base max-w-xl mx-auto mb-8">
+            Let's create something amazing together. First consultation is always free.
           </p>
-          <Button variant="sunshine" size="lg" asChild className="group">
+          <Button size="lg" asChild>
             <Link href="/booking">
-              <Sparkles className="mr-2 h-4 w-4" />
               Book Free Consultation
-              <ArrowRight className="ml-2 h-4 w-4 group-hover:translate-x-1 transition-transform" />
+              <ArrowRight className="ml-2 h-4 w-4" />
             </Link>
           </Button>
         </div>
@@ -63,32 +56,24 @@ export function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-10 lg:gap-12">
           {/* Brand Column */}
           <div className="lg:col-span-2">
-            <Link href="/" className="flex items-center gap-3 mb-6">
-              <div className="flex h-14 w-14 items-center justify-center rounded-xl bg-white/20 backdrop-blur-sm">
-                <Music2 className="h-7 w-7" />
-              </div>
-              <div className="flex flex-col">
-                <span className="font-heading text-2xl font-bold">
-                  Deke Sharon
-                </span>
-                <span className="text-sm text-white/70">
-                  The Father of Contemporary A Cappella
-                </span>
-              </div>
+            <Link href="/" className="inline-block mb-6">
+              <span className="font-heading text-xl font-semibold">
+                Deke Sharon
+              </span>
             </Link>
-            <p className="text-white/80 text-sm leading-relaxed mb-6 max-w-sm">
+            <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
               Transforming voices and building harmony for over 30 years.
               Founder of the Contemporary A Cappella Society, vocal producer for
               Pitch Perfect, and creator of The Sing-Off.
             </p>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2">
               {socialLinks.map((social) => (
                 <a
                   key={social.label}
                   href={social.href}
                   target="_blank"
                   rel="noopener noreferrer"
-                  className="flex h-11 w-11 items-center justify-center rounded-xl bg-white/10 hover:bg-white/20 transition-all duration-300 hover:-translate-y-1 text-lg"
+                  className="flex h-9 w-9 items-center justify-center rounded-md text-xs font-medium text-muted-foreground hover:text-foreground hover:bg-muted transition-colors"
                   aria-label={social.label}
                 >
                   {social.icon}
@@ -99,8 +84,7 @@ export function Footer() {
 
           {/* Services Links */}
           <div>
-            <h4 className="font-heading font-bold text-lg mb-5 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-sunshine-yellow"></span>
+            <h4 className="font-medium text-sm mb-4 text-foreground">
               Services
             </h4>
             <ul className="space-y-3">
@@ -108,7 +92,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-white/70 hover:text-white transition-colors hover:translate-x-1 inline-block"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -119,8 +103,7 @@ export function Footer() {
 
           {/* Resources Links */}
           <div>
-            <h4 className="font-heading font-bold text-lg mb-5 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-coral-pop"></span>
+            <h4 className="font-medium text-sm mb-4 text-foreground">
               Resources
             </h4>
             <ul className="space-y-3">
@@ -128,7 +111,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-white/70 hover:text-white transition-colors hover:translate-x-1 inline-block"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -139,8 +122,7 @@ export function Footer() {
 
           {/* Connect Links */}
           <div>
-            <h4 className="font-heading font-bold text-lg mb-5 flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-mint-fresh"></span>
+            <h4 className="font-medium text-sm mb-4 text-foreground">
               Connect
             </h4>
             <ul className="space-y-3">
@@ -148,7 +130,7 @@ export function Footer() {
                 <li key={link.href}>
                   <Link
                     href={link.href}
-                    className="text-sm text-white/70 hover:text-white transition-colors hover:translate-x-1 inline-block"
+                    className="text-sm text-muted-foreground hover:text-foreground transition-colors"
                   >
                     {link.label}
                   </Link>
@@ -158,12 +140,12 @@ export function Footer() {
             <div className="mt-6 space-y-3">
               <a
                 href="mailto:info@dekesharon.com"
-                className="flex items-center gap-2 text-sm text-white/70 hover:text-white transition-colors"
+                className="flex items-center gap-2 text-sm text-muted-foreground hover:text-foreground transition-colors"
               >
                 <Mail className="h-4 w-4" />
                 info@dekesharon.com
               </a>
-              <div className="flex items-center gap-2 text-sm text-white/70">
+              <div className="flex items-center gap-2 text-sm text-muted-foreground">
                 <MapPin className="h-4 w-4" />
                 San Francisco, CA
               </div>
@@ -171,24 +153,23 @@ export function Footer() {
           </div>
         </div>
 
-        <Separator className="my-10 bg-white/20" />
+        <Separator className="my-10" />
 
         {/* Bottom Footer */}
-        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-white/60">
-          <p className="flex items-center gap-1">
-            © {new Date().getFullYear()} Deke Sharon. Made with{" "}
-            <Heart className="h-3 w-3 text-coral-pop fill-coral-pop" /> for a cappella.
+        <div className="flex flex-col md:flex-row justify-between items-center gap-4 text-sm text-muted-foreground">
+          <p>
+            &copy; {new Date().getFullYear()} Deke Sharon. All rights reserved.
           </p>
           <div className="flex items-center gap-6">
             <Link
               href="/privacy"
-              className="hover:text-white transition-colors"
+              className="hover:text-foreground transition-colors"
             >
               Privacy Policy
             </Link>
             <Link
               href="/terms"
-              className="hover:text-white transition-colors"
+              className="hover:text-foreground transition-colors"
             >
               Terms of Service
             </Link>

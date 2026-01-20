@@ -1,30 +1,8 @@
 import type { Metadata } from "next";
-import { Nunito, Fredoka } from "next/font/google";
 import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HarmonyWidget } from "@/components/chat/harmony-widget";
-
-const nunito = Nunito({
-  variable: "--font-body",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700", "800"],
-});
-
-const fredoka = Fredoka({
-  variable: "--font-heading",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["400", "500", "600", "700"],
-});
-
-const fredokaDisplay = Fredoka({
-  variable: "--font-display",
-  subsets: ["latin"],
-  display: "swap",
-  weight: ["600", "700"],
-});
 
 export const metadata: Metadata = {
   title: {
@@ -67,9 +45,17 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en" className="scroll-smooth">
-      <body
-        className={`${nunito.variable} ${fredoka.variable} ${fredokaDisplay.variable} font-sans antialiased min-h-screen flex flex-col`}
-      >
+      <head>
+        {/* Preconnect to Google Fonts */}
+        <link rel="preconnect" href="https://fonts.googleapis.com" />
+        <link rel="preconnect" href="https://fonts.gstatic.com" crossOrigin="anonymous" />
+        {/* Load Inter and DM Sans from Google Fonts CDN */}
+        <link
+          href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@500;600;700&family=Inter:wght@400;500;600;700&display=swap"
+          rel="stylesheet"
+        />
+      </head>
+      <body className="font-sans antialiased min-h-screen flex flex-col">
         <Header />
         <main className="flex-1">{children}</main>
         <Footer />

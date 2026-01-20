@@ -73,7 +73,7 @@ export async function POST(
     }
 
     // Calculate total travel cost from travel expenses
-    const totalTravelCost = booking.travelExpenses.reduce((sum, expense) => {
+    const totalTravelCost = booking.travelExpenses.reduce((sum: number, expense: { flightCost: number | null; hotelCost: number | null; groundTransportCost: number | null }) => {
       return sum +
         (expense.flightCost ?? 0) +
         (expense.hotelCost ?? 0) +
@@ -84,7 +84,7 @@ export async function POST(
     const splitInput: SplitInput = {
       totalServiceFee: booking.totalServiceFee ?? booking.amount ?? 0,
       totalTravelCost: booking.travelBudget ?? totalTravelCost,
-      participants: booking.participants.map(p => ({
+      participants: booking.participants.map((p: { id: string; organizationName: string; groupSize: number | null }) => ({
         id: p.id,
         organizationName: p.organizationName,
         groupSize: p.groupSize ?? undefined,
