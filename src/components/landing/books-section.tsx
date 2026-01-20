@@ -176,14 +176,23 @@ export function BooksSection() {
           whileInView={{ opacity: 1, y: 0 }}
           viewport={{ once: true, margin: "-100px" }}
           transition={{ duration: 0.5 }}
-          className="text-center mb-12 md:mb-16"
+          className="flex flex-col items-center text-center mb-12 md:mb-16"
         >
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-primary/10 text-primary text-sm font-medium mb-4">
             <BookOpen className="h-4 w-4" />
             Publications
           </span>
-          <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
-            Books by Deke Sharon
+          <h2
+            className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold mb-4 relative"
+            style={{
+              textShadow: '0 4px 8px rgba(0,0,0,0.12), 0 2px 4px rgba(0,0,0,0.08)',
+              transform: 'perspective(1000px) rotateX(2deg)',
+              transformStyle: 'preserve-3d',
+            }}
+          >
+            <span className="relative inline-block bg-gradient-to-b from-foreground to-foreground/80 bg-clip-text">
+              Books by Deke Sharon
+            </span>
           </h2>
           <p className="text-lg text-muted-foreground max-w-3xl mx-auto">
             The definitive collection of a cappella knowledge — from arranging techniques to
