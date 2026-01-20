@@ -826,7 +826,7 @@ export default function HomePage() {
 
       {/* ========== BOOKING PROCESS (3-STEP) ========== */}
       <section className="py-20 md:py-28 bg-gradient-to-br from-secondary/30 to-white">
-        <div className="container px-4 md:px-6 max-w-5xl">
+        <div className="container px-4 md:px-6 max-w-5xl mx-auto">
           <div className="text-center mb-16">
             <h2 className="font-heading text-4xl md:text-5xl font-bold mb-4">
               How to Work With Deke
@@ -898,7 +898,7 @@ export default function HomePage() {
 
       {/* ========== FAQ SECTION ========== */}
       <section className="py-20 md:py-28 bg-white">
-        <div className="container px-4 md:px-6 max-w-4xl">
+        <div className="container px-4 md:px-6 max-w-4xl mx-auto">
           <div className="text-center mb-12">
             <h2 className="font-heading text-4xl md:text-5xl font-bold mb-4">
               Frequently Asked Questions
