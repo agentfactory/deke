@@ -2,7 +2,9 @@
 
 import { useState } from "react";
 import Link from "next/link";
+
 import { motion } from "framer-motion";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -39,14 +41,27 @@ const projectTypes = [
   { value: "other", label: "Other / Not Sure Yet" },
 ];
 
-const budgetRanges = [
-  { value: "under-5k", label: "Under $5k" },
-  { value: "5k-15k", label: "$5k-$15k" },
-  { value: "15k-50k", label: "$15k-$50k" },
-  { value: "50k-100k", label: "$50k-$100k" },
-  { value: "100k-plus", label: "$100k+" },
-  { value: "discuss", label: "Prefer to discuss" },
-];
+interface FormState {
+  name: string;
+  email: string;
+  organization: string;
+  phone: string;
+  projectType: string;
+  eventDate: string;
+  budget: string;
+  message: string;
+}
+
+const initialFormState: FormState = {
+  name: "",
+  email: "",
+  organization: "",
+  phone: "",
+  projectType: "",
+  eventDate: "",
+  budget: "",
+  message: "",
+};
 
 interface FormState {
   name: string;
