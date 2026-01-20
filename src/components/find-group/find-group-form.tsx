@@ -70,33 +70,59 @@ export function FindGroupForm() {
     setIsSubmitting(true);
 
     try {
-      const response = await fetch('/api/group-requests', {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-        },
+      // Parse name into first and last name
+      const nameParts = formData.name.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
+
+      // Step 1: Create or update lead
+      const leadResponse = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          name: formData.name,
+          firstName,
+          lastName,
           email: formData.email,
-          location: formData.location,
-          age: formData.age ? parseInt(formData.age, 10) : null,
-          experience: formData.experience,
-          commitment: formData.commitment,
-          genres: selectedGenres,
-          performanceInterest: formData.performanceInterest,
-          message: formData.message || null,
+          organization: formData.location, // Store location in organization field
+          source: "find-group-form",
         }),
       });
 
-      if (!response.ok) {
-        const errorData = await response.json();
-        throw new Error(errorData.error || 'Failed to submit request');
+      if (!leadResponse.ok) {
+        throw new Error("Failed to create lead");
+      }
+
+      const lead = await leadResponse.json();
+
+      // Step 2: Create inquiry with all form details
+      const details = JSON.stringify({
+        age: formData.age || null,
+        experience: formData.experience,
+        commitment: formData.commitment,
+        genres: selectedGenres,
+        performanceInterest: formData.performanceInterest,
+        location: formData.location,
+      });
+
+      const inquiryResponse = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId: lead.id,
+          serviceType: "CONSULTATION",
+          message: formData.message || `Looking for a singing group in ${formData.location}. Experience: ${formData.experience}, Commitment: ${formData.commitment}, Genres: ${selectedGenres.join(", ")}`,
+          details,
+        }),
+      });
+
+      if (!inquiryResponse.ok) {
+        throw new Error("Failed to create inquiry");
       }
 
       setIsSubmitted(true);
     } catch (error) {
-      console.error('Form submission error:', error);
-      alert(error instanceof Error ? error.message : 'Failed to submit request. Please try again.');
+      console.error("Form submission error:", error);
+      alert("There was an error submitting your request. Please try again.");
     } finally {
       setIsSubmitting(false);
     }
