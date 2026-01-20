@@ -1,7 +1,11 @@
 "use client";
 
+import { useState } from "react";
+
 import Link from "next/link";
+
 import { motion } from "framer-motion";
+
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
@@ -22,6 +26,9 @@ import {
   Calendar,
   ExternalLink,
   Send,
+  Loader2,
+  CheckCircle,
+  AlertCircle,
 } from "lucide-react";
 
 const projectTypes = [
@@ -35,14 +42,80 @@ const projectTypes = [
   { value: "other", label: "Other / Not Sure Yet" },
 ];
 
+interface FormState {
+  name: string;
+  email: string;
+  organization: string;
+  phone: string;
+  projectType: string;
+  eventDate: string;
+  budget: string;
+  message: string;
+}
+
+const initialFormState: FormState = {
+  name: "",
+  email: "",
+  organization: "",
+  phone: "",
+  projectType: "",
+  eventDate: "",
+  budget: "",
+  message: "",
+};
 
 export function ContactSection() {
+  const [formData, setFormData] = useState<FormState>(initialFormState);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [submitStatus, setSubmitStatus] = useState<"idle" | "success" | "error">("idle");
+  const [errorMessage, setErrorMessage] = useState("");
+
+  const handleInputChange = (field: keyof FormState, value: string) => {
+    setFormData((prev) => ({ ...prev, [field]: value }));
+    // Clear any previous error when user starts typing
+    if (submitStatus === "error") {
+      setSubmitStatus("idle");
+      setErrorMessage("");
+    }
+  };
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    setSubmitStatus("idle");
+    setErrorMessage("");
+
+    try {
+      const response = await fetch("/api/booking-request", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(formData),
+      });
+
+      const data = await response.json();
+
+      if (!response.ok) {
+        throw new Error(data.error || data.message || "Something went wrong. Please try again.");
+      }
+
+      setSubmitStatus("success");
+      setFormData(initialFormState);
+    } catch (error) {
+      setSubmitStatus("error");
+      setErrorMessage(error instanceof Error ? error.message : "Something went wrong. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
   return (
     <section
       className="py-20 md:py-28 bg-gradient-hero text-white"
       id="contact"
     >
-      <div className="container px-4 md:px-6 max-w-6xl">
+      <div className="container px-4 md:px-6 max-w-6xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}
@@ -80,84 +153,156 @@ export function ContactSection() {
                 </CardDescription>
               </CardHeader>
               <CardContent>
-                <form className="space-y-4">
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="name">Name *</Label>
-                      <Input id="name" placeholder="Your name" required />
+                {submitStatus === "success" ? (
+                  <div className="text-center py-8">
+                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                    <h3 className="text-xl font-semibold mb-2">Request Submitted!</h3>
+                    <p className="text-muted-foreground mb-4">
+                      Thank you for your booking request. We&apos;ll be in touch within 24 business hours.
+                    </p>
+                    <Button
+                      variant="outline"
+                      onClick={() => setSubmitStatus("idle")}
+                    >
+                      Submit Another Request
+                    </Button>
+                  </div>
+                ) : (
+                  <form onSubmit={handleSubmit} className="space-y-4">
+                    {submitStatus === "error" && (
+                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                        <span>{errorMessage}</span>
+                      </div>
+                    )}
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="name">Name *</Label>
+                        <Input
+                          id="name"
+                          placeholder="Your name"
+                          required
+                          value={formData.name}
+                          onChange={(e) => handleInputChange("name", e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="email">Email *</Label>
+                        <Input
+                          id="email"
+                          type="email"
+                          placeholder="you@example.com"
+                          required
+                          value={formData.email}
+                          onChange={(e) => handleInputChange("email", e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
                     </div>
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="organization">Organization</Label>
+                        <Input
+                          id="organization"
+                          placeholder="Your organization"
+                          value={formData.organization}
+                          onChange={(e) => handleInputChange("organization", e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="phone">Phone</Label>
+                        <Input
+                          id="phone"
+                          type="tel"
+                          placeholder="+1 (555) 000-0000"
+                          value={formData.phone}
+                          onChange={(e) => handleInputChange("phone", e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </div>
+
                     <div className="space-y-2">
-                      <Label htmlFor="email">Email *</Label>
-                      <Input
-                        id="email"
-                        type="email"
-                        placeholder="you@example.com"
+                      <Label htmlFor="project-type">Project Type *</Label>
+                      <Select
+                        value={formData.projectType}
+                        onValueChange={(value) => handleInputChange("projectType", value)}
+                        disabled={isSubmitting}
                         required
+                      >
+                        <SelectTrigger id="project-type">
+                          <SelectValue placeholder="Select project type" />
+                        </SelectTrigger>
+                        <SelectContent>
+                          {projectTypes.map((type) => (
+                            <SelectItem key={type.value} value={type.value}>
+                              {type.label}
+                            </SelectItem>
+                          ))}
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    <div className="grid sm:grid-cols-2 gap-4">
+                      <div className="space-y-2">
+                        <Label htmlFor="date">Event/Project Date</Label>
+                        <Input
+                          id="date"
+                          type="date"
+                          value={formData.eventDate}
+                          onChange={(e) => handleInputChange("eventDate", e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                      <div className="space-y-2">
+                        <Label htmlFor="budget">Target Budget</Label>
+                        <Input
+                          id="budget"
+                          placeholder="Your budget"
+                          value={formData.budget}
+                          onChange={(e) => handleInputChange("budget", e.target.value)}
+                          disabled={isSubmitting}
+                        />
+                      </div>
+                    </div>
+
+                    <div className="space-y-2">
+                      <Label htmlFor="message">Message / Project Details *</Label>
+                      <Textarea
+                        id="message"
+                        placeholder="Tell us about your project, goals, timeline, and any specific questions you have..."
+                        rows={5}
+                        required
+                        value={formData.message}
+                        onChange={(e) => handleInputChange("message", e.target.value)}
+                        disabled={isSubmitting}
                       />
                     </div>
-                  </div>
 
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="organization">Organization</Label>
-                      <Input id="organization" placeholder="Your organization" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="phone">Phone</Label>
-                      <Input
-                        id="phone"
-                        type="tel"
-                        placeholder="+1 (555) 000-0000"
-                      />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="project-type">Project Type *</Label>
-                    <Select>
-                      <SelectTrigger id="project-type">
-                        <SelectValue placeholder="Select project type" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {projectTypes.map((type) => (
-                          <SelectItem key={type.value} value={type.value}>
-                            {type.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="grid sm:grid-cols-2 gap-4">
-                    <div className="space-y-2">
-                      <Label htmlFor="date">Event/Project Date</Label>
-                      <Input id="date" type="date" />
-                    </div>
-                    <div className="space-y-2">
-                      <Label htmlFor="budget">Target Budget</Label>
-                      <Input id="budget" placeholder="Your budget" />
-                    </div>
-                  </div>
-
-                  <div className="space-y-2">
-                    <Label htmlFor="message">Message / Project Details *</Label>
-                    <Textarea
-                      id="message"
-                      placeholder="Tell us about your project, goals, timeline, and any specific questions you have..."
-                      rows={5}
-                      required
-                    />
-                  </div>
-
-                  <Button
-                    type="submit"
-                    size="lg"
-                    className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 text-base"
-                  >
-                    Submit Request
-                    <ArrowRight className="ml-2 h-5 w-5" />
-                  </Button>
-                </form>
+                    <Button
+                      type="submit"
+                      size="lg"
+                      className="w-full bg-accent hover:bg-accent/90 text-accent-foreground h-12 text-base"
+                      disabled={isSubmitting || !formData.projectType}
+                    >
+                      {isSubmitting ? (
+                        <>
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          Submitting...
+                        </>
+                      ) : (
+                        <>
+                          Submit Request
+                          <ArrowRight className="ml-2 h-5 w-5" />
+                        </>
+                      )}
+                    </Button>
+                  </form>
+                )}
               </CardContent>
             </Card>
           </motion.div>
