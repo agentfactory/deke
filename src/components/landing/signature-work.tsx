@@ -69,7 +69,7 @@ const projects = [
 export function SignatureWorkSection() {
   return (
     <section className="py-20 md:py-28 bg-secondary/30">
-      <div className="container px-4 md:px-6">
+      <div className="container px-4 md:px-6 max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           whileInView={{ opacity: 1, y: 0 }}

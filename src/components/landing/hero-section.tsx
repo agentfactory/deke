@@ -50,7 +50,7 @@ export function HeroSection() {
       <div className="absolute top-1/4 -left-32 w-96 h-96 bg-accent/20 rounded-full blur-[128px] animate-pulse-subtle" />
       <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-primary/30 rounded-full blur-[128px] animate-pulse-subtle" style={{ animationDelay: "1s" }} />
 
-      <div className="container relative z-10 px-4 md:px-6 py-16 md:py-24">
+      <div className="container relative z-10 px-4 md:px-6 py-16 md:py-24 max-w-7xl mx-auto">
         <motion.div
           initial="initial"
           animate="animate"
