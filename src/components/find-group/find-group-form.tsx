@@ -69,14 +69,63 @@ export function FindGroupForm() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      // Parse name into first and last name
+      const nameParts = formData.name.trim().split(/\s+/);
+      const firstName = nameParts[0] || "";
+      const lastName = nameParts.slice(1).join(" ") || "";
 
-    // In production, this would POST to /api/group-requests
-    console.log("Form submitted:", { ...formData, genres: selectedGenres });
+      // Step 1: Create or update lead
+      const leadResponse = await fetch("/api/leads", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          firstName,
+          lastName,
+          email: formData.email,
+          organization: formData.location, // Store location in organization field
+          source: "find-group-form",
+        }),
+      });
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      if (!leadResponse.ok) {
+        throw new Error("Failed to create lead");
+      }
+
+      const lead = await leadResponse.json();
+
+      // Step 2: Create inquiry with all form details
+      const details = JSON.stringify({
+        age: formData.age || null,
+        experience: formData.experience,
+        commitment: formData.commitment,
+        genres: selectedGenres,
+        performanceInterest: formData.performanceInterest,
+        location: formData.location,
+      });
+
+      const inquiryResponse = await fetch("/api/inquiries", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          leadId: lead.id,
+          serviceType: "CONSULTATION",
+          message: formData.message || `Looking for a singing group in ${formData.location}. Experience: ${formData.experience}, Commitment: ${formData.commitment}, Genres: ${selectedGenres.join(", ")}`,
+          details,
+        }),
+      });
+
+      if (!inquiryResponse.ok) {
+        throw new Error("Failed to create inquiry");
+      }
+
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error("Form submission error:", error);
+      alert("There was an error submitting your request. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {
