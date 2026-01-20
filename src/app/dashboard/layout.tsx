@@ -1,14 +1,36 @@
 import Link from "next/link";
-import { LayoutDashboard, Target, BarChart3, Calendar } from "lucide-react";
+import { LayoutDashboard, Target, BarChart3, Calendar, Users } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Separator } from "@/components/ui/separator";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { prisma } from "@/lib/db";
 
-export default function DashboardLayout({
+async function getNewGroupRequestCount(): Promise<number> {
+  try {
+    const count = await prisma.inquiry.count({
+      where: {
+        OR: [
+          { lead: { source: "find-group-form" } },
+          { serviceType: "CONSULTATION" },
+          { message: { contains: "group", mode: "insensitive" } },
+          { message: { contains: "sing", mode: "insensitive" } },
+        ],
+        status: { in: ["NEW", "PENDING"] },
+      },
+    });
+    return count;
+  } catch {
+    return 0;
+  }
+}
+
+export default async function DashboardLayout({
   children,
 }: {
   children: React.ReactNode;
 }) {
+  const newRequestCount = await getNewGroupRequestCount();
+
   return (
     <div className="min-h-screen bg-background">
       <div className="flex">
@@ -60,6 +82,20 @@ export default function DashboardLayout({
                 >
                   <BarChart3 className="h-5 w-5" />
                   Analytics
+                </Button>
+              </Link>
+              <Link href="/dashboard/groups">
+                <Button
+                  variant="ghost"
+                  className="w-full justify-start gap-3"
+                >
+                  <Users className="h-5 w-5" />
+                  Find a Group
+                  {newRequestCount > 0 && (
+                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+                      {newRequestCount > 99 ? "99+" : newRequestCount}
+                    </span>
+                  )}
                 </Button>
               </Link>
             </nav>
