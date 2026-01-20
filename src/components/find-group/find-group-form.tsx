@@ -69,14 +69,37 @@ export function FindGroupForm() {
     e.preventDefault();
     setIsSubmitting(true);
 
-    // Simulate API call
-    await new Promise((resolve) => setTimeout(resolve, 1500));
+    try {
+      const response = await fetch('/api/group-requests', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          name: formData.name,
+          email: formData.email,
+          location: formData.location,
+          age: formData.age ? parseInt(formData.age, 10) : null,
+          experience: formData.experience,
+          commitment: formData.commitment,
+          genres: selectedGenres,
+          performanceInterest: formData.performanceInterest,
+          message: formData.message || null,
+        }),
+      });
 
-    // In production, this would POST to /api/group-requests
-    console.log("Form submitted:", { ...formData, genres: selectedGenres });
+      if (!response.ok) {
+        const errorData = await response.json();
+        throw new Error(errorData.error || 'Failed to submit request');
+      }
 
-    setIsSubmitting(false);
-    setIsSubmitted(true);
+      setIsSubmitted(true);
+    } catch (error) {
+      console.error('Form submission error:', error);
+      alert(error instanceof Error ? error.message : 'Failed to submit request. Please try again.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   if (isSubmitted) {

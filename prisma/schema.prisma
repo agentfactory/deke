@@ -576,6 +576,38 @@ model Suppression {
 // PHASE 3: SERVICE RECOMMENDATION ENGINE
 // ============================================
 
+// ============================================
+// FIND A GROUP - Singer Matching Requests
+// ============================================
+
+model GroupRequest {
+  id            String    @id @default(cuid())
+
+  // Contact info
+  name          String
+  email         String
+  location      String
+  age           Int?
+
+  // Preferences
+  experience    String    // beginner, intermediate, advanced, professional
+  commitment    String    // casual, regular, intensive, flexible
+  genres        String[]  // Array of genre preferences
+  performanceInterest Boolean @default(false)
+  message       String?
+
+  // Status tracking
+  status        String    @default("PENDING") // PENDING, REVIEWING, MATCHED, CLOSED
+  notes         String?   // Admin notes
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([email])
+  @@index([status])
+  @@index([location])
+}
+
 model ServiceRecommendation {
   id                String   @id @default(cuid())
 
