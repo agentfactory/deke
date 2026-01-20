@@ -63,28 +63,6 @@ const initialFormState: FormState = {
   message: "",
 };
 
-interface FormState {
-  name: string;
-  email: string;
-  organization: string;
-  phone: string;
-  projectType: string;
-  eventDate: string;
-  budget: string;
-  message: string;
-}
-
-const initialFormState: FormState = {
-  name: "",
-  email: "",
-  organization: "",
-  phone: "",
-  projectType: "",
-  eventDate: "",
-  budget: "",
-  message: "",
-};
-
 export function ContactSection() {
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -280,23 +258,14 @@ export function ContactSection() {
                         />
                       </div>
                       <div className="space-y-2">
-                        <Label htmlFor="budget">Budget Range</Label>
-                        <Select
+                        <Label htmlFor="budget">Target Budget</Label>
+                        <Input
+                          id="budget"
+                          placeholder="Your budget"
                           value={formData.budget}
-                          onValueChange={(value) => handleInputChange("budget", value)}
+                          onChange={(e) => handleInputChange("budget", e.target.value)}
                           disabled={isSubmitting}
-                        >
-                          <SelectTrigger id="budget">
-                            <SelectValue placeholder="Select range" />
-                          </SelectTrigger>
-                          <SelectContent>
-                            {budgetRanges.map((range) => (
-                              <SelectItem key={range.value} value={range.value}>
-                                {range.label}
-                              </SelectItem>
-                            ))}
-                          </SelectContent>
-                        </Select>
+                        />
                       </div>
                     </div>
 
