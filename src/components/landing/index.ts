@@ -1,0 +1,12 @@
+export { HeroSection } from "./hero-section";
+export { CredentialsBar } from "./credentials-bar";
+export { ServicesSection } from "./services-section";
+export { VideoSection } from "./video-section";
+export { SignatureWorkSection } from "./signature-work";
+export { TestimonialsSection } from "./testimonials-section";
+export { ServicesTabsSection } from "./services-tabs";
+export { WorkshopTopicsSection } from "./workshop-topics";
+export { ResultsSection } from "./results-section";
+export { BookingProcessSection } from "./booking-process";
+export { FAQSection } from "./faq-section";
+export { ContactSection } from "./contact-section";
