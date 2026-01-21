@@ -22,12 +22,12 @@ async function getGroupRequests(): Promise<{
   stats: { total: number; pending: number; responded: number }
 }> {
   try {
-    // Use inquiries with serviceType CONSULTATION or OTHER as group requests
+    // Use inquiries from find-group-form or with relevant keywords
     const inquiries = await prisma.inquiry.findMany({
       where: {
         OR: [
+          { lead: { source: 'find-group-form' } },
           { serviceType: 'CONSULTATION' },
-          { serviceType: 'OTHER' },
           { message: { contains: 'group', mode: 'insensitive' } },
           { message: { contains: 'sing', mode: 'insensitive' } },
         ],
