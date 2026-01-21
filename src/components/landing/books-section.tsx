@@ -169,7 +169,7 @@ export function BooksSection() {
 
   return (
     <section className="py-20 md:py-28 bg-gradient-to-b from-background to-secondary/30 overflow-hidden">
-      <div className="container px-4 md:px-6">
+      <div className="container px-4 md:px-6 max-w-6xl mx-auto">
         {/* Section Header */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
