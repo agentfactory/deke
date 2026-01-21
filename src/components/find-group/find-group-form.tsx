@@ -73,7 +73,7 @@ export function FindGroupForm() {
       // Parse name into first and last name
       const nameParts = formData.name.trim().split(/\s+/);
       const firstName = nameParts[0] || "";
-      const lastName = nameParts.slice(1).join(" ") || "";
+      const lastName = nameParts.slice(1).join(" ") || "(Not Provided)";
 
       // Step 1: Create or update lead
       const leadResponse = await fetch("/api/leads", {
