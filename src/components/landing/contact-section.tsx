@@ -251,7 +251,8 @@ export function ContactSection() {
                         <Label htmlFor="date">Event/Project Date</Label>
                         <Input
                           id="date"
-                          type="date"
+                          type="text"
+                          placeholder="e.g., Saturdays in April, March 15-20"
                           value={formData.eventDate}
                           onChange={(e) => handleInputChange("eventDate", e.target.value)}
                           disabled={isSubmitting}

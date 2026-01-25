@@ -27,7 +27,6 @@ const trustLogos = [
   "Universal",
   "Broadway",
   "Carnegie Hall",
-  "Pentatonix",
 ];
 
 export function HeroSection() {
@@ -59,19 +58,12 @@ export function HeroSection() {
         >
           {/* Hero Content */}
           <div className="flex flex-col gap-6 md:gap-8 text-white">
-            {/* Eyebrow */}
-            <motion.div variants={fadeIn} className="flex items-center gap-3">
-              <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 backdrop-blur-sm border border-white/10 text-sm font-medium">
-                <span className="w-2 h-2 rounded-full bg-accent animate-pulse" />
-                Available for 2025 Bookings
-              </span>
-            </motion.div>
 
             {/* Main Headline */}
             <motion.div variants={fadeIn} className="space-y-4">
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
-                The Father of
-                <span className="block text-accent">Contemporary A Cappella</span>
+                Transforming Voices Into
+                <span className="block text-accent">Unforgettable Performances</span>
               </h1>
             </motion.div>
 
@@ -80,7 +72,7 @@ export function HeroSection() {
               variants={fadeIn}
               className="text-lg md:text-xl text-white/80 leading-relaxed max-w-xl"
             >
-              Vocal Director, Arranger & Producer behind{" "}
+              Music director, arranger, and vocal producer behind{" "}
               <span className="text-white font-medium">Pitch Perfect</span>,{" "}
               <span className="text-white font-medium">The Sing-Off</span>, and
               Broadway&apos;s first a cappella musical.
@@ -92,8 +84,8 @@ export function HeroSection() {
               className="flex flex-wrap gap-6 md:gap-8 py-4 border-y border-white/10"
             >
               {[
-                { value: "30+", label: "Years Experience" },
-                { value: "2,000+", label: "Arrangements" },
+                { value: "35+", label: "Years Experience" },
+                { value: "2,500+", label: "Arrangements" },
                 { value: "#1", label: "Billboard Album" },
               ].map((stat) => (
                 <div key={stat.label} className="text-center sm:text-left">
