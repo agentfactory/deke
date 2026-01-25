@@ -29,6 +29,8 @@ const socialLinks = [
   { label: "Instagram", href: "https://instagram.com/dekesharon", icon: "IG" },
   { label: "YouTube", href: "https://youtube.com/dekesharon", icon: "YT" },
   { label: "LinkedIn", href: "https://linkedin.com/in/dekesharon", icon: "in" },
+  { label: "IMDb", href: "https://www.imdb.com/name/nm1342220/", icon: "IMDb" },
+  { label: "Wikipedia", href: "https://en.wikipedia.org/wiki/Deke_Sharon", icon: "Wiki" },
 ];
 
 export function Footer() {
@@ -45,7 +47,7 @@ export function Footer() {
               </span>
             </Link>
             <p className="text-muted-foreground text-sm leading-relaxed mb-6 max-w-sm">
-              Transforming voices and building harmony for over 30 years.
+              Music director, arranger, and vocal producer for over 35 years.
               Founder of the Contemporary A Cappella Society, vocal producer for
               Pitch Perfect, and creator of The Sing-Off.
             </p>

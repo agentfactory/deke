@@ -6,8 +6,8 @@ import { Award, Trophy, Star, Music, Film, Radio, Users } from "lucide-react";
 const credentials = [
   { icon: Award, label: "Grammy Nominated" },
   { icon: Trophy, label: "Billboard #1" },
-  { icon: Star, label: "30+ Years Pioneer" },
-  { icon: Music, label: "2,000+ Arrangements" },
+  { icon: Star, label: "35+ Years Pioneer" },
+  { icon: Music, label: "2,500+ Arrangements" },
   { icon: Film, label: "Pitch Perfect Trilogy" },
   { icon: Radio, label: "Broadway's First" },
   { icon: Users, label: "Carnegie Hall Director" },
