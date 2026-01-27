@@ -15,7 +15,7 @@ const credentials = [
 
 export function CredentialsBar() {
   return (
-    <section className="py-10 md:py-14 bg-white border-y border-border/50">
+    <section className="py-10 md:py-14 bg-white border-y border-border/50" aria-label="Credentials and achievements">
       <div className="container px-4 md:px-6 max-w-7xl mx-auto">
         <motion.div
           initial={{ opacity: 0, y: 20 }}
@@ -34,7 +34,7 @@ export function CredentialsBar() {
               className="text-center group cursor-default"
             >
               <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-xl bg-accent/10 text-accent mx-auto mb-2 md:mb-3 group-hover:bg-accent group-hover:text-accent-foreground transition-all duration-300">
-                <item.icon className="h-5 w-5 md:h-6 md:w-6" />
+                <item.icon className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
               </div>
               <p className="font-semibold text-xs md:text-sm text-foreground/80 group-hover:text-foreground transition-colors">
                 {item.label}

@@ -197,7 +197,8 @@ export function BooksSection() {
             className="inline-flex items-center gap-1.5 text-sm text-primary hover:text-accent font-medium transition-colors"
           >
             View all publications
-            <ExternalLink className="h-3.5 w-3.5" />
+            <ExternalLink className="h-3.5 w-3.5" aria-hidden="true" />
+            <span className="sr-only">(opens in new tab)</span>
           </a>
         </motion.div>
       </div>
@@ -214,6 +215,7 @@ function BookCard({ book }: { book: Book }) {
       target="_blank"
       rel="noopener noreferrer"
       className="group block"
+      aria-label={`${book.title} by ${book.authors} (opens in new tab)`}
     >
       <div className="relative bg-card rounded-lg overflow-hidden shadow-sm hover:shadow-md transition-all duration-300 border border-transparent hover:border-accent/30">
         {/* Book Cover - Compact aspect ratio */}

@@ -123,7 +123,7 @@ export function ContactSection() {
           className="text-center mb-12 md:mb-16"
         >
           <span className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-white/10 text-white/90 text-sm font-medium mb-4 backdrop-blur-sm">
-            <Send className="h-4 w-4" />
+            <Send className="h-4 w-4" aria-hidden="true" />
             Contact
           </span>
           <h2 className="font-heading text-3xl md:text-4xl lg:text-5xl font-bold mb-4">
@@ -153,8 +153,8 @@ export function ContactSection() {
               </CardHeader>
               <CardContent>
                 {submitStatus === "success" ? (
-                  <div className="text-center py-8">
-                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" />
+                  <div className="text-center py-8" role="status" aria-live="polite">
+                    <CheckCircle className="h-16 w-16 text-green-500 mx-auto mb-4" aria-hidden="true" />
                     <h3 className="text-xl font-semibold mb-2">Request Submitted!</h3>
                     <p className="text-muted-foreground mb-4">
                       Thank you for your booking request. We&apos;ll be in touch within 24 business hours.
@@ -169,8 +169,8 @@ export function ContactSection() {
                 ) : (
                   <form onSubmit={handleSubmit} className="space-y-4">
                     {submitStatus === "error" && (
-                      <div className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
-                        <AlertCircle className="h-4 w-4 flex-shrink-0" />
+                      <div role="alert" className="flex items-center gap-2 p-3 bg-red-50 border border-red-200 rounded-lg text-red-700 text-sm">
+                        <AlertCircle className="h-4 w-4 flex-shrink-0" aria-hidden="true" />
                         <span>{errorMessage}</span>
                       </div>
                     )}
@@ -291,13 +291,13 @@ export function ContactSection() {
                     >
                       {isSubmitting ? (
                         <>
-                          <Loader2 className="mr-2 h-5 w-5 animate-spin" />
+                          <Loader2 className="mr-2 h-5 w-5 animate-spin" aria-hidden="true" />
                           Submitting...
                         </>
                       ) : (
                         <>
                           Submit Request
-                          <ArrowRight className="ml-2 h-5 w-5" />
+                          <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
                         </>
                       )}
                     </Button>
@@ -324,7 +324,7 @@ export function ContactSection() {
               <CardContent className="space-y-5">
                 <div className="flex items-start gap-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-                    <Mail className="h-5 w-5" />
+                    <Mail className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
                     <p className="font-semibold mb-1">Email</p>
@@ -339,7 +339,7 @@ export function ContactSection() {
 
                 <div className="flex items-start gap-4">
                   <div className="flex h-10 w-10 items-center justify-center rounded-lg bg-white/10">
-                    <MapPin className="h-5 w-5" />
+                    <MapPin className="h-5 w-5" aria-hidden="true" />
                   </div>
                   <div>
                     <p className="font-semibold mb-1">Location</p>
@@ -357,7 +357,7 @@ export function ContactSection() {
                     asChild
                   >
                     <Link href="#contact">
-                      <Calendar className="mr-3 h-5 w-5" />
+                      <Calendar className="mr-3 h-5 w-5" aria-hidden="true" />
                       Book a 15-Minute Discovery Call
                     </Link>
                   </Button>
@@ -369,7 +369,7 @@ export function ContactSection() {
                     asChild
                   >
                     <Link href="/workshops">
-                      <ExternalLink className="mr-3 h-5 w-5" />
+                      <ExternalLink className="mr-3 h-5 w-5" aria-hidden="true" />
                       Download Workshop Topics PDF
                     </Link>
                   </Button>
@@ -381,7 +381,7 @@ export function ContactSection() {
                     asChild
                   >
                     <Link href="/about">
-                      <ExternalLink className="mr-3 h-5 w-5" />
+                      <ExternalLink className="mr-3 h-5 w-5" aria-hidden="true" />
                       View Full Portfolio on IMDb
                     </Link>
                   </Button>

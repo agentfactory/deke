@@ -40,6 +40,7 @@ export function VideoSection() {
         >
           <button
             onClick={() => setIsVideoOpen(true)}
+            aria-label="Play Deke Sharon highlight reel video"
             className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border group cursor-pointer hover:border-accent/50 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
             {/* Video Thumbnail - Using Carnegie Hall image */}

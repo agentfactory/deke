@@ -130,9 +130,9 @@ export function FindGroupForm() {
 
   if (isSubmitted) {
     return (
-      <div className="text-center py-8">
+      <div className="text-center py-8" role="status" aria-live="polite">
         <div className="flex h-16 w-16 items-center justify-center rounded-full bg-green-100 text-green-600 mx-auto mb-4">
-          <CheckCircle2 className="h-8 w-8" />
+          <CheckCircle2 className="h-8 w-8" aria-hidden="true" />
         </div>
         <h3 className="font-heading text-xl font-semibold mb-2">
           Request Submitted!
@@ -267,14 +267,17 @@ export function FindGroupForm() {
         </Select>
       </div>
 
-      <div className="space-y-2">
-        <Label>Preferred Genres (select all that apply)</Label>
-        <div className="flex flex-wrap gap-2 pt-1">
+      <fieldset className="space-y-2">
+        <legend className="text-sm font-medium leading-none peer-disabled:cursor-not-allowed peer-disabled:opacity-70">
+          Preferred Genres (select all that apply)
+        </legend>
+        <div className="flex flex-wrap gap-2 pt-1" role="group" aria-label="Genre selection">
           {genres.map((genre) => (
             <button
               key={genre}
               type="button"
               onClick={() => handleGenreToggle(genre)}
+              aria-pressed={selectedGenres.includes(genre)}
               className={`px-3 py-1.5 text-sm rounded-full border transition-colors ${
                 selectedGenres.includes(genre)
                   ? "bg-primary text-primary-foreground border-primary"
@@ -285,7 +288,7 @@ export function FindGroupForm() {
             </button>
           ))}
         </div>
-      </div>
+      </fieldset>
 
       <div className="flex items-center space-x-2">
         <Checkbox
@@ -324,13 +327,13 @@ export function FindGroupForm() {
       >
         {isSubmitting ? (
           <>
-            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+            <Loader2 className="mr-2 h-4 w-4 animate-spin" aria-hidden="true" />
             Submitting...
           </>
         ) : (
           <>
             Find My Group
-            <ArrowRight className="ml-2 h-4 w-4" />
+            <ArrowRight className="ml-2 h-4 w-4" aria-hidden="true" />
           </>
         )}
       </Button>
