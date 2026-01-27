@@ -25,6 +25,9 @@ const trustLogos = [
   "BBC",
   "Disney",
   "Universal",
+  "Amazon",
+  "Peacock",
+  "Lifetime",
   "Broadway",
   "Carnegie Hall",
 ];
@@ -45,9 +48,9 @@ export function HeroSection() {
         <div className="absolute inset-0 bg-gradient-to-t from-primary via-transparent to-primary/50" />
       </div>
 
-      {/* Subtle Gradient Orbs */}
-      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-accent/20 rounded-full blur-[128px] animate-pulse-subtle" />
-      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-primary/30 rounded-full blur-[128px] animate-pulse-subtle" style={{ animationDelay: "1s" }} />
+      {/* Subtle Gradient Orbs - decorative */}
+      <div className="absolute top-1/4 -left-32 w-96 h-96 bg-accent/20 rounded-full blur-[128px] animate-pulse-subtle" aria-hidden="true" />
+      <div className="absolute bottom-1/4 -right-32 w-96 h-96 bg-primary/30 rounded-full blur-[128px] animate-pulse-subtle" aria-hidden="true" style={{ animationDelay: "1s" }} />
 
       <div className="container relative z-10 px-4 md:px-6 py-16 md:py-24 max-w-7xl mx-auto">
         <motion.div
@@ -62,8 +65,8 @@ export function HeroSection() {
             {/* Main Headline */}
             <motion.div variants={fadeIn} className="space-y-4">
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
-                Transforming Voices Into
-                <span className="block text-accent">Unforgettable Performances</span>
+                Pitch Perfect Harmony,
+                <span className="block text-accent">One Note at a Time</span>
               </h1>
             </motion.div>
 
@@ -74,8 +77,9 @@ export function HeroSection() {
             >
               Music director, arranger, and vocal producer behind{" "}
               <span className="text-white font-medium">Pitch Perfect</span>,{" "}
-              <span className="text-white font-medium">The Sing-Off</span>, and
-              Broadway&apos;s first a cappella musical.
+              <span className="text-white font-medium">NBC&apos;s The Sing-Off</span>,{" "}
+              and Broadway&apos;s{" "}
+              <span className="text-white font-medium">In Transit</span>.
             </motion.p>
 
             {/* Stats Row */}
@@ -109,7 +113,7 @@ export function HeroSection() {
               >
                 <Link href="#contact">
                   Request Deke for Your Project
-                  <ArrowRight className="ml-2 h-5 w-5" />
+                  <ArrowRight className="ml-2 h-5 w-5" aria-hidden="true" />
                 </Link>
               </Button>
               <Button
@@ -119,7 +123,7 @@ export function HeroSection() {
                 asChild
               >
                 <Link href="#contact">
-                  <Calendar className="mr-2 h-5 w-5" />
+                  <Calendar className="mr-2 h-5 w-5" aria-hidden="true" />
                   Book Discovery Call
                 </Link>
               </Button>
@@ -187,7 +191,7 @@ export function HeroSection() {
         transition={{ delay: 1.5 }}
         className="absolute bottom-6 md:bottom-8 left-1/2 -translate-x-1/2"
       >
-        <div className="flex flex-col items-center gap-2 text-white/40">
+        <div className="flex flex-col items-center gap-2 text-white/40" aria-hidden="true">
           <span className="text-xs uppercase tracking-widest">Scroll</span>
           <ChevronDown className="h-5 w-5 animate-bounce" />
         </div>

@@ -7,26 +7,26 @@ import { Camera } from "lucide-react";
 const galleryImages = [
   {
     src: "/images/deke/big-img-31.jpg",
-    alt: "Deke Sharon with Anna Kendrick on Pitch Perfect set",
-    caption: "With Anna Kendrick",
+    alt: "Deke Sharon with Anna Kendrick",
+    caption: "Anna Kendrick - 2am afterparty selfie",
     category: "Pitch Perfect",
   },
   {
     src: "/images/deke/big-img-41.jpg",
-    alt: "Deke Sharon conducting at Carnegie Hall",
-    caption: "Carnegie Hall",
+    alt: "Deke Sharon at Carnegie Hall",
+    caption: "Carnegie Hall - beatbox & vocal trumpet solo",
     category: "Live Performance",
   },
   {
     src: "/images/deke/big-img-21.jpg",
     alt: "Deke Sharon with Rebel Wilson",
-    caption: "With Rebel Wilson",
+    caption: "Rebel Wilson - recording the Pitch Perfect 2 finale",
     category: "Pitch Perfect",
   },
   {
     src: "/images/deke/big-img-65.jpg",
-    alt: "Deke Sharon with Ben Platt on Broadway",
-    caption: "With Ben Platt",
+    alt: "Deke Sharon with Ben Platt",
+    caption: "Ben Platt portrayed Benji (me) - can you see any resemblance?",
     category: "Broadway",
   },
   {
@@ -36,46 +36,22 @@ const galleryImages = [
     category: "Pitch Perfect",
   },
   {
-    src: "/images/deke/riffoff2.jpg",
-    alt: "The iconic Riff-Off scene from Pitch Perfect",
-    caption: "The Riff-Off",
-    category: "Pitch Perfect",
-  },
-  {
-    src: "/images/deke/big-img-20.jpg",
-    alt: "TotalVocal at Carnegie Hall",
-    caption: "TotalVocal",
-    category: "Carnegie Hall",
-  },
-  {
-    src: "/images/deke/big-img-61.jpg",
-    alt: "In Transit Broadway Cast",
-    caption: "In Transit Cast",
-    category: "Broadway",
-  },
-  {
     src: "/images/deke/big-img-34.jpg",
     alt: "Deke Sharon on the Today Show",
-    caption: "Today Show",
+    caption: "Today Show - with Hoda & Jenna",
     category: "Media",
   },
   {
     src: "/images/deke/big-img-15.jpg",
-    alt: "Performance with Ray Charles",
-    caption: "With Ray Charles",
+    alt: "Deke Sharon with Ray Charles and The House Jacks",
+    caption: "Singing for Ray Charles - with The House Jacks",
     category: "Performance",
   },
   {
     src: "/images/deke/big-img-35.jpg",
     alt: "Entertainment Weekly Feature",
-    caption: "Entertainment Weekly",
+    caption: "Entertainment Weekly - Promo shot for Pitch Slapped",
     category: "Press",
-  },
-  {
-    src: "/images/deke/2024_ACAPPELLA_SPECTACULAR_AB_0328.jpg",
-    alt: "2024 A Cappella Spectacular",
-    caption: "A Cappella Spectacular 2024",
-    category: "Live Event",
   },
 ];
 
