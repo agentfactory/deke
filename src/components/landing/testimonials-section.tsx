@@ -6,35 +6,19 @@ import { Quote, MessageSquare } from "lucide-react";
 
 const testimonials = [
   {
-    quote: "The Father of Contemporary A Cappella",
+    quote: "The Father of Contemporary A Cappella…",
     author: "Entertainment Weekly",
     size: "large" as const,
   },
   {
-    quote: "A One Man A Cappella Revolution",
+    quote: "A One Man A Cappella Revolution…",
     author: "Boston Globe",
-    size: "medium" as const,
-  },
-  {
-    quote: "The Genius Behind Pitch Perfect",
-    author: "BBC",
-    size: "medium" as const,
-  },
-  {
-    quote: "Hollywood's Go-To Choral Whiz",
-    author: "Radio New Zealand",
-    size: "small" as const,
-  },
-  {
-    quote: "Pioneering Achievement… Gleams with Blended Polyphony",
-    author: "New York Times",
     size: "large" as const,
   },
   {
-    quote: "Aca-amazing! Godfather of a cappella",
-    author: "Rebel Wilson",
-    role: "Actress, Pitch Perfect",
-    size: "medium" as const,
+    quote: "Deke Sharon Makes A Cappella Cool Again…",
+    author: "NPR All Things Considered",
+    size: "large" as const,
   },
   {
     quote: "Completely amazing, I forgot there wasn't an orchestra!",
@@ -42,20 +26,9 @@ const testimonials = [
     size: "large" as const,
   },
   {
-    quote: "I've been watching your career, your work is truly amazing!",
-    author: "Seal",
-    role: "Grammy-winning Artist",
-    size: "medium" as const,
-  },
-  {
-    quote: "Magnetic, musical, entertaining, informed, interesting",
-    author: "Dr. Janet Galvan",
-    role: "Ithaca Children's Choir",
-    size: "small" as const,
-  },
-  {
-    quote: "Deke Sharon's vibrant and evocative vocal arrangements deserve star billing",
-    author: "Broadway World",
+    quote: "If there's an acronym in a cappella, Deke Sharon probably had something to do with it…",
+    author: "Mickey Rapkin",
+    role: "Pitch Perfect (Book)",
     size: "large" as const,
   },
 ];

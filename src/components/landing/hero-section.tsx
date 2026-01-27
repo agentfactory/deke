@@ -25,6 +25,9 @@ const trustLogos = [
   "BBC",
   "Disney",
   "Universal",
+  "Amazon",
+  "Peacock",
+  "Lifetime",
   "Broadway",
   "Carnegie Hall",
 ];
@@ -62,8 +65,8 @@ export function HeroSection() {
             {/* Main Headline */}
             <motion.div variants={fadeIn} className="space-y-4">
               <h1 className="font-display text-4xl sm:text-5xl md:text-6xl lg:text-7xl font-bold leading-[1.1] tracking-tight">
-                Transforming Voices Into
-                <span className="block text-accent">Unforgettable Performances</span>
+                Pitch Perfect Harmony,
+                <span className="block text-accent">One Note at a Time</span>
               </h1>
             </motion.div>
 
@@ -74,8 +77,9 @@ export function HeroSection() {
             >
               Music director, arranger, and vocal producer behind{" "}
               <span className="text-white font-medium">Pitch Perfect</span>,{" "}
-              <span className="text-white font-medium">The Sing-Off</span>, and
-              Broadway&apos;s first a cappella musical.
+              <span className="text-white font-medium">NBC&apos;s The Sing-Off</span>,{" "}
+              and Broadway&apos;s{" "}
+              <span className="text-white font-medium">In Transit</span>.
             </motion.p>
 
             {/* Stats Row */}
