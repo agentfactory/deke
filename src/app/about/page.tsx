@@ -1,18 +1,17 @@
 "use client";
 
 import Link from "next/link";
+import Image from "next/image";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import {
-  Music2,
   Award,
   BookOpen,
   Users,
   Tv,
   ArrowRight,
-  Calendar,
   Quote,
 } from "lucide-react";
 
@@ -110,19 +109,21 @@ export default function AboutPage() {
               </Button>
             </motion.div>
 
-            {/* Photo Placeholder */}
+            {/* Deke Portrait */}
             <motion.div
               initial={{ opacity: 0, scale: 0.95 }}
               animate={{ opacity: 1, scale: 1 }}
               transition={{ duration: 0.6, delay: 0.2 }}
-              className="relative aspect-square rounded-lg bg-white/5 backdrop-blur-sm flex items-center justify-center border border-white/10 overflow-hidden"
+              className="relative aspect-[3/4] rounded-lg overflow-hidden shadow-2xl"
             >
-              <div className="text-center p-8 text-white">
-                <Music2 className="h-20 w-20 mx-auto text-white/20 mb-4" />
-                <p className="text-white/50 text-sm">
-                  Photo placeholder
-                </p>
-              </div>
+              <Image
+                src="/images/deke/deke2-photographer-Nikki-Davis-Jones.jpg"
+                alt="Deke Sharon - The Father of Contemporary A Cappella"
+                fill
+                className="object-cover"
+                priority
+              />
+              <div className="absolute inset-0 bg-gradient-to-t from-primary/40 via-transparent to-transparent" />
             </motion.div>
           </div>
         </div>

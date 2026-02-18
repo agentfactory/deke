@@ -28,8 +28,10 @@ const trustLogos = [
   "Amazon",
   "Peacock",
   "Lifetime",
-  "Broadway",
-  "Carnegie Hall",
+  "Sony",
+  "Atlantic Records",
+  "Warner Bros.",
+  "Hal Leonard",
 ];
 
 export function HeroSection() {

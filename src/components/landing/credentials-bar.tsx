@@ -1,47 +1,88 @@
 "use client";
 
 import { motion } from "framer-motion";
-import { Award, Trophy, Star, Music, Film, Radio, Users } from "lucide-react";
 
-const credentials = [
-  { icon: Award, label: "Grammy Nominated" },
-  { icon: Trophy, label: "Billboard #1" },
-  { icon: Star, label: "35+ Years Pioneer" },
-  { icon: Music, label: "2,500+ Arrangements" },
-  { icon: Film, label: "Pitch Perfect Trilogy" },
-  { icon: Radio, label: "Broadway's First" },
-  { icon: Users, label: "Carnegie Hall Director" },
+const trustedLogos = [
+  { name: "NBC", width: "w-12" },
+  { name: "BBC", width: "w-12" },
+  { name: "Disney", width: "w-14" },
+  { name: "Universal", width: "w-16" },
+  { name: "Amazon", width: "w-16" },
+  { name: "Peacock", width: "w-16" },
+  { name: "Lifetime", width: "w-16" },
+  { name: "Sony", width: "w-12" },
+  { name: "Atlantic Records", width: "w-20" },
+  { name: "Warner Bros.", width: "w-20" },
+  { name: "Hal Leonard", width: "w-20" },
 ];
 
 export function CredentialsBar() {
   return (
-    <section className="py-10 md:py-14 bg-white border-y border-border/50" aria-label="Credentials and achievements">
+    <section
+      className="py-8 md:py-10 bg-white border-y border-border/50 overflow-hidden"
+      aria-label="Trusted by leading brands"
+    >
       <div className="container px-4 md:px-6 max-w-7xl mx-auto">
-        <motion.div
-          initial={{ opacity: 0, y: 20 }}
-          whileInView={{ opacity: 1, y: 0 }}
-          viewport={{ once: true, margin: "-50px" }}
-          transition={{ duration: 0.5 }}
-          className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-7 gap-6 md:gap-8 items-center justify-items-center"
+        <motion.p
+          initial={{ opacity: 0 }}
+          whileInView={{ opacity: 1 }}
+          viewport={{ once: true }}
+          className="text-xs text-muted-foreground uppercase tracking-widest text-center mb-6"
         >
-          {credentials.map((item, i) => (
+          Trusted By
+        </motion.p>
+
+        {/* Logo Banner - scrolling on mobile, grid on desktop */}
+        <div className="relative">
+          {/* Desktop: static grid */}
+          <motion.div
+            initial={{ opacity: 0, y: 10 }}
+            whileInView={{ opacity: 1, y: 0 }}
+            viewport={{ once: true }}
+            transition={{ duration: 0.5 }}
+            className="hidden md:flex flex-wrap items-center justify-center gap-x-10 gap-y-4"
+          >
+            {trustedLogos.map((logo, i) => (
+              <motion.div
+                key={logo.name}
+                initial={{ opacity: 0 }}
+                whileInView={{ opacity: 1 }}
+                viewport={{ once: true }}
+                transition={{ delay: i * 0.05 }}
+                className="flex items-center justify-center"
+              >
+                <span className="text-sm font-semibold text-foreground/40 hover:text-foreground/70 transition-colors cursor-default tracking-wide whitespace-nowrap">
+                  {logo.name}
+                </span>
+              </motion.div>
+            ))}
+          </motion.div>
+
+          {/* Mobile: horizontal scroll */}
+          <div className="md:hidden overflow-hidden">
             <motion.div
-              key={item.label}
-              initial={{ opacity: 0, y: 10 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              viewport={{ once: true }}
-              transition={{ delay: i * 0.05 }}
-              className="text-center group cursor-default"
+              animate={{ x: [0, -1200] }}
+              transition={{
+                x: {
+                  repeat: Infinity,
+                  repeatType: "loop",
+                  duration: 20,
+                  ease: "linear",
+                },
+              }}
+              className="flex items-center gap-8 w-max"
             >
-              <div className="flex h-12 w-12 md:h-14 md:w-14 items-center justify-center rounded-xl bg-accent/10 text-accent mx-auto mb-2 md:mb-3 group-hover:bg-accent group-hover:text-accent-foreground transition-all duration-300">
-                <item.icon className="h-5 w-5 md:h-6 md:w-6" aria-hidden="true" />
-              </div>
-              <p className="font-semibold text-xs md:text-sm text-foreground/80 group-hover:text-foreground transition-colors">
-                {item.label}
-              </p>
+              {[...trustedLogos, ...trustedLogos].map((logo, i) => (
+                <span
+                  key={`${logo.name}-${i}`}
+                  className="text-sm font-semibold text-foreground/40 tracking-wide whitespace-nowrap"
+                >
+                  {logo.name}
+                </span>
+              ))}
             </motion.div>
-          ))}
-        </motion.div>
+          </div>
+        </div>
       </div>
     </section>
   );

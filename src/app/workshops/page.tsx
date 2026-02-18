@@ -5,6 +5,7 @@ import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
+import { WorkshopTopicsSection } from "@/components/landing";
 import {
   Calendar,
   MapPin,
@@ -269,6 +270,9 @@ export default function WorkshopsPage() {
           </motion.div>
         </div>
       </section>
+
+      {/* Full Workshop Topics Catalog */}
+      <WorkshopTopicsSection />
 
       {/* CTA */}
       <section className="py-20 md:py-28 bg-gradient-hero text-white">
