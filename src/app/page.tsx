@@ -8,6 +8,7 @@ import {
   TestimonialsSection,
   ServicesTabsSection,
   WorkshopTopicsSection,
+  PP2DiaryBanner,
   FAQSection,
   ContactSection,
 } from "@/components/landing";
@@ -24,6 +25,7 @@ export default function HomePage() {
       <TestimonialsSection />
       <ServicesTabsSection />
       <WorkshopTopicsSection />
+      <PP2DiaryBanner />
       <FAQSection />
       <ContactSection />
     </>

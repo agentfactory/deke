@@ -9,3 +9,4 @@ export { ServicesTabsSection } from "./services-tabs";
 export { WorkshopTopicsSection } from "./workshop-topics";
 export { FAQSection } from "./faq-section";
 export { ContactSection } from "./contact-section";
+export { PP2DiaryBanner } from "./pp2-diary-banner";
