@@ -128,7 +128,7 @@ export default function AboutPage() {
               className="relative aspect-[3/4] rounded-lg overflow-hidden shadow-2xl"
             >
               <Image
-                src="/images/deke/deke2-photographer-Nikki-Davis-Jones.jpg"
+                src="/images/deke/deke_hi.jpg"
                 alt="Deke Sharon - The Father of Contemporary A Cappella"
                 fill
                 className="object-cover"
