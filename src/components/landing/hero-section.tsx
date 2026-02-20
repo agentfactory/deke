@@ -161,8 +161,8 @@ export function HeroSection() {
             className="relative aspect-[3/4] rounded-2xl overflow-hidden hidden lg:block shadow-2xl"
           >
             <Image
-              src="/images/deke/deke2-photographer-Nikki-Davis-Jones.jpg"
-              alt="Deke Sharon - Professional Portrait"
+              src="/images/deke/deke_hi.jpg"
+              alt="Deke Sharon - Photo by Nikki Davis-Jones"
               fill
               className="object-cover"
               priority
