@@ -1,0 +1,20 @@
+npm warn config optional Use `--omit=optional` to exclude optional dependencies, or
+npm warn config `--include=optional` to include them.
+npm warn config
+npm warn config       Default value does install optional deps unless otherwise omitted.
+npm warn Unknown project config "platform". This will stop working in the next major version of npm.
+npm warn Unknown project config "arch". This will stop working in the next major version of npm.
+
+> deke@0.1.0 dev
+> next dev
+
+⚠ Port 3000 is in use by process 29332, using available port 3002 instead.
+▲ Next.js 16.1.1 (Turbopack)
+- Local:         http://localhost:3002
+- Network:       http://192.168.86.35:3002
+- Environments: .env
+
+✓ Starting...
+⨯ Unable to acquire lock at C:\claude_projects\deke\.next\dev\lock, is another instance of next dev running?
+  Suggestion: If you intended to restart next dev, terminate the other process, and then try again.
+[?25h
