@@ -4,7 +4,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { motion } from "framer-motion";
 import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
+
 import { ArrowRight, Calendar, ChevronDown } from "lucide-react";
 
 const fadeIn = {
@@ -20,19 +20,6 @@ const stagger = {
   },
 };
 
-const trustLogos = [
-  "NBC",
-  "BBC",
-  "Disney",
-  "Universal",
-  "Amazon",
-  "Peacock",
-  "Lifetime",
-  "Sony",
-  "Atlantic Records",
-  "Warner Bros.",
-  "Hal Leonard",
-];
 
 export function HeroSection() {
   return (
@@ -131,28 +118,7 @@ export function HeroSection() {
               </Button>
             </motion.div>
 
-            {/* Trust Indicators */}
-            <motion.div variants={fadeIn} className="pt-4 md:pt-6">
-              <p className="text-xs text-white/50 uppercase tracking-widest mb-3">
-                Trusted By
-              </p>
-              <div className="flex flex-wrap items-center gap-x-4 gap-y-2 md:gap-x-6">
-                {trustLogos.map((logo, i) => (
-                  <span
-                    key={logo}
-                    className="text-white/40 text-sm font-medium hover:text-white/60 transition-colors cursor-default"
-                  >
-                    {logo}
-                    {i < trustLogos.length - 1 && (
-                      <Separator
-                        orientation="vertical"
-                        className="hidden md:inline-block ml-4 md:ml-6 h-4 bg-white/20"
-                      />
-                    )}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
+
           </div>
 
           {/* Hero Visual - Portrait Photo */}
@@ -161,8 +127,8 @@ export function HeroSection() {
             className="relative aspect-[3/4] rounded-2xl overflow-hidden hidden lg:block shadow-2xl"
           >
             <Image
-              src="/images/deke/deke2-photographer-Nikki-Davis-Jones.jpg"
-              alt="Deke Sharon - Professional Portrait"
+              src="/images/deke/deke_hi.jpg"
+              alt="Deke Sharon - Photo by Nikki Davis-Jones"
               fill
               className="object-cover"
               priority
