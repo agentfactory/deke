@@ -43,10 +43,10 @@ export function VideoSection() {
             aria-label="Play Deke Sharon highlight reel video"
             className="relative w-full aspect-video rounded-2xl overflow-hidden border border-border group cursor-pointer hover:border-accent/50 transition-all duration-300 shadow-lg hover:shadow-xl"
           >
-            {/* Video Thumbnail - Using Carnegie Hall image */}
+            {/* Video Thumbnail - Deke & Rebel Wilson in the studio */}
             <Image
-              src="/images/deke/big-img-41.jpg"
-              alt="Deke Sharon at Carnegie Hall"
+              src="/images/deke/big-img-21.jpg"
+              alt="Deke Sharon with Rebel Wilson in the recording studio"
               fill
               className="object-cover transition-transform duration-500 group-hover:scale-105"
             />
