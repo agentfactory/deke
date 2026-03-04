@@ -27,7 +27,7 @@ const books: Book[] = [
     authors: "Dylan Bell & Deke Sharon",
     year: "2024",
     purchaseUrl: "https://www.amazon.com/Expert-Strategies-Cappella-Arranging-Techniques/dp/1538172666/",
-    coverImage: "https://covers.openlibrary.org/b/isbn/1538172666-L.jpg",
+    coverImage: "https://books.google.com/books/publisher/content/images/frontcover/di_2EAAAQBAJ?fife=w400-h600&source=gbs_api",
   },
   {
     id: "teaching-music",
@@ -35,7 +35,7 @@ const books: Book[] = [
     authors: "Frizzell, Hackel, Sharon & more",
     year: "2023",
     purchaseUrl: "https://www.giamusic.com/store/resource/teaching-music-through-performance-in-contemporary-a-cappella-book-g10098",
-    coverImage: "https://covers.openlibrary.org/b/isbn/1622774876-L.jpg",
+    coverImage: "https://covers.openlibrary.org/b/isbn/1622774876-L.jpg?default=false",
   },
   {
     id: "arranging-1",
@@ -43,7 +43,7 @@ const books: Book[] = [
     authors: "Dylan Bell & Deke Sharon",
     year: "2012",
     purchaseUrl: "https://www.amazon.com/gp/product/1458416577",
-    coverImage: "https://covers.openlibrary.org/b/isbn/1458416577-L.jpg",
+    coverImage: "https://books.google.com/books/content?id=oS7VygAACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   },
   {
     id: "a-cappella",
@@ -51,7 +51,7 @@ const books: Book[] = [
     authors: "Sharon, Spalding & McDonald",
     year: "2015",
     purchaseUrl: "https://www.amazon.com/Cappella-Deke-Sharon/dp/147061667X/",
-    coverImage: "https://covers.openlibrary.org/b/isbn/147061667X-L.jpg",
+    coverImage: "https://books.google.com/books/publisher/content/images/frontcover/G58mCwAAQBAJ?fife=w400-h600&source=gbs_api",
   },
   {
     id: "heart-of-harmony",
@@ -59,7 +59,7 @@ const books: Book[] = [
     authors: "Deke Sharon",
     year: "2016",
     purchaseUrl: "https://www.amazon.com/Heart-Vocal-Harmony-Emotional-Expression/dp/1495057836/",
-    coverImage: "https://covers.openlibrary.org/b/isbn/1495057836-L.jpg",
+    coverImage: "https://books.google.com/books/publisher/content/images/frontcover/gu7aDgAAQBAJ?fife=w400-h600&source=gbs_api",
   },
   {
     id: "so-you-want-to-sing",
@@ -67,7 +67,7 @@ const books: Book[] = [
     authors: "Deke Sharon",
     year: "2019",
     purchaseUrl: "https://www.amazon.com/You-Want-Sing-Cappella-Performers/dp/153810587X/",
-    coverImage: "https://covers.openlibrary.org/b/isbn/153810587X-L.jpg",
+    coverImage: "https://books.google.com/books/publisher/content/images/frontcover/BLs4DwAAQBAJ?fife=w400-h600&source=gbs_api",
   },
   {
     id: "warm-ups",
@@ -75,7 +75,7 @@ const books: Book[] = [
     authors: "Deke Sharon & J.D. Frizzell",
     year: "2017",
     purchaseUrl: "https://www.amazon.com/Cappella-Warm-Ups-Pop-Jazz-Choirs/dp/1495077411",
-    coverImage: "https://covers.openlibrary.org/b/isbn/1495077411-L.jpg",
+    coverImage: "https://books.google.com/books/content?id=_dMDtAEACAAJ&printsec=frontcover&img=1&zoom=1&source=gbs_api",
   },
 ];
 
@@ -233,6 +233,12 @@ function BookCard({ book }: { book: Book }) {
               alt={book.title}
               className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
               onError={() => setImageError(true)}
+              onLoad={(e) => {
+                const img = e.currentTarget;
+                if (img.naturalWidth <= 1 || img.naturalHeight <= 1) {
+                  setImageError(true);
+                }
+              }}
             />
           )}
 
