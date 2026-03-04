@@ -127,10 +127,10 @@ export function HeroSection() {
             className="relative aspect-[3/4] rounded-2xl overflow-hidden hidden lg:block shadow-2xl"
           >
             <Image
-              src="/images/deke/deke_hi.jpg"
-              alt="Deke Sharon - Photo by Nikki Davis-Jones"
+              src="/images/deke/biotop.jpg"
+              alt="Deke Sharon - Photo by Nina Westervelt"
               fill
-              className="object-cover"
+              className="object-cover object-top"
               priority
             />
             {/* Gradient overlay */}
