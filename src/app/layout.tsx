@@ -3,6 +3,7 @@ import "./globals.css";
 import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HarmonyWidget } from "@/components/chat/harmony-widget";
+import { NotificationPopup } from "@/components/notification-popup";
 
 export const metadata: Metadata = {
   title: {
@@ -66,6 +67,7 @@ export default function RootLayout({
         <main id="main-content" className="flex-1" tabIndex={-1}>{children}</main>
         <Footer />
         <HarmonyWidget />
+        <NotificationPopup />
       </body>
     </html>
   );
