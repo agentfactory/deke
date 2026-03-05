@@ -1,7 +1,10 @@
 import { Resend } from 'resend'
 
-// Admin notification email
-const ADMIN_EMAIL = 'denis@theagentfactory.ai'
+// Notification recipients (comma-separated emails via env, with sensible defaults)
+const NOTIFICATION_EMAILS = (process.env.BOOKING_NOTIFICATION_EMAILS || 'deke@dekesharon.com,denis@theagentfactory.ai')
+  .split(',')
+  .map(e => e.trim())
+  .filter(Boolean)
 
 export interface BookingNotificationData {
   bookingId: string
@@ -237,7 +240,7 @@ function generateClientEmailHtml(data: BookingNotificationData): string {
 
 /**
  * Send booking notification emails
- * - Admin notification to denis@theagentfactory.ai
+ * - Notification to all recipients in BOOKING_NOTIFICATION_EMAILS (defaults to deke@ + denis@)
  * - Confirmation email to the client
  */
 export async function sendBookingNotification(
@@ -259,10 +262,10 @@ export async function sendBookingNotification(
   const results: NotificationResult = { success: true }
 
   try {
-    // Send admin notification
+    // Send admin/owner notifications
     const adminResult = await resend.emails.send({
       from: fromEmail,
-      to: ADMIN_EMAIL,
+      to: NOTIFICATION_EMAILS,
       subject: `🎵 New Booking Request: ${getServiceTypeLabel(data.serviceType)} - ${data.leadName}`,
       html: generateAdminEmailHtml(data),
       tags: [
@@ -277,7 +280,7 @@ export async function sendBookingNotification(
       results.success = false
     } else {
       results.adminEmailId = adminResult.data?.id
-      console.log(`Admin notification sent successfully: ${results.adminEmailId}`)
+      console.log(`Admin notification sent to ${NOTIFICATION_EMAILS.join(', ')}: ${results.adminEmailId}`)
     }
 
     // Send client confirmation
