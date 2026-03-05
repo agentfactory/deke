@@ -638,3 +638,23 @@ model ServiceRecommendation {
   @@index([recommendedService])
   @@index([active])
 }
+
+// ============================================
+// EMAIL SUBSCRIBERS (Popup & Footer signups)
+// ============================================
+
+model EmailSubscriber {
+  id              String    @id @default(cuid())
+  firstName       String
+  email           String    @unique
+  location        String
+  groupName       String?
+  newsletterOptIn Boolean   @default(false)
+  source          String    @default("popup")
+  createdAt       DateTime  @default(now())
+  updatedAt       DateTime  @updatedAt
+
+  @@index([email])
+  @@index([location])
+  @@index([createdAt])
+}
