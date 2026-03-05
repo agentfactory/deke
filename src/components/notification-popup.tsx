@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePathname } from "next/navigation";
 import {
   Dialog,
   DialogContent,
@@ -22,6 +23,7 @@ import {
 } from "lucide-react";
 
 const STORAGE_KEY = "deke-notification-dismissed";
+const SUPPRESSED_ROUTES = ["/services", "/find-group"];
 
 interface FormState {
   firstName: string;
@@ -42,15 +44,21 @@ const initialFormState: FormState = {
 };
 
 export function NotificationPopup() {
+  const pathname = usePathname();
+  const isSuppressed = SUPPRESSED_ROUTES.some((route) =>
+    pathname.startsWith(route)
+  );
+
   const [open, setOpen] = useState(false);
   const [formData, setFormData] = useState<FormState>(initialFormState);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [submitStatus, setSubmitStatus] = useState<
-    "idle" | "success" | "error"
+    "idle" | "success" | "duplicate" | "error"
   >("idle");
   const [errorMessage, setErrorMessage] = useState("");
 
   useEffect(() => {
+    if (isSuppressed) return;
     try {
       if (localStorage.getItem(STORAGE_KEY)) return;
     } catch {
@@ -60,7 +68,7 @@ export function NotificationPopup() {
 
     const timer = setTimeout(() => setOpen(true), 3000);
     return () => clearTimeout(timer);
-  }, []);
+  }, [isSuppressed]);
 
   const handleDismiss = (isOpen: boolean) => {
     if (!isOpen) {
@@ -88,10 +96,16 @@ export function NotificationPopup() {
     setErrorMessage("");
 
     try {
-      const response = await fetch("/api/notification-signup", {
+      const response = await fetch("/api/subscribers", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(formData),
+        body: JSON.stringify({
+          firstName: formData.firstName,
+          email: formData.email,
+          location: formData.location,
+          groupName: formData.isGroup ? formData.groupName : undefined,
+          newsletterOptIn: formData.newsletter,
+        }),
       });
 
       const data = await response.json();
@@ -102,7 +116,7 @@ export function NotificationPopup() {
         );
       }
 
-      setSubmitStatus("success");
+      setSubmitStatus(data.duplicate ? "duplicate" : "success");
       try {
         localStorage.setItem(STORAGE_KEY, "1");
       } catch {
@@ -123,18 +137,26 @@ export function NotificationPopup() {
     }
   };
 
+  if (isSuppressed) return null;
+
   return (
     <Dialog open={open} onOpenChange={handleDismiss}>
       <DialogContent className="sm:max-w-md">
-        {submitStatus === "success" ? (
+        {submitStatus === "success" || submitStatus === "duplicate" ? (
           <div className="text-center py-6" role="status" aria-live="polite">
             <CheckCircle
               className="h-14 w-14 text-green-500 mx-auto mb-3"
               aria-hidden="true"
             />
-            <h3 className="text-lg font-semibold mb-1">You&apos;re on the list!</h3>
+            <h3 className="text-lg font-semibold mb-1">
+              {submitStatus === "duplicate"
+                ? "You\u2019re already on the list!"
+                : "You\u2019re on the list!"}
+            </h3>
             <p className="text-muted-foreground text-sm">
-              We&apos;ll let you know when Deke is heading to your area.
+              {submitStatus === "duplicate"
+                ? "We already have you — no need to sign up again."
+                : "We\u2019ll let you know when Deke is heading to your area."}
             </p>
           </div>
         ) : (
