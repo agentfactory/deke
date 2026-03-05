@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { z } from 'zod'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
+import { sendSignupNotification } from '@/lib/notifications/signup-notification'
 
 const notificationSignupSchema = z.object({
   firstName: z.string().min(1, 'First name is required'),
@@ -70,6 +71,20 @@ export async function POST(request: NextRequest) {
         message: `Area notification signup — ${messageParts.join('; ')}`,
       },
     })
+
+    // Send admin notification (fire-and-forget)
+    const extras: Record<string, string> = {}
+    if (data.newsletter) extras['Newsletter'] = 'Opted in'
+    if (data.isGroup) extras['Group Interest'] = data.groupName || 'Yes'
+
+    sendSignupNotification({
+      type: 'notification-popup',
+      name: data.firstName,
+      email: data.email,
+      location: data.location,
+      message: messageParts.join('; '),
+      extras: Object.keys(extras).length > 0 ? extras : undefined,
+    }).catch(err => console.error('Notification popup signup notification failed:', err))
 
     return NextResponse.json(
       { message: 'Signed up successfully' },

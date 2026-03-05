@@ -6,6 +6,7 @@ import {
   inquiryFiltersSchema,
   type CreateInquiryInput
 } from '@/lib/validations/inquiry'
+import { sendGroupRequestNotification } from '@/lib/notifications/group-request-notification'
 
 // POST /api/inquiries - Create new inquiry
 export async function POST(request: NextRequest) {
@@ -49,6 +50,22 @@ export async function POST(request: NextRequest) {
         }
       }
     })
+
+    // Send email notification for find-group-form submissions
+    if (lead.source === 'find-group-form') {
+      const details = validatedData.details ? JSON.parse(validatedData.details) : {}
+      sendGroupRequestNotification({
+        name: `${lead.firstName} ${lead.lastName}`.trim(),
+        email: lead.email,
+        location: details.location || lead.organization || 'Not specified',
+        age: details.age ? Number(details.age) : null,
+        experience: details.experience || 'Not specified',
+        commitment: details.commitment || 'Not specified',
+        genres: details.genres || [],
+        performanceInterest: details.performanceInterest || false,
+        message: validatedData.message || null,
+      }).catch(err => console.error('Failed to send group request notification:', err))
+    }
 
     return NextResponse.json(inquiry, { status: 201 })
   } catch (error) {

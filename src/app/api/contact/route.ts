@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { handleApiError, ApiError } from "@/lib/api-error";
+import { sendSignupNotification } from "@/lib/notifications/signup-notification";
 
 const ContactFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -50,8 +51,13 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // In production, you would also send an email notification here
-    // using Resend or another email service
+    // Send admin notification (fire-and-forget)
+    sendSignupNotification({
+      type: 'contact',
+      name: `${firstName} ${lastName}`,
+      email,
+      message: `Subject: ${subject}\n\n${message}`,
+    }).catch(err => console.error('Contact notification failed:', err))
 
     return NextResponse.json({
       success: true,

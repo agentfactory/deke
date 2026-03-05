@@ -6,6 +6,7 @@ import {
   groupRequestFiltersSchema,
   type CreateGroupRequestInput
 } from '@/lib/validations/group-request'
+import { sendSignupNotification } from '@/lib/notifications/signup-notification'
 
 // POST /api/group-requests - Create a new group request
 export async function POST(request: NextRequest) {
@@ -30,6 +31,23 @@ export async function POST(request: NextRequest) {
         status: 'PENDING',
       }
     })
+
+    // Send admin notification (fire-and-forget)
+    const extras: Record<string, string> = {
+      'Experience': validatedData.experience,
+      'Commitment': validatedData.commitment,
+    }
+    if (validatedData.genres.length > 0) extras['Genres'] = validatedData.genres.join(', ')
+    if (validatedData.performanceInterest) extras['Performance'] = 'Interested'
+
+    sendSignupNotification({
+      type: 'group-request',
+      name: validatedData.name,
+      email: validatedData.email,
+      location: validatedData.location,
+      message: validatedData.message,
+      extras,
+    }).catch(err => console.error('Group request notification failed:', err))
 
     return NextResponse.json(groupRequest, { status: 201 })
   } catch (error) {
