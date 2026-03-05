@@ -1,11 +1,10 @@
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Users, MapPin, Music, Clock, CheckCircle, Mail, Search } from 'lucide-react'
+import { Users, Music, Clock, CheckCircle, Search } from 'lucide-react'
 import { prisma } from '@/lib/db'
+import { GroupRequestList } from '@/components/dashboard/group-request-list'
 
 // This page shows "Find a Singing Group" requests from the Inquiry table
-// Requests with serviceType "OTHER" and message containing "find" or "group" are group requests
 
 interface GroupRequest {
   id: string
@@ -14,7 +13,8 @@ interface GroupRequest {
   location: string
   message: string
   status: string
-  createdAt: Date
+  details?: string | null
+  createdAt: string
 }
 
 async function getGroupRequests(): Promise<{
@@ -46,7 +46,8 @@ async function getGroupRequests(): Promise<{
       location: i.lead.organization || 'Location pending',
       message: i.message || '',
       status: i.status,
-      createdAt: i.createdAt,
+      details: i.details as string | null,
+      createdAt: i.createdAt.toISOString(),
     }))
 
     const total = requests.length
@@ -64,30 +65,6 @@ async function getGroupRequests(): Promise<{
       stats: { total: 0, pending: 0, responded: 0 },
     }
   }
-}
-
-function getStatusBadge(status: string) {
-  switch (status) {
-    case 'NEW':
-      return <Badge variant="default" className="bg-blue-500">New</Badge>
-    case 'PENDING':
-      return <Badge variant="secondary">Pending</Badge>
-    case 'IN_PROGRESS':
-      return <Badge variant="outline" className="border-yellow-500 text-yellow-600">In Progress</Badge>
-    case 'RESPONDED':
-    case 'COMPLETED':
-      return <Badge variant="outline" className="border-green-500 text-green-600">Responded</Badge>
-    default:
-      return <Badge variant="secondary">{status}</Badge>
-  }
-}
-
-function formatDate(date: Date) {
-  return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-  }).format(date)
 }
 
 export default async function GroupsPage() {
@@ -172,7 +149,7 @@ export default async function GroupsPage() {
                   No requests yet
                 </h3>
                 <p className="text-sm text-stone-500 max-w-md mx-auto">
-                  When visitors use the "Find a Singing Group" form on your website,
+                  When visitors use the &quot;Find a Singing Group&quot; form on your website,
                   their requests will appear here for you to review and respond to.
                 </p>
                 <div className="mt-6 p-4 bg-stone-50 dark:bg-stone-800 rounded-lg max-w-md mx-auto">
@@ -182,46 +159,7 @@ export default async function GroupsPage() {
                 </div>
               </div>
             ) : (
-              <div className="space-y-3">
-                {requests.map((request) => (
-                  <div
-                    key={request.id}
-                    className="flex items-start justify-between p-4 border border-stone-200 dark:border-stone-700 rounded-lg hover:bg-stone-50 dark:hover:bg-stone-800/50 transition-colors"
-                  >
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-3 mb-1">
-                        <h4 className="font-medium text-stone-900 dark:text-white truncate">
-                          {request.name}
-                        </h4>
-                        {getStatusBadge(request.status)}
-                      </div>
-                      <div className="flex items-center gap-4 text-sm text-stone-500 mb-2">
-                        <span className="flex items-center gap-1">
-                          <Mail className="h-3 w-3" />
-                          {request.email}
-                        </span>
-                        <span className="flex items-center gap-1">
-                          <MapPin className="h-3 w-3" />
-                          {request.location}
-                        </span>
-                      </div>
-                      {request.message && (
-                        <p className="text-sm text-stone-600 dark:text-stone-400 line-clamp-2">
-                          {request.message}
-                        </p>
-                      )}
-                    </div>
-                    <div className="flex flex-col items-end gap-2 ml-4">
-                      <span className="text-xs text-stone-400">
-                        {formatDate(request.createdAt)}
-                      </span>
-                      <Button variant="outline" size="sm" className="border-stone-300">
-                        View Details
-                      </Button>
-                    </div>
-                  </div>
-                ))}
-              </div>
+              <GroupRequestList requests={requests} />
             )}
           </CardContent>
         </Card>
