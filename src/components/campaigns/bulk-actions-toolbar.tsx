@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { Button } from '@/components/ui/button'
-import { Mail, MessageSquare, Pause, Play } from 'lucide-react'
+import { FileText, MessageSquare, Pause, Play } from 'lucide-react'
 
 interface BulkActionsToolbarProps {
   selectedCount: number
@@ -19,53 +19,24 @@ export function BulkActionsToolbar({
 }: BulkActionsToolbarProps) {
   const [isProcessing, setIsProcessing] = useState(false)
 
-  const handleSendEmail = async () => {
-    if (!confirm(`Send email to ${selectedCount} selected leads?`)) return
-
+  const handleGenerateDrafts = async () => {
     setIsProcessing(true)
     try {
-      const response = await fetch(`/api/campaigns/${campaignId}/send-bulk`, {
+      const response = await fetch(`/api/campaigns/${campaignId}/generate-drafts`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          channel: 'EMAIL',
           leadIds: selectedLeadIds,
         }),
       })
 
-      if (!response.ok) throw new Error('Failed to send emails')
+      if (!response.ok) throw new Error('Failed to generate drafts')
 
       const result = await response.json()
-      alert(`Sent ${result.sent} emails successfully`)
+      alert(`Generated ${result.created} drafts (${result.skipped} already existed)`)
       onActionComplete()
     } catch (error) {
-      alert('Failed to send emails')
-    } finally {
-      setIsProcessing(false)
-    }
-  }
-
-  const handleSendSMS = async () => {
-    if (!confirm(`Send SMS to ${selectedCount} selected leads?`)) return
-
-    setIsProcessing(true)
-    try {
-      const response = await fetch(`/api/campaigns/${campaignId}/send-bulk`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          channel: 'SMS',
-          leadIds: selectedLeadIds,
-        }),
-      })
-
-      if (!response.ok) throw new Error('Failed to send SMS')
-
-      const result = await response.json()
-      alert(`Sent ${result.sent} SMS successfully`)
-      onActionComplete()
-    } catch (error) {
-      alert('Failed to send SMS')
+      alert('Failed to generate drafts')
     } finally {
       setIsProcessing(false)
     }
@@ -118,20 +89,11 @@ export function BulkActionsToolbar({
         <Button
           variant="outline"
           size="sm"
-          onClick={handleSendEmail}
+          onClick={handleGenerateDrafts}
           disabled={isProcessing}
         >
-          <Mail className="h-4 w-4 mr-2" />
-          Send Email
-        </Button>
-        <Button
-          variant="outline"
-          size="sm"
-          onClick={handleSendSMS}
-          disabled={isProcessing}
-        >
-          <MessageSquare className="h-4 w-4 mr-2" />
-          Send SMS
+          <FileText className="h-4 w-4 mr-2" />
+          Generate Drafts
         </Button>
         <Button
           variant="outline"

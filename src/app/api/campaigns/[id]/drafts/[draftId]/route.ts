@@ -1,0 +1,78 @@
+import { NextRequest, NextResponse } from 'next/server'
+import { prisma } from '@/lib/db'
+import { handleApiError, ApiError } from '@/lib/api-error'
+import { updateDraftSchema } from '@/lib/validations/email-draft'
+
+export async function PATCH(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string; draftId: string }> }
+) {
+  try {
+    const { id: campaignId, draftId } = await params
+    const body = await request.json()
+    const data = updateDraftSchema.parse(body)
+
+    const draft = await prisma.emailDraft.findFirst({
+      where: { id: draftId, campaignId },
+    })
+
+    if (!draft) {
+      throw new ApiError(404, 'Draft not found', 'NOT_FOUND')
+    }
+
+    if (draft.status !== 'DRAFT') {
+      throw new ApiError(400, `Cannot edit a draft with status ${draft.status}`, 'INVALID_STATUS')
+    }
+
+    const updated = await prisma.emailDraft.update({
+      where: { id: draftId },
+      data: {
+        ...data,
+        editedByUser: true,
+      },
+      include: {
+        lead: {
+          select: {
+            firstName: true,
+            lastName: true,
+            email: true,
+            organization: true,
+          },
+        },
+      },
+    })
+
+    return NextResponse.json(updated)
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+
+export async function DELETE(
+  _request: NextRequest,
+  { params }: { params: Promise<{ id: string; draftId: string }> }
+) {
+  try {
+    const { id: campaignId, draftId } = await params
+
+    const draft = await prisma.emailDraft.findFirst({
+      where: { id: draftId, campaignId },
+    })
+
+    if (!draft) {
+      throw new ApiError(404, 'Draft not found', 'NOT_FOUND')
+    }
+
+    if (draft.status !== 'DRAFT') {
+      throw new ApiError(400, `Cannot delete a draft with status ${draft.status}`, 'INVALID_STATUS')
+    }
+
+    await prisma.emailDraft.delete({
+      where: { id: draftId },
+    })
+
+    return NextResponse.json({ success: true })
+  } catch (error) {
+    return handleApiError(error)
+  }
+}

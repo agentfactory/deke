@@ -5,7 +5,8 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookingStatusBadge } from '@/components/bookings/booking-status-badge';
-import { ArrowLeft, Edit, Trash2, Loader2, Rocket, Target, Mail, Users } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Loader2, Rocket, Target, Mail, Users, Globe } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import Link from 'next/link';
 import { Badge } from '@/components/ui/badge';
@@ -32,6 +33,7 @@ interface Booking {
   paymentStatus: string;
   internalNotes: string | null;
   clientNotes: string | null;
+  isPublic: boolean;
   lead: {
     id: string;
     firstName: string;
@@ -378,6 +380,43 @@ export default function BookingDetailPage({
               </CardContent>
             </Card>
           )}
+
+          {/* Public Event Visibility */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Globe className="h-4 w-4" />
+                Public Visibility
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-medium">Show on Events Page</p>
+                  <p className="text-xs text-muted-foreground">
+                    Display this booking on the public /events page
+                  </p>
+                </div>
+                <Switch
+                  checked={booking.isPublic}
+                  onCheckedChange={async (checked) => {
+                    try {
+                      const response = await fetch(`/api/bookings/${booking.id}`, {
+                        method: 'PATCH',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ isPublic: checked }),
+                      });
+                      if (response.ok) {
+                        fetchBooking();
+                      }
+                    } catch (err) {
+                      console.error('Failed to update visibility:', err);
+                    }
+                  }}
+                />
+              </div>
+            </CardContent>
+          </Card>
 
           {/* Campaign Section */}
           <Card>

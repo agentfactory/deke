@@ -34,6 +34,7 @@ import { MessagesTab } from "@/components/campaigns/messages-tab";
 import { LeadsTableSelectable } from "@/components/campaigns/leads-table-selectable";
 import { BulkActionsToolbar } from "@/components/campaigns/bulk-actions-toolbar";
 import { SourceStats } from "@/components/campaigns/source-stats";
+import { DraftsTab } from "@/components/campaigns/drafts-tab";
 
 interface Campaign {
   id: string;
@@ -404,6 +405,7 @@ export default function CampaignDetailPage({
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads ({campaign.leads.length})</TabsTrigger>
+          <TabsTrigger value="drafts">Drafts</TabsTrigger>
           <TabsTrigger value="messages">Messages ({campaign._count.outreachLogs})</TabsTrigger>
           <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
@@ -543,11 +545,15 @@ export default function CampaignDetailPage({
             <Button
               className="w-full"
               variant="outline"
-              onClick={handleSendOutreach}
-              disabled={!campaign || campaign.status === "DRAFT"}
+              onClick={() => {
+                // Navigate to the Drafts tab
+                const tabsTrigger = document.querySelector('[data-state][value="drafts"]') as HTMLElement;
+                tabsTrigger?.click();
+              }}
+              disabled={!campaign || campaign.leads.length === 0}
             >
               <Mail className="h-4 w-4 mr-2" />
-              Send Outreach Emails
+              Generate Email Drafts
             </Button>
             <Button
               className="w-full"
@@ -605,6 +611,14 @@ export default function CampaignDetailPage({
               </Card>
             )}
           </div>
+        </TabsContent>
+
+        <TabsContent value="drafts">
+          <DraftsTab
+            campaignId={campaign.id}
+            campaignLeadIds={campaign.leads.map(l => l.id)}
+            onDraftsChange={fetchCampaign}
+          />
         </TabsContent>
 
         <TabsContent value="messages">

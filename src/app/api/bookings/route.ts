@@ -82,6 +82,8 @@ export async function POST(request: NextRequest) {
         balanceDue: validatedData.balanceDue ?? null,
         internalNotes: validatedData.internalNotes ?? null,
         clientNotes: validatedData.clientNotes ?? null,
+        availabilityBefore: validatedData.availabilityBefore ?? null,
+        availabilityAfter: validatedData.availabilityAfter ?? null,
       },
       include: {
         lead: {
@@ -102,8 +104,8 @@ export async function POST(request: NextRequest) {
     let campaign = null
     if (booking.location && booking.startDate && latitude && longitude) {
       try {
-        const availBefore = 3
-        const availAfter = 3
+        const availBefore = booking.availabilityBefore ?? 3
+        const availAfter = booking.availabilityAfter ?? 3
         const campaignStart = new Date(booking.startDate)
         campaignStart.setDate(campaignStart.getDate() - availBefore)
         const campaignEnd = new Date(booking.endDate || booking.startDate)

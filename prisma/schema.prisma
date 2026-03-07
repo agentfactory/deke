@@ -45,6 +45,7 @@ model Lead {
   bookings      Booking[]
   orders        Order[]
   campaignLeads CampaignLead[]
+  emailDrafts   EmailDraft[]
 
   @@index([email])
   @@index([status])
@@ -164,6 +165,9 @@ model Booking {
   splitMethod       String?  // EQUAL, BY_SIZE, CUSTOM, AUTO_OPTIMAL
   splitNotes        String?
 
+  // Public visibility for events page
+  isPublic      Boolean  @default(false)
+
   // Relations
   campaigns     Campaign[]
 
@@ -173,6 +177,7 @@ model Booking {
   @@index([startDate])
   @@index([latitude, longitude])
   @@index([status, startDate])
+  @@index([isPublic, startDate])
 }
 
 // Removed enum BookingStatus - now using String with validation comments
@@ -462,6 +467,7 @@ model Campaign {
 
   leads         CampaignLead[]
   outreachLogs  OutreachLog[]
+  emailDrafts   EmailDraft[]
 
   // Optional: Link to booking that triggered campaign
   booking       Booking?       @relation(fields: [bookingId], references: [id])
@@ -500,6 +506,7 @@ model CampaignLead {
   followUpPausedAt       DateTime?  // When paused
 
   outreachLogs  OutreachLog[]
+  emailDraft    EmailDraft?
 
   @@unique([campaignId, leadId]) // prevent duplicates
   @@index([campaignId, status])
@@ -533,6 +540,34 @@ model OutreachLog {
 
 // Removed enum OutreachChannel - now using String with validation comments
 // Removed enum OutreachStatus - now using String with validation comments
+
+// ============================================
+// EMAIL DRAFTS (Human Review Workflow)
+// ============================================
+
+model EmailDraft {
+  id              String        @id @default(cuid())
+  campaignId      String
+  campaign        Campaign      @relation(fields: [campaignId], references: [id], onDelete: Cascade)
+  campaignLeadId  String        @unique
+  campaignLead    CampaignLead  @relation(fields: [campaignLeadId], references: [id], onDelete: Cascade)
+  leadId          String
+  lead            Lead          @relation(fields: [leadId], references: [id])
+
+  subject         String
+  body            String        // Pre-rendered HTML from template
+  status          String        @default("DRAFT") // DRAFT, APPROVED, SENT, FAILED
+  editedByUser    Boolean       @default(false)
+  sentAt          DateTime?
+  errorMessage    String?
+
+  createdAt       DateTime      @default(now())
+  updatedAt       DateTime      @updatedAt
+
+  @@index([campaignId, status])
+  @@index([campaignLeadId])
+  @@unique([campaignId, campaignLeadId]) // One draft per lead per campaign
+}
 
 model GeoPreference {
   id            String   @id @default(cuid())
