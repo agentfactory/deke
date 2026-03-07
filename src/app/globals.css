@@ -74,8 +74,8 @@
   --popover: oklch(0.96 0.005 80);
   --popover-foreground: oklch(0.15 0 0);
 
-  /* Primary: Terracotta - warm, bold */
-  --primary: oklch(0.55 0.15 30);
+  /* Primary: Deep Navy - sophisticated, commanding */
+  --primary: oklch(0.18 0.03 260);
   --primary-foreground: oklch(0.96 0.005 80);
 
   /* Secondary: Warm card surface */
@@ -85,17 +85,17 @@
   --muted: oklch(0.92 0.01 80);
   --muted-foreground: oklch(0.62 0 0);
 
-  /* Accent: Terracotta */
-  --accent: oklch(0.55 0.15 30);
-  --accent-foreground: oklch(0.96 0.005 80);
+  /* Accent: Gold - warm, elegant */
+  --accent: oklch(0.78 0.14 75);
+  --accent-foreground: oklch(0.15 0.01 260);
 
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.84 0.01 80);
   --input: oklch(0.84 0.01 80);
-  --ring: oklch(0.55 0.15 30);
+  --ring: oklch(0.78 0.14 75);
 
   /* Chart colors - Warm palette */
-  --chart-1: oklch(0.55 0.15 30);
+  --chart-1: oklch(0.78 0.14 75);
   --chart-2: oklch(0.52 0.10 150);
   --chart-3: oklch(0.55 0.05 220);
   --chart-4: oklch(0.42 0 0);
@@ -104,12 +104,12 @@
   /* Sidebar - Dark surface */
   --sidebar: oklch(0.15 0 0);
   --sidebar-foreground: oklch(0.96 0.005 80);
-  --sidebar-primary: oklch(0.55 0.15 30);
+  --sidebar-primary: oklch(0.78 0.14 75);
   --sidebar-primary-foreground: oklch(0.96 0.005 80);
   --sidebar-accent: oklch(0.22 0 0);
   --sidebar-accent-foreground: oklch(0.96 0.005 80);
   --sidebar-border: oklch(0.28 0 0);
-  --sidebar-ring: oklch(0.55 0.15 30);
+  --sidebar-ring: oklch(0.78 0.14 75);
 }
 
 .dark {

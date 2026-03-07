@@ -33,8 +33,8 @@ export function HeroSection() {
           className="object-cover object-center"
           priority
         />
-        <div className="absolute inset-0 bg-gradient-to-r from-primary/95 via-primary/85 to-primary/70" />
-        <div className="absolute inset-0 bg-gradient-to-t from-primary via-transparent to-primary/50" />
+        <div className="absolute inset-0 bg-gradient-to-r from-black/90 via-black/75 to-black/50" />
+        <div className="absolute inset-0 bg-gradient-to-t from-black/80 via-transparent to-black/40" />
       </div>
 
       {/* Subtle Gradient Orbs - decorative */}
@@ -134,7 +134,7 @@ export function HeroSection() {
               priority
             />
             {/* Gradient overlay */}
-            <div className="absolute inset-0 bg-gradient-to-t from-primary/60 via-transparent to-transparent" />
+            <div className="absolute inset-0 bg-gradient-to-t from-black/60 via-transparent to-transparent" />
 
             {/* Floating Stats Card */}
             <div className="absolute bottom-6 left-6 right-6 bg-white/10 backdrop-blur-md border border-white/20 rounded-xl p-4">
