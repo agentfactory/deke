@@ -19,8 +19,9 @@ import {
 } from "@/components/ui/table";
 import { StatusBadge } from "./status-badge";
 import { format } from "date-fns";
-import { ArrowUpDown } from "lucide-react";
+import { ArrowUpDown, LinkIcon } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Badge } from "@/components/ui/badge";
 
 export type Campaign = {
   id: string;
@@ -30,6 +31,11 @@ export type Campaign = {
   status: "DRAFT" | "APPROVED" | "ACTIVE" | "COMPLETED" | "CANCELLED";
   leadCount: number;
   createdAt: string;
+  booking?: {
+    id: string;
+    clientName: string;
+    serviceType: string;
+  } | null;
 };
 
 interface CampaignTableProps {
@@ -56,7 +62,17 @@ export function CampaignTable({ campaigns, onRowClick }: CampaignTableProps) {
         );
       },
       cell: ({ row }) => (
-        <div className="font-medium">{row.getValue("name")}</div>
+        <div>
+          <div className="font-medium">{row.getValue("name")}</div>
+          {row.original.booking && (
+            <div className="flex items-center gap-1.5 mt-1">
+              <Badge variant="outline" className="text-xs font-normal gap-1">
+                <LinkIcon className="h-3 w-3" />
+                {row.original.booking.clientName} - {row.original.booking.serviceType.replace('_', ' ')}
+              </Badge>
+            </div>
+          )}
+        </div>
       ),
     },
     {

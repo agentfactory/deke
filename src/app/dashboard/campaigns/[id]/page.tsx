@@ -98,6 +98,7 @@ export default function CampaignDetailPage({
   const [isDeleting, setIsDeleting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [showLaunchConfirm, setShowLaunchConfirm] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
   const [selectedLeads, setSelectedLeads] = useState<Campaign['leads']>([]);
 
   const fetchCampaign = async () => {
@@ -220,16 +221,9 @@ export default function CampaignDetailPage({
   const handleDelete = async () => {
     if (!campaign) return;
 
-    if (
-      !confirm(
-        "Are you sure you want to delete this campaign? This action cannot be undone."
-      )
-    ) {
-      return;
-    }
-
     try {
       setIsDeleting(true);
+      setShowDeleteConfirm(false);
       const response = await fetch(`/api/campaigns/${campaign.id}`, {
         method: "DELETE",
       });
@@ -380,13 +374,19 @@ export default function CampaignDetailPage({
                 Resume
               </Button>
             )}
-            <Button variant="outline" size="icon" disabled>
+            <Button
+              variant="outline"
+              size="icon"
+              onClick={() => router.push(`/dashboard/campaigns/${campaign.id}/edit`)}
+              disabled={campaign.status !== "DRAFT" && campaign.status !== "APPROVED"}
+              title={campaign.status !== "DRAFT" && campaign.status !== "APPROVED" ? "Can only edit DRAFT or APPROVED campaigns" : "Edit campaign"}
+            >
               <Edit className="h-4 w-4" />
             </Button>
             <Button
               variant="outline"
               size="icon"
-              onClick={handleDelete}
+              onClick={() => setShowDeleteConfirm(true)}
               disabled={isDeleting || campaign.status === "ACTIVE"}
             >
               {isDeleting ? (
@@ -524,7 +524,7 @@ export default function CampaignDetailPage({
             {campaign.booking && (
               <div className="pt-2 border-t">
                 <p className="font-medium text-sm mb-2">Linked Booking</p>
-                <Link href={`/dashboard/bookings`}>
+                <Link href={`/dashboard/bookings/${campaign.booking.id}`}>
                   <Button variant="outline" size="sm">
                     View Booking Details
                   </Button>
@@ -630,6 +630,48 @@ export default function CampaignDetailPage({
           </Card>
         </TabsContent>
       </Tabs>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Campaign?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete the campaign, all discovered leads, and outreach logs. This action cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="py-4">
+            <div className="flex items-start gap-2 text-amber-600">
+              <AlertTriangle className="h-6 w-6 mt-1" />
+              <div>
+                <p className="font-medium">Permanent deletion</p>
+                <p className="text-sm">
+                  Campaign "{campaign?.name}" with {campaign?._count?.leads || 0} leads will be removed.
+                </p>
+              </div>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                "Delete Campaign"
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Launch Confirmation Dialog */}
       <Dialog open={showLaunchConfirm} onOpenChange={setShowLaunchConfirm}>

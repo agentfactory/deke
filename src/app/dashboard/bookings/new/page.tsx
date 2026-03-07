@@ -116,7 +116,8 @@ function NewBookingForm() {
 
       const result = await response.json();
 
-      if (launch && result.campaign) {
+      if (result.campaign) {
+        // Campaign was created (either via auto-launch or auto-create)
         router.push(`/dashboard/campaigns/${result.campaign.id}`);
       } else {
         router.push(`/dashboard/bookings/${result.id}`);

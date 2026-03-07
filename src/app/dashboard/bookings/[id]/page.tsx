@@ -5,9 +5,18 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookingStatusBadge } from '@/components/bookings/booking-status-badge';
-import { ArrowLeft, Edit, Trash2, Loader2 } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Loader2, Rocket, Target, Mail, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
+import { Badge } from '@/components/ui/badge';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
 
 interface Booking {
   id: string;
@@ -40,6 +49,10 @@ interface Booking {
     id: string;
     name: string;
     status: string;
+    _count?: {
+      leads: number;
+      outreachLogs: number;
+    };
   }>;
   createdAt: string;
   updatedAt: string;
@@ -56,6 +69,8 @@ export default function BookingDetailPage({
   const [booking, setBooking] = useState<Booking | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [isLaunchingCampaign, setIsLaunchingCampaign] = useState(false);
 
   const fetchBooking = async () => {
     try {
@@ -84,16 +99,9 @@ export default function BookingDetailPage({
   const handleDelete = async () => {
     if (!booking) return;
 
-    if (
-      !confirm(
-        'Are you sure you want to delete this booking? This action cannot be undone.'
-      )
-    ) {
-      return;
-    }
-
     try {
       setIsDeleting(true);
+      setShowDeleteConfirm(false);
       const response = await fetch(`/api/bookings/${booking.id}`, {
         method: 'DELETE',
       });
@@ -109,10 +117,39 @@ export default function BookingDetailPage({
       alert(
         err instanceof Error
           ? err.message
-          : 'Failed to delete booking. It may be linked to campaigns.'
+          : 'Failed to delete booking.'
       );
     } finally {
       setIsDeleting(false);
+    }
+  };
+
+  const handleLaunchCampaign = async () => {
+    if (!booking || !booking.location) return;
+
+    try {
+      setIsLaunchingCampaign(true);
+
+      // Use the quick-launch-style logic: create campaign via API
+      const response = await fetch(`/api/bookings/${booking.id}/campaign`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+      });
+
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.error || 'Failed to create campaign');
+      }
+
+      const result = await response.json();
+      router.push(`/dashboard/campaigns/${result.campaign.id}`);
+    } catch (err) {
+      console.error('Error creating campaign:', err);
+      alert(
+        err instanceof Error ? err.message : 'Failed to create campaign'
+      );
+    } finally {
+      setIsLaunchingCampaign(false);
     }
   };
 
@@ -164,9 +201,9 @@ export default function BookingDetailPage({
           <Button
             variant="destructive"
             size="icon"
-            onClick={handleDelete}
-            disabled={isDeleting || booking.campaigns.length > 0}
-            title={booking.campaigns.length > 0 ? 'Cannot delete: linked to campaigns' : 'Delete booking'}
+            onClick={() => setShowDeleteConfirm(true)}
+            disabled={isDeleting}
+            title="Delete booking"
           >
             {isDeleting ? (
               <Loader2 className="h-4 w-4 animate-spin" />
@@ -342,26 +379,76 @@ export default function BookingDetailPage({
             </Card>
           )}
 
-          {/* Linked Campaigns */}
-          {booking.campaigns.length > 0 && (
-            <Card>
-              <CardHeader>
-                <CardTitle>Linked Campaigns ({booking.campaigns.length})</CardTitle>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-2">
+          {/* Campaign Section */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Target className="h-4 w-4" />
+                Campaign
+              </CardTitle>
+            </CardHeader>
+            <CardContent>
+              {booking.campaigns.length > 0 ? (
+                <div className="space-y-3">
                   {booking.campaigns.map((campaign) => (
-                    <Link key={campaign.id} href={`/dashboard/campaigns/${campaign.id}`}>
-                      <div className="p-2 rounded border hover:bg-muted/50 cursor-pointer">
-                        <p className="font-medium text-sm">{campaign.name}</p>
-                        <p className="text-xs text-muted-foreground">{campaign.status}</p>
-                      </div>
-                    </Link>
+                    <div key={campaign.id} className="space-y-2">
+                      <Link href={`/dashboard/campaigns/${campaign.id}`}>
+                        <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer space-y-2">
+                          <div className="flex items-center justify-between">
+                            <p className="font-medium text-sm">{campaign.name}</p>
+                            <Badge variant={campaign.status === 'ACTIVE' ? 'default' : campaign.status === 'DRAFT' ? 'secondary' : 'outline'}>
+                              {campaign.status}
+                            </Badge>
+                          </div>
+                          {campaign._count && (
+                            <div className="flex gap-4 text-xs text-muted-foreground">
+                              <span className="flex items-center gap-1">
+                                <Users className="h-3 w-3" />
+                                {campaign._count.leads} leads
+                              </span>
+                              <span className="flex items-center gap-1">
+                                <Mail className="h-3 w-3" />
+                                {campaign._count.outreachLogs} sent
+                              </span>
+                            </div>
+                          )}
+                        </div>
+                      </Link>
+                    </div>
                   ))}
                 </div>
-              </CardContent>
-            </Card>
-          )}
+              ) : (
+                <div className="text-center space-y-3 py-2">
+                  <p className="text-sm text-muted-foreground">
+                    No campaign linked yet
+                  </p>
+                  <Button
+                    onClick={handleLaunchCampaign}
+                    disabled={isLaunchingCampaign || !booking.location}
+                    className="w-full"
+                    variant="outline"
+                  >
+                    {isLaunchingCampaign ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Creating...
+                      </>
+                    ) : (
+                      <>
+                        <Rocket className="mr-2 h-4 w-4" />
+                        Launch Campaign
+                      </>
+                    )}
+                  </Button>
+                  {!booking.location && (
+                    <p className="text-xs text-muted-foreground">
+                      Add a location to enable campaign creation
+                    </p>
+                  )}
+                </div>
+              )}
+            </CardContent>
+          </Card>
 
           {/* Metadata */}
           <Card>
@@ -381,6 +468,42 @@ export default function BookingDetailPage({
           </Card>
         </div>
       </div>
+
+      {/* Delete Confirmation Dialog */}
+      <Dialog open={showDeleteConfirm} onOpenChange={setShowDeleteConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Delete Booking?</DialogTitle>
+            <DialogDescription>
+              This will permanently delete this booking.
+              {booking.campaigns.length > 0 && (
+                <span className="block mt-2 font-medium text-amber-600">
+                  Warning: This will also delete {booking.campaigns.length} linked campaign(s) and all their discovered leads.
+                </span>
+              )}
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowDeleteConfirm(false)}>
+              Cancel
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={handleDelete}
+              disabled={isDeleting}
+            >
+              {isDeleting ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Deleting...
+                </>
+              ) : (
+                'Delete Booking'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }

@@ -8,6 +8,7 @@ import {
 } from '@/lib/validations/booking'
 import { geocodeAddress } from '@/lib/services/geocoding'
 import { sendBookingNotification } from '@/lib/notifications/booking-notification'
+import { discoverLeads } from '@/lib/discovery'
 
 // POST /api/bookings - Create new booking
 export async function POST(request: NextRequest) {
@@ -97,6 +98,42 @@ export async function POST(request: NextRequest) {
       }
     })
 
+    // Auto-create campaign if booking has location + dates + coordinates
+    let campaign = null
+    if (booking.location && booking.startDate && latitude && longitude) {
+      try {
+        const availBefore = 3
+        const availAfter = 3
+        const campaignStart = new Date(booking.startDate)
+        campaignStart.setDate(campaignStart.getDate() - availBefore)
+        const campaignEnd = new Date(booking.endDate || booking.startDate)
+        campaignEnd.setDate(campaignEnd.getDate() + availAfter)
+
+        const campaignName = `${booking.serviceType} - ${lead.firstName} ${lead.lastName} - ${booking.location} (${new Date(booking.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+
+        campaign = await prisma.campaign.create({
+          data: {
+            name: campaignName,
+            baseLocation: booking.location,
+            latitude,
+            longitude,
+            radius: 100,
+            startDate: campaignStart,
+            endDate: campaignEnd,
+            bookingId: booking.id,
+            status: 'DRAFT',
+          },
+        })
+
+        // Trigger lead discovery (async - don't block response)
+        discoverLeads(campaign.id).catch((err) => {
+          console.error('Lead discovery failed (non-blocking):', err)
+        })
+      } catch (campaignError) {
+        console.error('Auto-campaign creation failed (non-blocking):', campaignError)
+      }
+    }
+
     // Send booking notification emails (async - don't block response)
     sendBookingNotification({
       bookingId: booking.id,
@@ -114,7 +151,7 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send booking notification:', error)
     })
 
-    return NextResponse.json(booking, { status: 201 })
+    return NextResponse.json({ ...booking, campaign }, { status: 201 })
   } catch (error) {
     return handleApiError(error)
   }

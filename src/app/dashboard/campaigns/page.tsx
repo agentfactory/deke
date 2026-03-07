@@ -18,7 +18,20 @@ async function getCampaignsData() {
       take: 10,
       orderBy: { createdAt: 'desc' },
       include: {
-        _count: { select: { leads: true } }
+        _count: { select: { leads: true } },
+        booking: {
+          select: {
+            id: true,
+            serviceType: true,
+            location: true,
+            lead: {
+              select: {
+                firstName: true,
+                lastName: true,
+              }
+            }
+          }
+        }
       }
     })
 

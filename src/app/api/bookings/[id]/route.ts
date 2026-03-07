@@ -42,6 +42,12 @@ export async function GET(
             baseLocation: true,
             startDate: true,
             endDate: true,
+            _count: {
+              select: {
+                leads: true,
+                outreachLogs: true,
+              }
+            }
           }
         },
         travelExpenses: {
@@ -212,14 +218,13 @@ export async function DELETE(
       throw new ApiError(404, 'Booking not found', 'BOOKING_NOT_FOUND')
     }
 
-    // Check if campaigns exist - prevent deletion if campaigns reference this booking
+    // If campaigns exist, delete them first (cascade)
     if (booking.campaigns && booking.campaigns.length > 0) {
-      const campaignNames = booking.campaigns.map(c => c.name).join(', ')
-      throw new ApiError(
-        409,
-        `Cannot delete booking because it's linked to ${booking.campaigns.length} campaign(s): ${campaignNames}. Please remove the booking from these campaigns first.`,
-        'BOOKING_HAS_CAMPAIGNS'
-      )
+      for (const campaign of booking.campaigns) {
+        await prisma.campaign.delete({
+          where: { id: campaign.id }
+        })
+      }
     }
 
     // Delete booking (cascade delete for travelExpenses and participants handled by schema)

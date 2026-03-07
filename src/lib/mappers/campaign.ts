@@ -5,6 +5,15 @@ type CampaignWithCount = PrismaCampaign & {
   _count: {
     leads: number;
   };
+  booking?: {
+    id: string;
+    serviceType: string;
+    location: string | null;
+    lead: {
+      firstName: string;
+      lastName: string;
+    };
+  } | null;
 };
 
 export function mapCampaignToComponent(
@@ -18,6 +27,11 @@ export function mapCampaignToComponent(
     status: campaign.status as ComponentCampaign['status'],
     leadCount: campaign._count.leads,
     createdAt: campaign.createdAt.toISOString(),
+    booking: campaign.booking ? {
+      id: campaign.booking.id,
+      clientName: `${campaign.booking.lead.firstName} ${campaign.booking.lead.lastName}`,
+      serviceType: campaign.booking.serviceType,
+    } : null,
   };
 }
 
