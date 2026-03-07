@@ -19,8 +19,11 @@ const QuickBookingSchema = z.object({
   endDate: z.string().nullable().optional(),
   location: z.string().nullable().optional(),
   amount: z.number().nullable().optional(),
+  depositPaid: z.number().nullable().optional(),
   notes: z.string().nullable().optional(),
   tripId: z.string().nullable().optional(),
+  availabilityBefore: z.number().int().min(0).max(30).nullable().optional(),
+  availabilityAfter: z.number().int().min(0).max(30).nullable().optional(),
 });
 
 export async function POST(request: NextRequest) {
@@ -32,7 +35,7 @@ export async function POST(request: NextRequest) {
       return ApiError.badRequest(result.error.issues[0].message);
     }
 
-    const { client, serviceType, startDate, endDate, location, amount, notes, tripId } = result.data;
+    const { client, serviceType, startDate, endDate, location, amount, depositPaid, notes, tripId, availabilityBefore, availabilityAfter } = result.data;
 
     // Step 1: Find or create Lead
     let lead = await prisma.lead.findUnique({
@@ -83,8 +86,11 @@ export async function POST(request: NextRequest) {
         endDate: endDate ? new Date(endDate) : null,
         location: location || null,
         amount: amount || null,
-        paymentStatus: "UNPAID",
+        depositPaid: depositPaid || null,
+        paymentStatus: depositPaid ? "DEPOSIT_PAID" : "UNPAID",
         internalNotes: notes || null,
+        availabilityBefore: availabilityBefore ?? null,
+        availabilityAfter: availabilityAfter ?? null,
       },
       include: {
         lead: {

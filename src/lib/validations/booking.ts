@@ -46,6 +46,8 @@ export const createBookingSchema = z.object({
   balanceDue: z.number().min(0).optional().nullable(),
   internalNotes: z.string().optional().nullable(),
   clientNotes: z.string().optional().nullable(),
+  availabilityBefore: z.number().int().min(0).max(30).optional().nullable(),
+  availabilityAfter: z.number().int().min(0).max(30).optional().nullable(),
 })
 
 // Query filters for listing bookings
@@ -72,6 +74,8 @@ export const updateBookingSchema = z.object({
   paymentStatus: paymentStatusSchema.optional(),
   internalNotes: z.string().optional().nullable(),
   clientNotes: z.string().optional().nullable(),
+  availabilityBefore: z.number().int().min(0).max(30).optional().nullable(),
+  availabilityAfter: z.number().int().min(0).max(30).optional().nullable(),
 })
 
 // Type exports

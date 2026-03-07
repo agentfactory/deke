@@ -33,6 +33,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesTab } from "@/components/campaigns/messages-tab";
 import { LeadsTableSelectable } from "@/components/campaigns/leads-table-selectable";
 import { BulkActionsToolbar } from "@/components/campaigns/bulk-actions-toolbar";
+import { SourceStats } from "@/components/campaigns/source-stats";
 
 interface Campaign {
   id: string;
@@ -55,6 +56,8 @@ interface Campaign {
   leads: Array<{
     id: string;
     score: number;
+    distance: number;
+    source: string;
     status: string;
     lead: {
       id: string;
@@ -317,7 +320,15 @@ export default function CampaignDetailPage({
               {getStatusBadge(campaign.status)}
             </div>
             <p className="text-muted-foreground mt-2">
-              Created {new Date(campaign.createdAt).toLocaleDateString()}
+              {campaign.startDate && campaign.endDate && (
+                <span>
+                  {new Date(campaign.startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                  {' - '}
+                  {new Date(campaign.endDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}
+                  {' . '}
+                </span>
+              )}
+              {campaign.radius}mi radius . {campaign._count.leads} contacts found
             </p>
           </div>
         </div>
@@ -466,6 +477,11 @@ export default function CampaignDetailPage({
         </Card>
       </div>
 
+      {/* Source Stats */}
+      {campaign.leads.length > 0 && (
+        <SourceStats leads={campaign.leads} />
+      )}
+
       {/* Campaign Info */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Details Card */}
@@ -581,7 +597,9 @@ export default function CampaignDetailPage({
                 <CardContent className="p-0">
                   <LeadsTableSelectable
                     leads={campaign.leads}
+                    campaignId={campaign.id}
                     onSelectionChange={setSelectedLeads}
+                    onLeadStatusChange={fetchCampaign}
                   />
                 </CardContent>
               </Card>

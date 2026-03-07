@@ -146,6 +146,10 @@ model Booking {
   internalNotes String?
   clientNotes   String?
 
+  // Availability window for nearby gig discovery
+  availabilityBefore  Int?   // Days available before booking for nearby gigs
+  availabilityAfter   Int?   // Days available after booking for nearby gigs
+
   createdAt     DateTime      @default(now())
   updatedAt     DateTime      @updatedAt
 
