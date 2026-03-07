@@ -1,8 +1,5 @@
 import Link from "next/link";
-import { LayoutDashboard, Target, BarChart3, Calendar, Users } from "lucide-react";
-import { Button } from "@/components/ui/button";
-import { Separator } from "@/components/ui/separator";
-import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import { Calendar, Send, MessageSquare, Users, TrendingUp } from "lucide-react";
 import { prisma } from "@/lib/db";
 
 async function getNewGroupRequestCount(): Promise<number> {
@@ -24,6 +21,14 @@ async function getNewGroupRequestCount(): Promise<number> {
   }
 }
 
+const navItems = [
+  { href: "/dashboard/bookings", label: "BOOKINGS", icon: Calendar },
+  { href: "/dashboard/campaigns", label: "CAMPAIGNS", icon: Send },
+  { href: "#", label: "MESSAGING", icon: MessageSquare, disabled: true },
+  { href: "/dashboard/groups", label: "CONTACTS", icon: Users, badge: true },
+  { href: "/dashboard/analytics", label: "ANALYTICS", icon: TrendingUp },
+];
+
 export default async function DashboardLayout({
   children,
 }: {
@@ -32,97 +37,66 @@ export default async function DashboardLayout({
   const newRequestCount = await getNewGroupRequestCount();
 
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-[#F5F3EF]">
       <div className="flex">
         {/* Sidebar */}
-        <aside className="fixed left-0 top-0 z-30 h-screen w-64 border-r bg-card">
+        <aside className="fixed left-0 top-0 z-30 h-screen w-[280px] bg-[#1a1a1a]">
           <div className="flex h-full flex-col">
             {/* Logo */}
-            <div className="flex h-16 items-center border-b px-6">
-              <Link href="/" className="flex items-center gap-2">
-                <span className="font-heading text-xl font-bold text-primary">
-                  Deke Sharon
+            <div className="flex items-center gap-3 px-7 py-8">
+              <Link href="/" className="flex items-center gap-3">
+                <div className="h-8 w-8 rounded bg-[#C05A3C]" />
+                <span
+                  className="text-[18px] font-bold uppercase tracking-[2px] text-[#F5F3EF]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  DEKE OPS
                 </span>
               </Link>
             </div>
 
             {/* Navigation */}
-            <nav className="flex-1 space-y-1 px-3 py-4">
-              <Link href="/dashboard">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                >
-                  <LayoutDashboard className="h-5 w-5" />
-                  Dashboard
-                </Button>
-              </Link>
-              <Link href="/dashboard/campaigns">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                >
-                  <Target className="h-5 w-5" />
-                  Campaigns
-                </Button>
-              </Link>
-              <Link href="/dashboard/bookings">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                >
-                  <Calendar className="h-5 w-5" />
-                  Bookings
-                </Button>
-              </Link>
-              <Link href="/dashboard/analytics">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                >
-                  <BarChart3 className="h-5 w-5" />
-                  Analytics
-                </Button>
-              </Link>
-              <Link href="/dashboard/groups">
-                <Button
-                  variant="ghost"
-                  className="w-full justify-start gap-3"
-                >
-                  <Users className="h-5 w-5" />
-                  Find a Group
-                  {newRequestCount > 0 && (
-                    <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
-                      {newRequestCount > 99 ? "99+" : newRequestCount}
+            <nav className="flex-1 space-y-1 px-5 pt-4">
+              {navItems.map((item) => {
+                const Icon = item.icon;
+                const isDisabled = item.disabled;
+
+                return isDisabled ? (
+                  <span
+                    key={item.label}
+                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-[#444444] cursor-not-allowed"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <Icon className="h-[18px] w-[18px]" />
+                    <span className="text-[13px] font-medium uppercase tracking-[1px]">
+                      {item.label}
                     </span>
-                  )}
-                </Button>
-              </Link>
+                  </span>
+                ) : (
+                  <Link
+                    key={item.label}
+                    href={item.href}
+                    className="flex items-center gap-3 rounded-md px-3 py-2.5 text-[#666666] transition-colors hover:text-[#C05A3C]"
+                    style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                  >
+                    <Icon className="h-[18px] w-[18px]" />
+                    <span className="text-[13px] font-medium uppercase tracking-[1px]">
+                      {item.label}
+                    </span>
+                    {item.badge && newRequestCount > 0 && (
+                      <span className="ml-auto flex h-5 min-w-5 items-center justify-center rounded-full bg-red-500 px-1.5 text-xs font-medium text-white">
+                        {newRequestCount > 99 ? "99+" : newRequestCount}
+                      </span>
+                    )}
+                  </Link>
+                );
+              })}
             </nav>
-
-            <Separator />
-
-            {/* User Info */}
-            <div className="p-4">
-              <div className="flex items-center gap-3">
-                <Avatar>
-                  <AvatarFallback className="bg-primary text-primary-foreground">
-                    DS
-                  </AvatarFallback>
-                </Avatar>
-                <div className="flex-1 min-w-0">
-                  <p className="text-sm font-medium truncate">Deke Sharon</p>
-                  <p className="text-xs text-muted-foreground truncate">
-                    Admin
-                  </p>
-                </div>
-              </div>
-            </div>
           </div>
         </aside>
 
         {/* Main Content */}
-        <main className="flex-1 pl-64">
+        <main className="flex-1 pl-[280px]">
           <div className="container mx-auto max-w-7xl p-6">{children}</div>
         </main>
       </div>
