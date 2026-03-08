@@ -15,6 +15,12 @@ interface Campaign {
 }
 
 export async function discoverDormantLeads(campaign: Campaign) {
+  console.log('[Discovery:Dormant] Starting search', {
+    lat: campaign.latitude,
+    lng: campaign.longitude,
+    radius: campaign.radius,
+  })
+
   // Calculate bounding box for efficient database query
   const bbox = calculateBoundingBox(
     { lat: campaign.latitude, lon: campaign.longitude },
@@ -66,8 +72,10 @@ export async function discoverDormantLeads(campaign: Campaign) {
     },
   })
 
+  console.log(`[Discovery:Dormant] Found ${leads.length} leads in bounding box`)
+
   // Filter by exact haversine distance and calculate distance for each lead
-  return leads
+  const results = leads
     .map((lead) => {
       if (lead.latitude === null || lead.longitude === null) {
         return null
@@ -86,4 +94,7 @@ export async function discoverDormantLeads(campaign: Campaign) {
       }
     })
     .filter((lead): lead is NonNullable<typeof lead> => lead !== null && lead.distance <= campaign.radius)
+
+  console.log(`[Discovery:Dormant] Returning ${results.length} leads after distance filter`)
+  return results
 }

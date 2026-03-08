@@ -75,6 +75,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           duration: result.duration,
           leadsPerSecond: Math.round((result.total / result.duration) * 1000),
         },
+        warnings: result.warnings || [],
       },
       { status: 200 }
     )

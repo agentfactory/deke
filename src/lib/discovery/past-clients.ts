@@ -15,11 +15,19 @@ interface Campaign {
 }
 
 export async function discoverPastClients(campaign: Campaign) {
+  console.log('[Discovery:PastClients] Starting search', {
+    lat: campaign.latitude,
+    lng: campaign.longitude,
+    radius: campaign.radius,
+  })
+
   // Calculate bounding box for efficient database query
   const bbox = calculateBoundingBox(
     { lat: campaign.latitude, lon: campaign.longitude },
     campaign.radius
   )
+
+  console.log('[Discovery:PastClients] Bounding box', bbox)
 
   // Find leads with completed bookings within the bounding box
   const leads = await prisma.lead.findMany({
@@ -35,8 +43,10 @@ export async function discoverPastClients(campaign: Campaign) {
     },
   })
 
+  console.log(`[Discovery:PastClients] Found ${leads.length} leads in bounding box`)
+
   // Filter by exact haversine distance and calculate distance for each lead
-  return leads
+  const results = leads
     .map((lead) => {
       if (lead.latitude === null || lead.longitude === null) {
         return null
@@ -55,4 +65,7 @@ export async function discoverPastClients(campaign: Campaign) {
       }
     })
     .filter((lead): lead is NonNullable<typeof lead> => lead !== null && lead.distance <= campaign.radius)
+
+  console.log(`[Discovery:PastClients] Returning ${results.length} leads after distance filter`)
+  return results
 }

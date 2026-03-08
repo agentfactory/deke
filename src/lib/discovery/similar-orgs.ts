@@ -7,7 +7,7 @@
 
 import { prisma } from '@/lib/db'
 import { haversineDistance, calculateBoundingBox } from '@/lib/geo'
-import { classifyFromLocation, getSimilarOrgKeywords } from './org-classifier'
+import { classifyFromLocation, classifyOrganization, getSimilarOrgKeywords } from './org-classifier'
 
 interface Campaign {
   latitude: number
@@ -15,22 +15,44 @@ interface Campaign {
   radius: number
   booking?: {
     location: string | null
+    lead?: {
+      organization: string | null
+    } | null
   } | null
 }
 
 export async function discoverSimilarOrgs(campaign: Campaign) {
+  console.log('[Discovery:SimilarOrgs] Starting search', {
+    lat: campaign.latitude,
+    lng: campaign.longitude,
+    radius: campaign.radius,
+    bookingLocation: campaign.booking?.location,
+    leadOrg: campaign.booking?.lead?.organization,
+  })
+
   // Determine organization type from the booking location
   const bookingLocation = campaign.booking?.location
   if (!bookingLocation) {
-    // No booking location to base similarity on
+    console.warn('[Discovery:SimilarOrgs] No booking location — skipping')
     return []
   }
 
-  const orgType = classifyFromLocation(bookingLocation)
+  let orgType = classifyFromLocation(bookingLocation)
+
+  // Fallback: if location is a street address (UNKNOWN), try classifying the lead's organization name
+  if (orgType === 'UNKNOWN' && campaign.booking?.lead?.organization) {
+    orgType = classifyOrganization(campaign.booking.lead.organization)
+    if (orgType !== 'UNKNOWN') {
+      console.log(`[Discovery:SimilarOrgs] Location unclassifiable, fell back to lead org: ${orgType}`)
+    }
+  }
+
   if (orgType === 'UNKNOWN') {
-    // Could not classify organization type
+    console.warn(`[Discovery:SimilarOrgs] Could not classify: "${bookingLocation}" — skipping`)
     return []
   }
+
+  console.log(`[Discovery:SimilarOrgs] Classified as ${orgType}`)
 
   // Get keywords for similar organization search
   const keywords = getSimilarOrgKeywords(orgType)
@@ -51,6 +73,8 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
       mode: 'insensitive' as const,
     },
   }))
+
+  console.log(`[Discovery:SimilarOrgs] Searching with ${keywords.length} keywords:`, keywords)
 
   // Find leads with similar organization names within the bounding box
   const leads = await prisma.lead.findMany({
@@ -79,8 +103,10 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
     },
   })
 
+  console.log(`[Discovery:SimilarOrgs] Found ${leads.length} leads in bounding box`)
+
   // Filter by exact haversine distance and calculate distance for each lead
-  return leads
+  const results = leads
     .map((lead) => {
       if (lead.latitude === null || lead.longitude === null) {
         return null
@@ -100,4 +126,7 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
       }
     })
     .filter((lead): lead is NonNullable<typeof lead> => lead !== null && lead.distance <= campaign.radius)
+
+  console.log(`[Discovery:SimilarOrgs] Returning ${results.length} leads after distance filter`)
+  return results
 }

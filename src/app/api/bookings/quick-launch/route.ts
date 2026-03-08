@@ -76,6 +76,8 @@ export async function POST(request: NextRequest) {
           phone: client.phone || null,
           source: "direct_booking",
           status: "QUALIFIED",
+          latitude: geoResult.latitude,
+          longitude: geoResult.longitude,
         },
       });
     } else {
@@ -86,6 +88,8 @@ export async function POST(request: NextRequest) {
           lastName: client.lastName,
           organization: client.organization || lead.organization,
           phone: client.phone || lead.phone,
+          latitude: geoResult.latitude,
+          longitude: geoResult.longitude,
         },
       });
     }

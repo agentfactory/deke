@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
+import { geocodeAddress } from '@/lib/services/geocoding'
 import {
   createLeadSchema,
   leadFiltersSchema,
@@ -14,6 +15,20 @@ export async function POST(request: NextRequest) {
 
     // Validate input
     const validatedData: CreateLeadInput = createLeadSchema.parse(body)
+
+    // If no lat/lng provided but organization is given, attempt geocoding
+    if (!validatedData.latitude && !validatedData.longitude && validatedData.organization) {
+      try {
+        const geoResult = await geocodeAddress(validatedData.organization)
+        if (geoResult) {
+          validatedData.latitude = geoResult.latitude
+          validatedData.longitude = geoResult.longitude
+        }
+      } catch (err) {
+        // Non-blocking — geocoding failure shouldn't prevent lead creation
+        console.warn('[Leads] Geocoding failed for organization:', validatedData.organization, err)
+      }
+    }
 
     // Check if lead exists
     const existingLead = await prisma.lead.findUnique({

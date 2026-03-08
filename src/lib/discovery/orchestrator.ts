@@ -28,6 +28,7 @@ export interface DiscoveryResult {
   scoreStats: ReturnType<typeof calculateScoreStats>
   deduplicationStats: ReturnType<typeof getDeduplicationStats>
   duration: number
+  warnings: string[]
 }
 
 /**
@@ -42,16 +43,68 @@ export interface DiscoveryResult {
 export async function discoverLeads(campaignId: string): Promise<DiscoveryResult> {
   const startTime = Date.now()
 
-  // Fetch campaign details
+  const warnings: string[] = []
+
+  // Fetch campaign details (include booking.lead for similar-orgs classification fallback)
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     include: {
-      booking: true,
+      booking: {
+        include: {
+          lead: {
+            select: { organization: true },
+          },
+        },
+      },
     },
   })
 
   if (!campaign) {
     throw new Error('Campaign not found')
+  }
+
+  console.log('[Discovery:Orchestrator] Campaign details', {
+    id: campaign.id,
+    name: campaign.name,
+    lat: campaign.latitude,
+    lng: campaign.longitude,
+    radius: campaign.radius,
+    hasBooking: !!campaign.booking,
+    bookingLocation: campaign.booking?.location,
+    bookingLeadOrg: campaign.booking?.lead?.organization,
+  })
+
+  // Pre-flight validation
+  if (!campaign.latitude || !campaign.longitude) {
+    warnings.push('Campaign has no coordinates — all geo-based sources will return empty')
+  } else if (
+    campaign.latitude < -90 || campaign.latitude > 90 ||
+    campaign.longitude < -180 || campaign.longitude > 180
+  ) {
+    warnings.push(`Campaign has invalid coordinates (${campaign.latitude}, ${campaign.longitude})`)
+  }
+
+  if (!campaign.radius || campaign.radius <= 0) {
+    warnings.push('Campaign has no radius set — geo-based sources will return empty')
+  }
+
+  if (!campaign.booking) {
+    warnings.push('Campaign has no linked booking — Similar Orgs source will be skipped')
+  }
+
+  // Check how many leads in DB have coordinates vs total
+  const [totalLeads, leadsWithCoords] = await Promise.all([
+    prisma.lead.count(),
+    prisma.lead.count({ where: { latitude: { not: null }, longitude: { not: null } } }),
+  ])
+  console.log(`[Discovery:Orchestrator] Lead coverage: ${leadsWithCoords}/${totalLeads} leads have coordinates`)
+  if (totalLeads > 0 && leadsWithCoords < totalLeads) {
+    warnings.push(`${totalLeads - leadsWithCoords} of ${totalLeads} leads have no coordinates — run backfill at /api/admin/leads/backfill-coords`)
+  }
+
+  // Check Google Places API key
+  if (!process.env.GOOGLE_PLACES_API_KEY) {
+    warnings.push('GOOGLE_PLACES_API_KEY not configured — AI Research source will be skipped')
   }
 
   // Run all discovery sources in parallel for performance
@@ -61,6 +114,13 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     discoverSimilarOrgs(campaign),
     discoverAIResearch(campaign),
   ])
+
+  console.log('[Discovery:Orchestrator] Source results', {
+    pastClients: pastClients.length,
+    dormant: dormant.length,
+    similar: similar.length,
+    aiResearch: aiResearch.length,
+  })
 
   // Track counts by source before deduplication
   const bySource = {
@@ -175,6 +235,12 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
 
   const duration = Date.now() - startTime
 
+  if (warnings.length > 0) {
+    console.warn('[Discovery:Orchestrator] Warnings:', warnings)
+  }
+
+  console.log(`[Discovery:Orchestrator] Complete: ${scored.length} leads in ${duration}ms`)
+
   return {
     total: scored.length,
     bySource,
@@ -182,6 +248,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     scoreStats,
     deduplicationStats,
     duration,
+    warnings,
   }
 }
 
