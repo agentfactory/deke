@@ -1,139 +1,132 @@
 import Link from 'next/link'
+import { prisma } from '@/lib/db'
+import { Rocket, ArrowRight, MapPin, Users } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
-import { ArrowRight, Target, TrendingUp, Users } from 'lucide-react'
-import { prisma } from '@/lib/db'
+import { Badge } from '@/components/ui/badge'
+import { CampaignsClient } from './campaigns-client'
 import { mapCampaignsToComponent } from '@/lib/mappers/campaign'
-import { DashboardCampaignTable } from '@/components/campaigns/dashboard-campaign-table'
+
+export const dynamic = 'force-dynamic'
+export const revalidate = 0
+
+function getStatusColor(status: string): string {
+  switch (status) {
+    case 'ACTIVE': return 'bg-emerald-100 text-emerald-800 border-emerald-200'
+    case 'DRAFT': return 'bg-stone-100 text-stone-700 border-stone-200'
+    case 'PAUSED': return 'bg-amber-100 text-amber-800 border-amber-200'
+    case 'COMPLETED': return 'bg-sky-100 text-sky-800 border-sky-200'
+    case 'APPROVED': return 'bg-indigo-100 text-indigo-800 border-indigo-200'
+    case 'CANCELLED': return 'bg-red-100 text-red-700 border-red-200'
+    default: return 'bg-stone-100 text-stone-600 border-stone-200'
+  }
+}
 
 async function getCampaignsData() {
   try {
-    const [totalCampaigns, activeCampaigns, totalLeads] = await Promise.all([
+    const [totalCampaigns, activeCampaigns, totalLeads, campaignsData] = await Promise.all([
       prisma.campaign.count(),
       prisma.campaign.count({ where: { status: 'ACTIVE' } }),
-      prisma.campaignLead.count()
-    ])
-
-    const recentCampaignsData = await prisma.campaign.findMany({
-      take: 10,
-      orderBy: { createdAt: 'desc' },
-      include: {
-        _count: { select: { leads: true } },
-        booking: {
-          select: {
-            id: true,
-            serviceType: true,
-            location: true,
-            lead: {
-              select: {
-                firstName: true,
-                lastName: true,
-              }
+      prisma.campaignLead.count(),
+      prisma.campaign.findMany({
+        orderBy: { createdAt: 'desc' },
+        include: {
+          _count: { select: { leads: true } },
+          booking: {
+            select: {
+              id: true,
+              serviceType: true,
+              location: true,
+              lead: { select: { firstName: true, lastName: true } }
             }
           }
         }
-      }
-    })
+      })
+    ])
 
-    const recentCampaigns = mapCampaignsToComponent(recentCampaignsData)
+    const campaigns = mapCampaignsToComponent(campaignsData)
 
     return {
       stats: { totalCampaigns, activeCampaigns, totalLeads },
-      recentCampaigns
+      campaigns
     }
   } catch (error) {
     console.error('Error fetching campaigns:', error)
     return {
       stats: { totalCampaigns: 0, activeCampaigns: 0, totalLeads: 0 },
-      recentCampaigns: []
+      campaigns: []
     }
   }
 }
 
 export default async function CampaignsPage() {
-  const { stats, recentCampaigns } = await getCampaignsData()
+  const { stats, campaigns } = await getCampaignsData()
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-cyan-50/20 dark:from-slate-950 dark:via-violet-950/20 dark:to-cyan-950/10">
-      <div className="relative overflow-hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-cyan-500/5 to-violet-500/5" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Campaign & Lead Discovery
-              </h1>
-              <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                Discover and score potential booking opportunities
-              </p>
-            </div>
-
-            <Link href="/dashboard/campaigns/new">
-              <Button className="bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800">
-                Create Campaign
-              </Button>
-            </Link>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Campaigns</CardTitle>
-                <Target className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalCampaigns}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Active Campaigns</CardTitle>
-                <TrendingUp className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.activeCampaigns}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-                <Users className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalLeads}</div>
-              </CardContent>
-            </Card>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1
+            className="text-2xl font-bold text-[#1a1a1a]"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Campaigns
+          </h1>
+          <p className="mt-1 text-sm text-[#888]">
+            Discover and reach potential booking opportunities
+          </p>
         </div>
+        <Link href="/dashboard/campaigns/new">
+          <Button
+            className="text-white hover:opacity-90"
+            style={{ backgroundColor: '#C05A3C' }}
+          >
+            <Rocket className="h-4 w-4 mr-2" />
+            Create Campaign
+          </Button>
+        </Link>
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <Card>
-          <CardHeader>
-            <div className="flex items-center justify-between">
-              <div>
-                <CardTitle>Recent Campaigns</CardTitle>
-                <p className="text-sm text-muted-foreground mt-1">
-                  Your most recent lead discovery campaigns
-                </p>
-              </div>
-              <Link href="/dashboard/campaigns">
-                <Button variant="outline" size="sm">
-                  View All
-                  <ArrowRight className="ml-2 h-4 w-4" />
-                </Button>
-              </Link>
+      {/* Stats Row */}
+      <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+        <Card className="border-[#E8E4DD] bg-white">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-[#C05A3C]/10">
+              <Rocket className="h-5 w-5 text-[#C05A3C]" />
             </div>
-          </CardHeader>
-          <CardContent>
-            <DashboardCampaignTable campaigns={recentCampaigns} />
+            <div>
+              <p className="text-2xl font-bold text-[#1a1a1a]">{stats.totalCampaigns}</p>
+              <p className="text-xs font-medium text-[#888]">Total Campaigns</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-[#E8E4DD] bg-white">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-emerald-100">
+              <Rocket className="h-5 w-5 text-emerald-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#1a1a1a]">{stats.activeCampaigns}</p>
+              <p className="text-xs font-medium text-[#888]">Active</p>
+            </div>
+          </CardContent>
+        </Card>
+        <Card className="border-[#E8E4DD] bg-white">
+          <CardContent className="flex items-center gap-4 p-5">
+            <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-lg bg-blue-100">
+              <Users className="h-5 w-5 text-blue-600" />
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-[#1a1a1a]">{stats.totalLeads}</p>
+              <p className="text-xs font-medium text-[#888]">Total Leads Discovered</p>
+            </div>
           </CardContent>
         </Card>
       </div>
+
+      {/* Campaigns List */}
+      <CampaignsClient initialCampaigns={campaigns} />
     </div>
   )
 }
