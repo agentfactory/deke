@@ -180,10 +180,10 @@ interface PlaceDetails {
 }
 
 /**
- * Fetch place details from Google Places (New) API
+ * Fetch place details from Google Places API (legacy)
  *
  * Gets phone, website, rating, editorial summary, and primary type.
- * Uses GET https://places.googleapis.com/v1/places/{PLACE_ID}
+ * Uses GET https://maps.googleapis.com/maps/api/place/details/json
  */
 async function fetchPlaceDetails(
   placeId: string,
@@ -199,14 +199,9 @@ async function fetchPlaceDetails(
   }
 
   try {
+    const fields = 'formatted_phone_number,website,rating,user_ratings_total,editorial_summary,type,name'
     const response = await fetch(
-      `https://places.googleapis.com/v1/places/${placeId}`,
-      {
-        headers: {
-          'X-Goog-Api-Key': apiKey,
-          'X-Goog-FieldMask': 'nationalPhoneNumber,websiteUri,rating,userRatingCount,editorialSummary,primaryTypeDisplayName,displayName',
-        },
-      }
+      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}`
     )
 
     if (!response.ok) {
@@ -216,13 +211,20 @@ async function fetchPlaceDetails(
 
     const data = await response.json()
 
+    if (data.status !== 'OK') {
+      console.error(`[AI Research] Details API status: ${data.status} - ${data.error_message || ''}`)
+      return emptyResult
+    }
+
+    const result = data.result || {}
+
     return {
-      phone: data.nationalPhoneNumber || null,
-      website: data.websiteUri || null,
-      googleRating: data.rating || null,
-      userRatingCount: data.userRatingCount || null,
-      editorialSummary: data.editorialSummary?.text || null,
-      primaryType: data.primaryTypeDisplayName?.text || null,
+      phone: result.formatted_phone_number || null,
+      website: result.website || null,
+      googleRating: result.rating || null,
+      userRatingCount: result.user_ratings_total || null,
+      editorialSummary: result.editorial_summary?.overview || null,
+      primaryType: result.types?.[0] || null,
     }
   } catch (error) {
     console.error(`[AI Research] Failed to fetch details for place ${placeId}:`, error)
@@ -399,10 +401,11 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 }
 
 /**
- * Search Google Places (New) API using Text Search
+ * Search Google Places API using Text Search (legacy)
  *
- * Uses POST https://places.googleapis.com/v1/places:searchText
+ * Uses GET https://maps.googleapis.com/maps/api/place/textsearch/json
  * Returns place IDs, names, locations, types, and addresses.
+ * This is the most widely-enabled Google Maps API.
  */
 async function searchPlacesByKeyword(
   lat: number,
@@ -413,47 +416,49 @@ async function searchPlacesByKeyword(
   apiKey: string
 ): Promise<any[]> {
   const query = `${keyword} in ${location}`
-
-  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'X-Goog-Api-Key': apiKey,
-      'X-Goog-FieldMask': 'places.displayName,places.id,places.location,places.types,places.formattedAddress',
-    },
-    body: JSON.stringify({
-      textQuery: query,
-      locationBias: {
-        circle: {
-          center: { latitude: lat, longitude: lng },
-          radius: radius,
-        },
-      },
-    }),
+  const params = new URLSearchParams({
+    query,
+    location: `${lat},${lng}`,
+    radius: String(Math.min(radius, 50000)), // Legacy API max 50km
+    key: apiKey,
   })
+
+  const response = await fetch(
+    `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`
+  )
 
   if (!response.ok) {
     const errorBody = await response.text().catch(() => 'unknown')
-    console.error(`[AI Research] Places searchText failed for "${query}":`, errorBody)
-    throw new Error(`Places New API error: ${response.status} ${response.statusText}`)
+    console.error(`[AI Research] Places Text Search failed for "${query}":`, errorBody)
+    throw new Error(`Places API error: ${response.status} ${response.statusText}`)
   }
 
   const data = await response.json()
-  const places = data.places || []
+
+  if (data.status === 'REQUEST_DENIED') {
+    console.error(`[AI Research] Places API denied for "${query}": ${data.error_message || 'unknown'}`)
+    throw new Error(`Places API denied: ${data.error_message || 'Check API key and enabled APIs'}`)
+  }
+
+  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+    console.error(`[AI Research] Places API status "${data.status}" for "${query}": ${data.error_message || ''}`)
+    throw new Error(`Places API error: ${data.status}`)
+  }
+
+  const places = data.results || []
   console.log(`[AI Research] "${keyword}" → ${places.length} results`)
 
-  // Map New API response to match our internal format
   return places.map((place: any) => ({
-    name: place.displayName?.text || '',
-    place_id: place.id,
+    name: place.name || '',
+    place_id: place.place_id,
     geometry: {
       location: {
-        lat: place.location?.latitude || 0,
-        lng: place.location?.longitude || 0,
+        lat: place.geometry?.location?.lat || 0,
+        lng: place.geometry?.location?.lng || 0,
       },
     },
     types: place.types || [],
-    formatted_address: place.formattedAddress || '',
+    formatted_address: place.formatted_address || '',
   }))
 }
 
