@@ -363,18 +363,21 @@ async function searchPlacesByKeyword(
       locationBias: {
         circle: {
           center: { latitude: lat, longitude: lng },
-          radiusMeters: radius,
+          radius: radius,
         },
       },
     }),
   })
 
   if (!response.ok) {
+    const errorBody = await response.text().catch(() => 'unknown')
+    console.error(`[AI Research] Places searchText failed for "${query}":`, errorBody)
     throw new Error(`Places New API error: ${response.status} ${response.statusText}`)
   }
 
   const data = await response.json()
   const places = data.places || []
+  console.log(`[AI Research] "${keyword}" → ${places.length} results`)
 
   // Map New API response to match our internal format
   return places.map((place: any) => ({
