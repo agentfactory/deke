@@ -6,7 +6,8 @@ import { useRouter } from 'next/navigation'
 import {
   Search, Download, Plus, MoreHorizontal, Eye, Mail,
   Trash2, ArrowUpDown, ChevronLeft, ChevronRight, X, Phone,
-  RefreshCw
+  RefreshCw, ExternalLink, Pencil, Building2, Calendar, Target,
+  Megaphone, Clock
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -29,6 +30,9 @@ import {
   DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent,
   DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
+import {
+  Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
+} from '@/components/ui/sheet'
 
 // --- Types & Constants ---
 
@@ -44,6 +48,17 @@ const STATUS_COLORS: Record<string, string> = {
   WON: 'bg-emerald-500',
   LOST: 'bg-red-500',
   DORMANT: 'bg-gray-400',
+}
+
+const STATUS_TEXT_COLORS: Record<string, string> = {
+  NEW: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950',
+  CONTACTED: 'text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950',
+  QUALIFIED: 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950',
+  PROPOSAL_SENT: 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950',
+  NEGOTIATING: 'text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950',
+  WON: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950',
+  LOST: 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950',
+  DORMANT: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900',
 }
 
 const PAGE_SIZE = 25
@@ -101,6 +116,10 @@ function downloadCSV(content: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+function formatStatusLabel(status: string): string {
+  return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
 // --- Component ---
 
 export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] }) {
@@ -116,6 +135,15 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
 
   // Selection
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
+
+  // Detail sheet
+  const [detailLead, setDetailLead] = useState<Lead | null>(null)
+  const [isEditing, setIsEditing] = useState(false)
+  const [editForm, setEditForm] = useState({
+    firstName: '', lastName: '', email: '', phone: '', organization: '',
+    source: '', status: '',
+  })
+  const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   // Dialogs
   const [isAddOpen, setIsAddOpen] = useState(false)
@@ -197,6 +225,10 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
       })
       if (!res.ok) throw new Error('Failed to update status')
       setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l))
+      // Update detail sheet if open for this lead
+      if (detailLead?.id === id) {
+        setDetailLead(prev => prev ? { ...prev, status } : null)
+      }
     } catch (err) {
       console.error('Status update failed:', err)
     }
@@ -218,6 +250,11 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
       }
       setLeads(prev => prev.filter(l => l.id !== id))
       setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n })
+      // Close detail sheet if deleting the viewed lead
+      if (detailLead?.id === id) {
+        setDetailLead(null)
+        setIsEditing(false)
+      }
     } catch (err) {
       console.error('Delete failed:', err)
     }
@@ -245,7 +282,6 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
         return
       }
       const newLead = await res.json()
-      // Add with default _count
       setLeads(prev => [{
         ...newLead,
         createdAt: newLead.createdAt || new Date().toISOString(),
@@ -263,6 +299,69 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
   const exportCSV = (subset?: Lead[]) => {
     const data = subset || filtered
     downloadCSV(toCSV(data), `contacts-${new Date().toISOString().slice(0, 10)}.csv`)
+  }
+
+  // --- Detail Sheet ---
+
+  const openDetail = (lead: Lead) => {
+    setDetailLead(lead)
+    setIsEditing(false)
+  }
+
+  const startEditing = () => {
+    if (!detailLead) return
+    setEditForm({
+      firstName: detailLead.firstName,
+      lastName: detailLead.lastName,
+      email: detailLead.email,
+      phone: detailLead.phone || '',
+      organization: detailLead.organization || '',
+      source: detailLead.source || 'website',
+      status: detailLead.status,
+    })
+    setIsEditing(true)
+  }
+
+  const saveEdit = async () => {
+    if (!detailLead) return
+    setIsSavingEdit(true)
+    try {
+      const res = await fetch(`/api/leads/${detailLead.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          firstName: editForm.firstName,
+          lastName: editForm.lastName,
+          email: editForm.email,
+          phone: editForm.phone || null,
+          organization: editForm.organization || null,
+          source: editForm.source,
+          status: editForm.status,
+        }),
+      })
+      if (!res.ok) {
+        const data = await res.json()
+        alert(data.message || 'Failed to update contact')
+        return
+      }
+      const updated = {
+        ...detailLead,
+        firstName: editForm.firstName,
+        lastName: editForm.lastName,
+        email: editForm.email,
+        phone: editForm.phone || null,
+        organization: editForm.organization || null,
+        source: editForm.source,
+        status: editForm.status,
+      }
+      setLeads(prev => prev.map(l => l.id === detailLead.id ? updated : l))
+      setDetailLead(updated)
+      setIsEditing(false)
+    } catch (err) {
+      console.error('Edit failed:', err)
+    } finally {
+      setIsSavingEdit(false)
+    }
   }
 
   // --- Render ---
@@ -373,14 +472,14 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
         </div>
       )}
 
-      {/* Table */}
+      {/* Compact Table */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Search className="h-10 w-10 text-stone-300" />
           <p className="mt-3 text-sm text-stone-500">No leads match your filters.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-stone-200 dark:border-stone-800 overflow-x-auto">
+        <div className="rounded-lg border border-stone-200 dark:border-stone-800">
           <Table>
             <TableHeader>
               <TableRow className="bg-stone-50 dark:bg-stone-900">
@@ -392,24 +491,26 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                     className="rounded border-stone-300"
                   />
                 </TableHead>
-                <TableHead className="font-semibold">Name</TableHead>
-                <TableHead className="font-semibold">Email</TableHead>
-                <TableHead className="font-semibold hidden lg:table-cell">Phone</TableHead>
-                <TableHead className="font-semibold hidden md:table-cell">Organization</TableHead>
-                <TableHead className="font-semibold">Source</TableHead>
+                <TableHead className="font-semibold">Contact</TableHead>
                 <TableHead className="font-semibold">Status</TableHead>
                 <TableHead className="font-semibold text-center">Score</TableHead>
-                <TableHead className="font-semibold text-center hidden sm:table-cell">Bookings</TableHead>
-                <TableHead className="font-semibold text-center hidden lg:table-cell">Campaigns</TableHead>
-                <TableHead className="font-semibold hidden xl:table-cell">Last Contact</TableHead>
                 <TableHead className="font-semibold hidden sm:table-cell">Date</TableHead>
                 <TableHead className="font-semibold w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
               {paginated.map(lead => (
-                <TableRow key={lead.id} className="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors">
-                  <TableCell>
+                <TableRow
+                  key={lead.id}
+                  className="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors cursor-pointer"
+                  onClick={(e) => {
+                    // Don't open sheet if clicking checkbox or actions
+                    const target = e.target as HTMLElement
+                    if (target.closest('input[type="checkbox"]') || target.closest('[data-slot="dropdown-menu"]') || target.closest('button')) return
+                    openDetail(lead)
+                  }}
+                >
+                  <TableCell onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
                       checked={selectedIds.has(lead.id)}
@@ -417,45 +518,31 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                       className="rounded border-stone-300"
                     />
                   </TableCell>
+                  {/* Contact: name + email stacked, org as subtitle */}
                   <TableCell>
-                    <Link
-                      href={`/dashboard/leads/${lead.id}`}
-                      className="font-medium text-stone-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                    >
-                      {lead.firstName} {lead.lastName}
-                    </Link>
+                    <div className="min-w-0">
+                      <div className="font-medium text-stone-900 dark:text-white truncate">
+                        {lead.firstName} {lead.lastName}
+                      </div>
+                      <div className="text-sm text-stone-500 dark:text-stone-400 truncate">
+                        {lead.email}
+                      </div>
+                      {lead.organization && (
+                        <div className="text-xs text-stone-400 dark:text-stone-500 truncate flex items-center gap-1 mt-0.5">
+                          <Building2 className="h-3 w-3 shrink-0" />
+                          {lead.organization}
+                        </div>
+                      )}
+                    </div>
                   </TableCell>
-                  <TableCell className="text-stone-600 dark:text-stone-400 max-w-[180px] truncate">
-                    {lead.email}
-                  </TableCell>
-                  <TableCell className="hidden lg:table-cell text-stone-600 dark:text-stone-400">
-                    {lead.phone ? (
-                      <a href={`tel:${lead.phone}`} className="hover:text-blue-600 inline-flex items-center gap-1">
-                        <Phone className="h-3 w-3" />
-                        {lead.phone}
-                      </a>
-                    ) : (
-                      <span className="text-stone-400">{'\u2014'}</span>
-                    )}
-                  </TableCell>
-                  <TableCell className="hidden md:table-cell text-stone-600 dark:text-stone-400">
-                    {lead.organization || '\u2014'}
-                  </TableCell>
+                  {/* Status: colored badge */}
                   <TableCell>
-                    {lead.source ? (
-                      <Badge variant="outline" className="text-xs capitalize">
-                        {lead.source.replace(/_/g, ' ')}
-                      </Badge>
-                    ) : (
-                      <span className="text-stone-400">{'\u2014'}</span>
-                    )}
-                  </TableCell>
-                  <TableCell>
-                    <span className="inline-flex items-center gap-1.5 text-xs text-stone-700 dark:text-stone-300">
-                      <span className={`h-2 w-2 rounded-full shrink-0 ${STATUS_COLORS[lead.status] || 'bg-gray-400'}`} />
-                      {lead.status}
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_TEXT_COLORS[lead.status] || 'text-gray-600 bg-gray-100'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_COLORS[lead.status] || 'bg-gray-400'}`} />
+                      {formatStatusLabel(lead.status)}
                     </span>
                   </TableCell>
+                  {/* Score: number + mini bar */}
                   <TableCell className="text-center">
                     <div className="inline-flex flex-col items-center gap-0.5">
                       <span className="text-sm font-medium text-stone-900 dark:text-white">{lead.score}</span>
@@ -464,19 +551,12 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                       </div>
                     </div>
                   </TableCell>
-                  <TableCell className="text-center text-stone-600 dark:text-stone-400 hidden sm:table-cell">
-                    {lead._count.bookings}
-                  </TableCell>
-                  <TableCell className="text-center text-stone-600 dark:text-stone-400 hidden lg:table-cell">
-                    {lead._count.campaignLeads}
-                  </TableCell>
-                  <TableCell className="text-stone-500 dark:text-stone-400 text-sm whitespace-nowrap hidden xl:table-cell">
-                    {lead.lastContactedAt ? relativeTime(lead.lastContactedAt) : '\u2014'}
-                  </TableCell>
+                  {/* Date */}
                   <TableCell className="text-stone-500 dark:text-stone-400 text-sm whitespace-nowrap hidden sm:table-cell">
                     {formatDate(lead.createdAt)}
                   </TableCell>
-                  <TableCell>
+                  {/* Actions ellipsis */}
+                  <TableCell onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
                         <Button variant="ghost" size="sm" className="h-8 w-8 p-0">
@@ -484,8 +564,11 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
+                        <DropdownMenuItem onClick={() => openDetail(lead)}>
+                          <Eye className="h-4 w-4 mr-2" /> View Details
+                        </DropdownMenuItem>
                         <DropdownMenuItem onClick={() => router.push(`/dashboard/leads/${lead.id}`)}>
-                          <Eye className="h-4 w-4 mr-2" /> View Profile
+                          <ExternalLink className="h-4 w-4 mr-2" /> Open Full Page
                         </DropdownMenuItem>
                         <DropdownMenuSub>
                           <DropdownMenuSubTrigger>
@@ -553,6 +636,208 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
           </div>
         </div>
       )}
+
+      {/* Detail / Edit Sheet */}
+      <Sheet open={!!detailLead} onOpenChange={(open) => { if (!open) { setDetailLead(null); setIsEditing(false) } }}>
+        <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
+          {detailLead && !isEditing && (
+            <>
+              <SheetHeader className="pb-2">
+                <div className="flex items-start justify-between gap-2 pr-8">
+                  <div>
+                    <SheetTitle className="text-lg">
+                      {detailLead.firstName} {detailLead.lastName}
+                    </SheetTitle>
+                    <SheetDescription className="mt-0.5">
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_TEXT_COLORS[detailLead.status] || 'text-gray-600 bg-gray-100'}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[detailLead.status] || 'bg-gray-400'}`} />
+                        {formatStatusLabel(detailLead.status)}
+                      </span>
+                    </SheetDescription>
+                  </div>
+                </div>
+              </SheetHeader>
+
+              {/* Quick actions */}
+              <div className="flex gap-2 px-4 pb-4">
+                <Button variant="outline" size="sm" onClick={startEditing}>
+                  <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
+                </Button>
+                <Button variant="outline" size="sm" asChild>
+                  <Link href={`/dashboard/leads/${detailLead.id}`}>
+                    <ExternalLink className="h-3.5 w-3.5 mr-1" /> Full Page
+                  </Link>
+                </Button>
+                {detailLead.email && (
+                  <Button variant="outline" size="sm" asChild>
+                    <a href={`mailto:${detailLead.email}`}>
+                      <Mail className="h-3.5 w-3.5 mr-1" /> Email
+                    </a>
+                  </Button>
+                )}
+              </div>
+
+              {/* Contact info */}
+              <div className="px-4 space-y-4">
+                <div className="rounded-lg border border-stone-200 dark:border-stone-800 divide-y divide-stone-200 dark:divide-stone-800">
+                  <DetailRow icon={<Mail className="h-4 w-4" />} label="Email">
+                    <a href={`mailto:${detailLead.email}`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+                      {detailLead.email}
+                    </a>
+                  </DetailRow>
+                  <DetailRow icon={<Phone className="h-4 w-4" />} label="Phone">
+                    {detailLead.phone ? (
+                      <a href={`tel:${detailLead.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+                        {detailLead.phone}
+                      </a>
+                    ) : (
+                      <span className="text-stone-400 text-sm">{'\u2014'}</span>
+                    )}
+                  </DetailRow>
+                  <DetailRow icon={<Building2 className="h-4 w-4" />} label="Organization">
+                    <span className="text-sm">{detailLead.organization || '\u2014'}</span>
+                  </DetailRow>
+                </div>
+
+                {/* Details */}
+                <div className="rounded-lg border border-stone-200 dark:border-stone-800 divide-y divide-stone-200 dark:divide-stone-800">
+                  <DetailRow icon={<Target className="h-4 w-4" />} label="Source">
+                    {detailLead.source ? (
+                      <Badge variant="outline" className="text-xs capitalize">
+                        {detailLead.source.replace(/_/g, ' ')}
+                      </Badge>
+                    ) : (
+                      <span className="text-stone-400 text-sm">{'\u2014'}</span>
+                    )}
+                  </DetailRow>
+                  <DetailRow icon={<ArrowUpDown className="h-4 w-4" />} label="Score">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{detailLead.score}</span>
+                      <div className="w-16 h-1.5 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
+                        <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(detailLead.score, 100)}%` }} />
+                      </div>
+                    </div>
+                  </DetailRow>
+                  <DetailRow icon={<Calendar className="h-4 w-4" />} label="Bookings">
+                    <span className="text-sm">{detailLead._count.bookings}</span>
+                  </DetailRow>
+                  <DetailRow icon={<Megaphone className="h-4 w-4" />} label="Campaigns">
+                    <span className="text-sm">{detailLead._count.campaignLeads}</span>
+                  </DetailRow>
+                  <DetailRow icon={<Clock className="h-4 w-4" />} label="Last Contact">
+                    <span className="text-sm">
+                      {detailLead.lastContactedAt ? relativeTime(detailLead.lastContactedAt) : '\u2014'}
+                    </span>
+                  </DetailRow>
+                  <DetailRow icon={<Calendar className="h-4 w-4" />} label="Created">
+                    <span className="text-sm">{formatDate(detailLead.createdAt)}</span>
+                  </DetailRow>
+                </div>
+
+                {/* Status change */}
+                <div>
+                  <label className="text-xs text-stone-500 mb-1.5 block">Quick Status Change</label>
+                  <Select value={detailLead.status} onValueChange={v => changeStatus(detailLead.id, v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map(s => (
+                        <SelectItem key={s} value={s}>
+                          <span className="flex items-center gap-2">
+                            <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[s]}`} />
+                            {formatStatusLabel(s)}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+
+                {/* Delete */}
+                <Button
+                  variant="outline"
+                  size="sm"
+                  className="text-red-600 hover:text-red-700 w-full"
+                  disabled={detailLead._count.bookings > 0}
+                  onClick={() => setDeleteTarget(detailLead)}
+                >
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Contact
+                  {detailLead._count.bookings > 0 && <span className="text-xs ml-1">(has bookings)</span>}
+                </Button>
+              </div>
+            </>
+          )}
+
+          {/* Edit mode */}
+          {detailLead && isEditing && (
+            <>
+              <SheetHeader>
+                <SheetTitle>Edit Contact</SheetTitle>
+                <SheetDescription>Update contact information</SheetDescription>
+              </SheetHeader>
+              <div className="px-4 space-y-3">
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">First Name</label>
+                    <Input value={editForm.firstName} onChange={e => setEditForm(f => ({ ...f, firstName: e.target.value }))} />
+                  </div>
+                  <div>
+                    <label className="text-sm font-medium mb-1 block">Last Name</label>
+                    <Input value={editForm.lastName} onChange={e => setEditForm(f => ({ ...f, lastName: e.target.value }))} />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Email</label>
+                  <Input type="email" value={editForm.email} onChange={e => setEditForm(f => ({ ...f, email: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Phone</label>
+                  <Input value={editForm.phone} onChange={e => setEditForm(f => ({ ...f, phone: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Organization</label>
+                  <Input value={editForm.organization} onChange={e => setEditForm(f => ({ ...f, organization: e.target.value }))} />
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Source</label>
+                  <Select value={editForm.source} onValueChange={v => setEditForm(f => ({ ...f, source: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {SOURCES.map(s => (
+                        <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Status</label>
+                  <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map(s => (
+                        <SelectItem key={s} value={s}>{formatStatusLabel(s)}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div className="flex gap-2 pt-2">
+                  <Button
+                    onClick={saveEdit}
+                    disabled={isSavingEdit || !editForm.firstName || !editForm.lastName || !editForm.email}
+                    className="flex-1"
+                  >
+                    {isSavingEdit ? 'Saving...' : 'Save Changes'}
+                  </Button>
+                  <Button variant="outline" onClick={() => setIsEditing(false)}>
+                    Cancel
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
 
       {/* Add Contact Dialog */}
       <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
@@ -638,6 +923,22 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
           </DialogFooter>
         </DialogContent>
       </Dialog>
+    </div>
+  )
+}
+
+// --- Detail Row helper ---
+
+function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
+  return (
+    <div className="flex items-center justify-between px-3 py-2.5">
+      <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+        {icon}
+        <span className="text-xs font-medium">{label}</span>
+      </div>
+      <div className="text-stone-900 dark:text-white">
+        {children}
+      </div>
     </div>
   )
 }
