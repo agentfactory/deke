@@ -184,14 +184,14 @@ export function BookingForm({
           render={({ field }) => (
             <FormItem>
               <FormLabel>Trip (Optional)</FormLabel>
-              <Select onValueChange={field.onChange} value={field.value}>
+              <Select onValueChange={(val) => field.onChange(val === "none" ? "" : val)} value={field.value || "none"}>
                 <FormControl>
                   <SelectTrigger>
                     <SelectValue placeholder="Select a trip (optional)" />
                   </SelectTrigger>
                 </FormControl>
                 <SelectContent>
-                  <SelectItem value="">No trip</SelectItem>
+                  <SelectItem value="none">No trip</SelectItem>
                   {trips.map((trip) => (
                     <SelectItem key={trip.id} value={trip.id}>
                       {trip.name} - {trip.location}
