@@ -37,6 +37,23 @@ interface DiscoveredLead {
   googleRating?: number | null
 }
 
+export interface AIResearchDiagnostics {
+  apiCallsMade: number
+  apiCallsFailed: number
+  rawPlaces: number
+  uniquePlaces: number
+  musicRelevant: number
+  enriched: number
+  leadsCreated: number
+  keywordResults: Array<{ keyword: string; count: number; error?: string }>
+  errors: string[]
+}
+
+export interface AIResearchResult {
+  leads: DiscoveredLead[]
+  diagnostics: AIResearchDiagnostics
+}
+
 // Music-specific keywords for targeted search
 // Uses Text Search API for more precise matching than generic place types
 const MUSIC_KEYWORDS = [
@@ -219,120 +236,166 @@ async function fetchPlaceDetails(
  * @param campaign - Campaign with location and radius
  * @returns Array of discovered leads
  */
-export async function discoverAIResearch(campaign: Campaign): Promise<DiscoveredLead[]> {
+export async function discoverAIResearch(campaign: Campaign): Promise<AIResearchResult> {
   const apiKey = process.env.GOOGLE_PLACES_API_KEY
 
-  // If no API key, return empty (graceful degradation)
-  if (!apiKey) {
-    console.warn('GOOGLE_PLACES_API_KEY not set - skipping AI research discovery')
-    return []
+  const diagnostics: AIResearchDiagnostics = {
+    apiCallsMade: 0,
+    apiCallsFailed: 0,
+    rawPlaces: 0,
+    uniquePlaces: 0,
+    musicRelevant: 0,
+    enriched: 0,
+    leadsCreated: 0,
+    keywordResults: [],
+    errors: [],
   }
 
-  try {
-    const allPlaces: any[] = []
+  // If no API key, return empty with clear diagnostic
+  if (!apiKey) {
+    const msg = 'GOOGLE_PLACES_API_KEY not set - skipping AI research discovery'
+    console.warn(msg)
+    diagnostics.errors.push(msg)
+    return { leads: [], diagnostics }
+  }
 
-    // Convert radius from miles to meters (Places API uses meters)
-    const radiusMeters = campaign.radius * 1609.34
+  const allPlaces: any[] = []
 
-    // Search for each music keyword using Text Search API
-    for (const keyword of MUSIC_KEYWORDS) {
-      try {
-        const places = await searchPlacesByKeyword(
-          campaign.latitude,
-          campaign.longitude,
-          campaign.baseLocation,
-          radiusMeters,
-          keyword,
-          apiKey
-        )
-        allPlaces.push(...places)
-      } catch (error) {
-        console.error(`Error searching for "${keyword}":`, error)
-        // Continue with other keywords
-      }
-    }
+  // Convert radius from miles to meters (Places API uses meters)
+  const radiusMeters = campaign.radius * 1609.34
 
-    console.log(`AI Research: Found ${allPlaces.length} raw places from Google`)
+  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
 
-    // CRITICAL: Deduplicate by place_id FIRST (same place appears in multiple keyword searches)
-    const uniquePlaces = deduplicateByPlaceId(allPlaces)
-
-    console.log(
-      `AI Research: ${uniquePlaces.length} unique places (removed ${allPlaces.length - uniquePlaces.length} duplicates)`
-    )
-
-    // Score each UNIQUE place by music relevance + proximity
-    const scoredPlaces = uniquePlaces.map((place) => {
-      const distance = haversineDistance(
+  // Search for each music keyword using Text Search API
+  for (const keyword of MUSIC_KEYWORDS) {
+    diagnostics.apiCallsMade++
+    try {
+      const places = await searchPlacesByKeyword(
         campaign.latitude,
         campaign.longitude,
-        place.geometry.location.lat,
-        place.geometry.location.lng
+        campaign.baseLocation,
+        radiusMeters,
+        keyword,
+        apiKey
       )
+      diagnostics.keywordResults.push({ keyword, count: places.length })
+      allPlaces.push(...places)
+    } catch (error) {
+      diagnostics.apiCallsFailed++
+      const errMsg = error instanceof Error ? error.message : String(error)
+      diagnostics.keywordResults.push({ keyword, count: 0, error: errMsg })
+      diagnostics.errors.push(`Keyword "${keyword}": ${errMsg}`)
+      console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
+      // Continue with other keywords
+    }
+  }
 
+  diagnostics.rawPlaces = allPlaces.length
+  console.log(`[AI Research] Found ${allPlaces.length} raw places from ${diagnostics.apiCallsMade} API calls (${diagnostics.apiCallsFailed} failed)`)
+
+  // If ALL keyword searches failed, throw with aggregated error
+  if (diagnostics.apiCallsFailed === diagnostics.apiCallsMade) {
+    const aggregatedMsg = `All ${diagnostics.apiCallsMade} Places API calls failed. First error: ${diagnostics.errors[0] || 'unknown'}`
+    console.error(`[AI Research] FATAL: ${aggregatedMsg}`)
+    throw new Error(aggregatedMsg)
+  }
+
+  // CRITICAL: Deduplicate by place_id FIRST (same place appears in multiple keyword searches)
+  const uniquePlaces = deduplicateByPlaceId(allPlaces)
+  diagnostics.uniquePlaces = uniquePlaces.length
+
+  console.log(
+    `[AI Research] ${uniquePlaces.length} unique places (removed ${allPlaces.length - uniquePlaces.length} duplicates)`
+  )
+
+  // Score each UNIQUE place by music relevance + proximity
+  const scoredPlaces = uniquePlaces.map((place) => {
+    const distance = haversineDistance(
+      campaign.latitude,
+      campaign.longitude,
+      place.geometry.location.lat,
+      place.geometry.location.lng
+    )
+
+    return {
+      ...place,
+      musicScore: calculateMusicRelevance(place),
+      proximityScore: calculateProximityBonus(distance, campaign.radius),
+      distance,
+    }
+  })
+
+  // Filter: ONLY organizations with music relevance (score > 0)
+  const musicOrgs = scoredPlaces.filter((p) => p.musicScore > 0)
+  diagnostics.musicRelevant = musicOrgs.length
+
+  const filteredOut = uniquePlaces.length - musicOrgs.length
+  console.log(
+    `[AI Research] ${musicOrgs.length} music-relevant organizations (${filteredOut} filtered out as non-music)`
+  )
+
+  // Warn if music filter removes everything
+  if (musicOrgs.length === 0 && uniquePlaces.length > 0) {
+    const warnMsg = `Found ${uniquePlaces.length} places but music relevance filter removed all of them. Top place names: ${uniquePlaces.slice(0, 5).map((p: any) => p.name).join(', ')}`
+    diagnostics.errors.push(warnMsg)
+    console.warn(`[AI Research] WARNING: ${warnMsg}`)
+    return { leads: [], diagnostics }
+  }
+
+  if (musicOrgs.length === 0) {
+    console.log('[AI Research] No music-relevant places found — returning empty')
+    return { leads: [], diagnostics }
+  }
+
+  // Sort by combined score (music relevance + proximity)
+  const sorted = musicOrgs.sort(
+    (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
+  )
+
+  // LIMIT TO TOP 20 highest-quality leads
+  const top20 = sorted.slice(0, 20)
+
+  console.log(`[AI Research] Top ${top20.length} music organizations selected for enrichment`)
+
+  // Enrich top 20 with REAL contact information from Places New API
+  console.log('[AI Research] Using Places New API — fetching details (phone, website, rating, summary)...')
+
+  const enrichedPlaces = await Promise.all(
+    top20.map(async (place) => {
+      const details = await fetchPlaceDetails(place.place_id, apiKey)
       return {
         ...place,
-        musicScore: calculateMusicRelevance(place),
-        proximityScore: calculateProximityBonus(distance, campaign.radius),
-        distance,
+        phone: details.phone,
+        website: details.website,
+        googleRating: details.googleRating,
+        userRatingCount: details.userRatingCount,
+        editorialSummary: details.editorialSummary,
+        primaryType: details.primaryType,
       }
     })
+  )
 
-    // Filter: ONLY organizations with music relevance (score > 0)
-    const musicOrgs = scoredPlaces.filter((p) => p.musicScore > 0)
+  diagnostics.enriched = enrichedPlaces.length
+  console.log(`[AI Research] ${enrichedPlaces.length} places enriched with contact details`)
 
-    console.log(
-      `AI Research: ${musicOrgs.length} music-relevant organizations (filtered from ${uniquePlaces.length})`
-    )
+  // Batch convert places to leads and CREATE them in database
+  const discovered = await placesToLeadsBatch(enrichedPlaces, campaign)
 
-    // Sort by combined score (music relevance + proximity)
-    const sorted = musicOrgs.sort(
-      (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
-    )
+  // Deduplicate by organization name
+  const uniqueLeads = deduplicateByOrganization(discovered)
 
-    // LIMIT TO TOP 20 highest-quality leads
-    const top20 = sorted.slice(0, 20)
+  console.log(`[AI Research] ${uniqueLeads.length} unique organizations after dedup`)
 
-    console.log(`AI Research: Top 20 music organizations selected`)
+  // Insert new leads into database and return with IDs
+  const leadsWithIds = await createLeadsInDatabase(uniqueLeads)
+  diagnostics.leadsCreated = leadsWithIds.length
 
-    // Enrich top 20 with REAL contact information from Places New API
-    console.log('[AI Research] Using Places New API — fetching details (phone, website, rating, summary)...')
+  console.log(`[AI Research] Created ${leadsWithIds.length} leads in database`)
 
-    const enrichedPlaces = await Promise.all(
-      top20.map(async (place) => {
-        const details = await fetchPlaceDetails(place.place_id, apiKey)
-        return {
-          ...place,
-          phone: details.phone,
-          website: details.website,
-          googleRating: details.googleRating,
-          userRatingCount: details.userRatingCount,
-          editorialSummary: details.editorialSummary,
-          primaryType: details.primaryType,
-        }
-      })
-    )
+  // Summary log
+  console.log(`[AI Research] SUMMARY: ${diagnostics.apiCallsMade} calls, ${diagnostics.apiCallsFailed} failed, ${diagnostics.rawPlaces} raw → ${diagnostics.uniquePlaces} unique → ${diagnostics.musicRelevant} music → ${diagnostics.enriched} enriched → ${diagnostics.leadsCreated} leads`)
 
-    console.log('[AI Research] Contact details enriched')
-
-    // Batch convert places to leads and CREATE them in database
-    const discovered = await placesToLeadsBatch(enrichedPlaces, campaign)
-
-    // Deduplicate by organization name
-    const uniqueLeads = deduplicateByOrganization(discovered)
-
-    console.log(`AI Research: ${uniqueLeads.length} unique organizations after dedup`)
-
-    // Insert new leads into database and return with IDs
-    const leadsWithIds = await createLeadsInDatabase(uniqueLeads)
-
-    console.log(`AI Research: Created ${leadsWithIds.length} leads in database`)
-
-    return leadsWithIds
-  } catch (error) {
-    console.error('AI Research discovery failed:', error)
-    return []
-  }
+  return { leads: leadsWithIds, diagnostics }
 }
 
 /**

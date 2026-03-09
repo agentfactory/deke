@@ -132,9 +132,14 @@ export async function POST(request: NextRequest, { params }: Params) {
       })
     }
 
+    const status = result.total === 0 ? 'no_results' : 'success'
+
     return NextResponse.json(
       {
-        message: 'Lead discovery and draft generation completed',
+        message: result.total === 0
+          ? 'Discovery completed but found no leads — check diagnostics for details'
+          : 'Lead discovery and draft generation completed',
+        status,
         campaignId: campaign.id,
         campaignName: campaign.name,
         discovered: {
@@ -164,9 +169,17 @@ export async function POST(request: NextRequest, { params }: Params) {
         },
         performance: {
           duration: result.duration,
-          leadsPerSecond: Math.round((result.total / result.duration) * 1000),
+          leadsPerSecond: result.duration > 0 ? Math.round((result.total / result.duration) * 1000) : 0,
         },
         warnings: result.warnings || [],
+        errors: result.errors || [],
+        diagnostics: (result.diagnostics || []).map(d => ({
+          source: d.source,
+          count: d.count,
+          durationMs: d.durationMs,
+          error: d.error || null,
+          details: d.details || null,
+        })),
         newLeadsCount: result.total,
       },
       { status: 200 }

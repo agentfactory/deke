@@ -183,28 +183,36 @@ export default function CampaignDetailPage({
   };
 
   const [isDiscovering, setIsDiscovering] = useState(false);
+  const [discoveryResult, setDiscoveryResult] = useState<any>(null);
 
   const handleDiscoverLeads = async () => {
     if (!campaign) return;
 
     try {
       setIsDiscovering(true);
+      setDiscoveryResult(null);
       const response = await fetch(`/api/campaigns/${campaign.id}/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
 
       if (!response.ok) {
-        throw new Error("Failed to discover leads");
+        const errorData = await response.json().catch(() => ({}));
+        throw new Error(errorData.message || "Failed to discover leads");
       }
 
       const result = await response.json();
-      const msg = `Found ${result.discovered?.total || 0} leads, generated ${result.drafts?.generated || 0} email drafts.`;
-      alert(msg);
+      setDiscoveryResult(result);
+
+      if (result.discovered?.total === 0) {
+        // Don't use alert — the UI will show diagnostics inline
+        console.warn("Discovery returned 0 leads. Diagnostics:", result.diagnostics);
+      }
+
       await fetchCampaign();
     } catch (err) {
       console.error("Error discovering leads:", err);
-      alert("Failed to discover leads");
+      setDiscoveryResult({ error: err instanceof Error ? err.message : "Failed to discover leads" });
     } finally {
       setIsDiscovering(false);
     }
@@ -342,9 +350,12 @@ export default function CampaignDetailPage({
           {/* Status action buttons with help text */}
           {campaign.status === "DRAFT" && (
             <div className="flex flex-col gap-2">
-              <Button onClick={handleDiscoverLeads}>
-                <Target className="h-4 w-4 mr-2" />
-                Discover & Draft
+              <Button onClick={handleDiscoverLeads} disabled={isDiscovering}>
+                {isDiscovering ? (
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
+                ) : (
+                  <><Target className="h-4 w-4 mr-2" />Discover & Draft</>
+                )}
               </Button>
               <p className="text-sm text-muted-foreground">
                 Find leads, enrich contacts, and generate email drafts
@@ -492,6 +503,91 @@ export default function CampaignDetailPage({
         <SourceStats leads={campaign.leads} />
       )}
 
+      {/* Discovery Diagnostics (shown when discovery ran but found 0 leads or had warnings) */}
+      {discoveryResult && (
+        <Card className={discoveryResult.error || discoveryResult.status === 'no_results' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/20' : 'border-green-500 bg-green-50 dark:bg-green-950/20'}>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-sm flex items-center gap-2">
+              {discoveryResult.error || discoveryResult.status === 'no_results' ? (
+                <><AlertTriangle className="h-4 w-4 text-amber-500" /> Discovery Results — {discoveryResult.error ? 'Error' : 'No Leads Found'}</>
+              ) : (
+                <>Discovery Complete — {discoveryResult.discovered?.total} leads found</>
+              )}
+            </CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            {discoveryResult.error && (
+              <p className="text-red-600 font-medium">{discoveryResult.error}</p>
+            )}
+
+            {/* Per-source breakdown */}
+            {discoveryResult.diagnostics && discoveryResult.diagnostics.length > 0 && (
+              <div>
+                <p className="font-medium mb-1">Source Breakdown:</p>
+                <div className="space-y-1">
+                  {discoveryResult.diagnostics.map((d: any, i: number) => (
+                    <div key={i} className="flex items-center justify-between text-xs font-mono bg-white dark:bg-gray-900 rounded px-2 py-1">
+                      <span>{d.source}</span>
+                      <span className={d.error ? 'text-red-500' : 'text-muted-foreground'}>
+                        {d.error ? `ERROR: ${d.error.substring(0, 80)}` : `${d.count} leads (${d.durationMs}ms)`}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
+
+            {/* AI Research details */}
+            {discoveryResult.diagnostics?.find((d: any) => d.source === 'AI Research')?.details && (() => {
+              const aiDetails = discoveryResult.diagnostics.find((d: any) => d.source === 'AI Research').details;
+              return (
+                <div>
+                  <p className="font-medium mb-1">AI Research Pipeline:</p>
+                  <div className="text-xs font-mono bg-white dark:bg-gray-900 rounded px-2 py-1 space-y-0.5">
+                    <p>API calls: {aiDetails.apiCallsMade} made, {aiDetails.apiCallsFailed} failed</p>
+                    <p>Places: {aiDetails.rawPlaces} raw → {aiDetails.uniquePlaces} unique → {aiDetails.musicRelevant} music-relevant</p>
+                    <p>Enriched: {aiDetails.enriched} → {aiDetails.leadsCreated} leads created</p>
+                  </div>
+                </div>
+              );
+            })()}
+
+            {/* Warnings */}
+            {discoveryResult.warnings && discoveryResult.warnings.length > 0 && (
+              <div>
+                <p className="font-medium mb-1">Warnings:</p>
+                <ul className="list-disc list-inside text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
+                  {discoveryResult.warnings.map((w: string, i: number) => (
+                    <li key={i}>{w}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            {/* Errors */}
+            {discoveryResult.errors && discoveryResult.errors.length > 0 && (
+              <div>
+                <p className="font-medium mb-1 text-red-600">Errors:</p>
+                <ul className="list-disc list-inside text-xs text-red-600 space-y-0.5">
+                  {discoveryResult.errors.map((e: string, i: number) => (
+                    <li key={i}>{e}</li>
+                  ))}
+                </ul>
+              </div>
+            )}
+
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setDiscoveryResult(null)}
+              className="mt-2"
+            >
+              Dismiss
+            </Button>
+          </CardContent>
+        </Card>
+      )}
+
       {/* Campaign Info */}
       <div className="grid gap-6 md:grid-cols-2">
         {/* Details Card */}
@@ -567,10 +663,13 @@ export default function CampaignDetailPage({
               className="w-full"
               variant="outline"
               onClick={handleDiscoverLeads}
-              disabled={!campaign}
+              disabled={!campaign || isDiscovering}
             >
-              <Target className="h-4 w-4 mr-2" />
-              Discover More Leads
+              {isDiscovering ? (
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
+              ) : (
+                <><Target className="h-4 w-4 mr-2" />Discover More Leads</>
+              )}
             </Button>
             <Button
               className="w-full"
@@ -602,8 +701,22 @@ export default function CampaignDetailPage({
                   <Users className="h-12 w-12 mx-auto mb-4 opacity-50" />
                   <p className="font-medium">No leads discovered yet</p>
                   <p className="text-sm text-muted-foreground mt-2">
-                    Activate this campaign to start discovering leads in the target area
+                    {discoveryResult?.status === 'no_results'
+                      ? 'Discovery ran but found no leads — check the Overview tab for diagnostics'
+                      : 'Run discovery to find leads in the target area'}
                   </p>
+                  <Button
+                    onClick={handleDiscoverLeads}
+                    disabled={isDiscovering}
+                    className="mt-4"
+                    variant="outline"
+                  >
+                    {isDiscovering ? (
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
+                    ) : (
+                      <><Target className="h-4 w-4 mr-2" />{discoveryResult ? 'Re-run Discovery' : 'Run Discovery'}</>
+                    )}
+                  </Button>
                 </CardContent>
               </Card>
             ) : (

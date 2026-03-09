@@ -9,12 +9,20 @@ import { prisma } from '@/lib/db'
 import { discoverPastClients } from './past-clients'
 import { discoverDormantLeads } from './dormant-leads'
 import { discoverSimilarOrgs } from './similar-orgs'
-import { discoverAIResearch } from './ai-research'
+import { discoverAIResearch, type AIResearchDiagnostics } from './ai-research'
 import { calculateScore, calculateScoreStats } from './scorer'
 import { deduplicate, getDeduplicationStats } from './deduplicator'
 import { classifyOrganization } from './org-classifier'
 import { getRecommendations, buildRecommendationReason } from '@/lib/recommendations/engine'
 import { calculateRecommendationBonus } from '@/lib/recommendations/scorer'
+
+export interface SourceDiagnostic {
+  source: string
+  count: number
+  durationMs: number
+  error?: string
+  details?: AIResearchDiagnostics
+}
 
 export interface DiscoveryResult {
   total: number
@@ -29,6 +37,8 @@ export interface DiscoveryResult {
   deduplicationStats: ReturnType<typeof getDeduplicationStats>
   duration: number
   warnings: string[]
+  diagnostics: SourceDiagnostic[]
+  errors: string[]
 }
 
 /**
@@ -108,13 +118,63 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     warnings.push('GOOGLE_PLACES_API_KEY not configured — AI Research source will be skipped')
   }
 
-  // Run all discovery sources in parallel for performance
-  const [pastClients, dormant, similar, aiResearch] = await Promise.all([
-    discoverPastClients(campaign),
-    discoverDormantLeads(campaign),
-    discoverSimilarOrgs(campaign),
-    discoverAIResearch(campaign),
+  // Run all discovery sources in parallel, each wrapped in individual try/catch
+  const sourceDiagnostics: SourceDiagnostic[] = []
+  const sourceErrors: string[] = []
+
+  const runSource = async <T>(
+    name: string,
+    fn: () => Promise<T>
+  ): Promise<T | null> => {
+    const sourceStart = Date.now()
+    try {
+      const result = await fn()
+      const durationMs = Date.now() - sourceStart
+      const count = Array.isArray(result) ? result.length : 0
+      sourceDiagnostics.push({ source: name, count, durationMs })
+      return result
+    } catch (error) {
+      const durationMs = Date.now() - sourceStart
+      const errMsg = error instanceof Error ? error.message : String(error)
+      sourceDiagnostics.push({ source: name, count: 0, durationMs, error: errMsg })
+      sourceErrors.push(`${name}: ${errMsg}`)
+      console.error(`[Discovery:Orchestrator] ${name} FAILED (${durationMs}ms):`, errMsg)
+      return null
+    }
+  }
+
+  // AI Research needs special handling for its richer result type
+  let aiResearchDiagnostics: AIResearchDiagnostics | undefined
+
+  const [pastClientsResult, dormantResult, similarResult, aiResearchResult] = await Promise.all([
+    runSource('Past Clients', () => discoverPastClients(campaign)),
+    runSource('Dormant Leads', () => discoverDormantLeads(campaign)),
+    runSource('Similar Orgs', () => discoverSimilarOrgs(campaign)),
+    runSource('AI Research', async () => {
+      const result = await discoverAIResearch(campaign)
+      aiResearchDiagnostics = result.diagnostics
+      // Surface AI Research errors as warnings
+      if (result.diagnostics.errors.length > 0) {
+        for (const err of result.diagnostics.errors) {
+          warnings.push(`AI Research: ${err}`)
+        }
+      }
+      return result.leads
+    }),
   ])
+
+  // Attach AI Research detailed diagnostics after runSource has pushed its entry
+  if (aiResearchDiagnostics) {
+    const aiDiag = sourceDiagnostics.find(d => d.source === 'AI Research')
+    if (aiDiag) {
+      aiDiag.details = aiResearchDiagnostics
+    }
+  }
+
+  const pastClients = pastClientsResult || []
+  const dormant = dormantResult || []
+  const similar = similarResult || []
+  const aiResearch = aiResearchResult || []
 
   console.log('[Discovery:Orchestrator] Source results', {
     pastClients: pastClients.length,
@@ -250,6 +310,8 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     deduplicationStats,
     duration,
     warnings,
+    diagnostics: sourceDiagnostics,
+    errors: sourceErrors,
   }
 }
 

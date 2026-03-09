@@ -105,18 +105,49 @@ function NewCampaignContent() {
         );
 
         if (!discoveryResponse.ok) {
-          console.error("Lead discovery failed, but campaign was created");
+          const errorData = await discoveryResponse.json().catch(() => ({}));
+          console.error("Lead discovery failed:", errorData);
+          alert(`Campaign created but discovery failed: ${errorData.message || 'Unknown error'}. You can re-run discovery from the campaign page.`);
         } else {
-          // After discovery, approve the campaign
-          const approveResponse = await fetch(
-            `/api/campaigns/${campaign.id}/approve`,
-            {
-              method: "POST",
-            }
-          );
+          const discoveryResult = await discoveryResponse.json();
 
-          if (!approveResponse.ok) {
-            console.error("Campaign approval failed, but campaign and leads were created");
+          // Show warnings/diagnostics if zero leads found
+          if (discoveryResult.discovered?.total === 0) {
+            const warnings = discoveryResult.warnings || [];
+            const errors = discoveryResult.errors || [];
+            const diagnostics = discoveryResult.diagnostics || [];
+
+            let msg = `Campaign created but no leads were found.\n\n`;
+
+            if (errors.length > 0) {
+              msg += `Errors:\n${errors.map((e: string) => `  - ${e}`).join('\n')}\n\n`;
+            }
+
+            if (warnings.length > 0) {
+              msg += `Warnings:\n${warnings.map((w: string) => `  - ${w}`).join('\n')}\n\n`;
+            }
+
+            // Show per-source breakdown
+            msg += `Source breakdown:\n`;
+            for (const d of diagnostics) {
+              const status = d.error ? `ERROR: ${d.error}` : `${d.count} leads (${d.durationMs}ms)`;
+              msg += `  - ${d.source}: ${status}\n`;
+            }
+
+            msg += `\nYou can re-run discovery from the campaign page.`;
+            alert(msg);
+          } else {
+            // After discovery, approve the campaign
+            const approveResponse = await fetch(
+              `/api/campaigns/${campaign.id}/approve`,
+              {
+                method: "POST",
+              }
+            );
+
+            if (!approveResponse.ok) {
+              console.error("Campaign approval failed, but campaign and leads were created");
+            }
           }
         }
       }
