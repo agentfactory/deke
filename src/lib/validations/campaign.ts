@@ -3,8 +3,10 @@ import { z } from 'zod'
 // Campaign status enum validation
 export const campaignStatusSchema = z.enum([
   'DRAFT',
+  'READY',
   'APPROVED',
   'ACTIVE',
+  'SENDING',
   'PAUSED',
   'COMPLETED',
   'CANCELLED'
@@ -20,6 +22,7 @@ export const createCampaignSchema = z.object({
   startDate: z.string().datetime().optional().nullable(),
   endDate: z.string().datetime().optional().nullable(),
   bookingId: z.string().optional().nullable(),
+  targetOrgTypes: z.string().optional().nullable(), // JSON array of org type strings
 })
 
 // Update campaign schema (all fields optional)

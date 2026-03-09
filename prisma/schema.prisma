@@ -36,6 +36,15 @@ model Lead {
   longitude     Float?
   lastContactedAt DateTime?
 
+  // Enrichment fields
+  website           String?
+  emailVerified     Boolean   @default(false)
+  needsEnrichment   Boolean   @default(false)
+  enrichmentSource  String?   // "website_scrape", "manual", "google_places"
+  contactTitle      String?   // "Music Director", "President", etc.
+  editorialSummary  String?   // Google's one-line description for email personalization
+  googleRating      Float?    // Google Places rating (1-5)
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
@@ -469,6 +478,9 @@ model Campaign {
   outreachLogs  OutreachLog[]
   emailDrafts   EmailDraft[]
 
+  // Prospect mode: target org types without requiring a booking
+  targetOrgTypes  String?      // JSON array: ["CHOIR", "BARBERSHOP", "MUSIC_SCHOOL"]
+
   // Optional: Link to booking that triggered campaign
   booking       Booking?       @relation(fields: [bookingId], references: [id])
   bookingId     String?        @unique
@@ -487,7 +499,7 @@ model CampaignLead {
   lead          Lead                @relation(fields: [leadId], references: [id])
   leadId        String
   score         Int                 @default(50) // 0-100
-  distance      Float               // miles from campaign base location
+  distance      Float?              // miles from campaign base location (null if no coordinates)
   source        String              // PAST_CLIENT, DORMANT, SIMILAR_ORG, AI_RESEARCH, MANUAL_IMPORT
   status        String              @default("PENDING") // PENDING, CONTACTED, OPENED, CLICKED, RESPONDED, BOOKED, DECLINED, REMOVED
   createdAt     DateTime            @default(now())

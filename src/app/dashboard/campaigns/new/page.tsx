@@ -68,6 +68,9 @@ function NewCampaignContent() {
         startDate: startDateTime,
         endDate: endDateTime,
         ...(bookingId && { bookingId }), // Include bookingId if present
+        ...(values.targetOrgTypes && values.targetOrgTypes.length > 0 && {
+          targetOrgTypes: JSON.stringify(values.targetOrgTypes),
+        }),
       };
 
       console.log("Creating campaign:", payload);

@@ -13,12 +13,12 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowUpDown, UserMinus, UserPlus } from 'lucide-react'
+import { ArrowUpDown, UserMinus, UserPlus, CheckCircle, AlertCircle, HelpCircle } from 'lucide-react'
 
 interface CampaignLead {
   id: string
   score: number
-  distance: number
+  distance: number | null
   source: string
   status: string
   lead: {
@@ -30,6 +30,9 @@ interface CampaignLead {
     organization: string | null
     status: string
     score: number
+    emailVerified?: boolean
+    needsEnrichment?: boolean
+    website?: string | null
   }
   outreachLogs: Array<{
     id: string
@@ -110,16 +113,30 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
-      cell: ({ row }) => (
-        <div>
-          <div className="font-medium">
-            {row.original.lead.firstName} {row.original.lead.lastName}
+      cell: ({ row }) => {
+        const lead = row.original.lead
+        const isPlaceholder = lead.email.includes('@placeholder.local')
+        return (
+          <div>
+            <div className="font-medium flex items-center gap-1.5">
+              {lead.firstName} {lead.lastName}
+              {lead.emailVerified && (
+                <span title="Verified email"><CheckCircle className="h-3.5 w-3.5 text-emerald-500" /></span>
+              )}
+              {lead.needsEnrichment && (
+                <span title="Needs enrichment"><AlertCircle className="h-3.5 w-3.5 text-amber-500" /></span>
+              )}
+            </div>
+            <div className="text-sm text-muted-foreground">
+              {isPlaceholder ? (
+                <span className="text-amber-500 italic">No email found</span>
+              ) : (
+                lead.email
+              )}
+            </div>
           </div>
-          <div className="text-sm text-muted-foreground">
-            {row.original.lead.email}
-          </div>
-        </div>
-      ),
+        )
+      },
     },
     {
       accessorKey: 'lead.organization',
@@ -166,6 +183,41 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
         return (
           <Badge variant="outline" className={config.className}>
             {config.label}
+          </Badge>
+        )
+      },
+    },
+    {
+      id: 'enrichment',
+      header: 'Contact',
+      cell: ({ row }) => {
+        const lead = row.original.lead
+        if (lead.emailVerified) {
+          return (
+            <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
+              Verified
+            </Badge>
+          )
+        }
+        if (lead.needsEnrichment) {
+          return (
+            <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
+              No Email
+            </Badge>
+          )
+        }
+        // Has email but not enriched/verified
+        const isGeneric = lead.email.startsWith('info@') || lead.email.startsWith('contact@') || lead.email.startsWith('admin@')
+        if (isGeneric) {
+          return (
+            <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
+              Generic
+            </Badge>
+          )
+        }
+        return (
+          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30">
+            Email
           </Badge>
         )
       },

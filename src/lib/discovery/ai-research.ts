@@ -7,6 +7,7 @@
  */
 
 import { prisma } from '@/lib/db'
+import { enrichOrganization } from '@/lib/enrichment'
 
 interface Campaign {
   id: string
@@ -27,6 +28,13 @@ interface DiscoveredLead {
   longitude: number
   score: number
   distance: number
+  website?: string | null
+  emailVerified?: boolean
+  needsEnrichment?: boolean
+  enrichmentSource?: string | null
+  contactTitle?: string | null
+  editorialSummary?: string | null
+  googleRating?: number | null
 }
 
 // Music-specific keywords for targeted search
@@ -145,46 +153,63 @@ function deduplicateByPlaceId(places: any[]): any[] {
   return Array.from(placeMap.values())
 }
 
+interface PlaceDetails {
+  phone: string | null
+  website: string | null
+  googleRating: number | null
+  userRatingCount: number | null
+  editorialSummary: string | null
+  primaryType: string | null
+}
+
 /**
- * Fetch additional contact details from Google Places Details API
+ * Fetch place details from Google Places (New) API
  *
- * Gets real phone numbers and website URLs that aren't available
- * in the Text Search API response.
- *
- * @param placeId - Google Place ID
- * @param apiKey - Google Places API key
- * @returns Phone number and website (if available)
+ * Gets phone, website, rating, editorial summary, and primary type.
+ * Uses GET https://places.googleapis.com/v1/places/{PLACE_ID}
  */
 async function fetchPlaceDetails(
   placeId: string,
   apiKey: string
-): Promise<{ phone: string | null; website: string | null }> {
-  try {
-    const url = new URL('https://maps.googleapis.com/maps/api/place/details/json')
-    url.searchParams.set('place_id', placeId)
-    url.searchParams.set('fields', 'formatted_phone_number,website')
-    url.searchParams.set('key', apiKey)
+): Promise<PlaceDetails> {
+  const emptyResult: PlaceDetails = {
+    phone: null,
+    website: null,
+    googleRating: null,
+    userRatingCount: null,
+    editorialSummary: null,
+    primaryType: null,
+  }
 
-    const response = await fetch(url.toString())
+  try {
+    const response = await fetch(
+      `https://places.googleapis.com/v1/places/${placeId}`,
+      {
+        headers: {
+          'X-Goog-Api-Key': apiKey,
+          'X-Goog-FieldMask': 'nationalPhoneNumber,websiteUri,rating,userRatingCount,editorialSummary,primaryTypeDisplayName,displayName',
+        },
+      }
+    )
 
     if (!response.ok) {
-      console.error(`Details API error: ${response.statusText}`)
-      return { phone: null, website: null }
+      console.error(`[AI Research] Details API error: ${response.status} ${response.statusText}`)
+      return emptyResult
     }
 
     const data = await response.json()
 
-    if (data.status === 'OK' && data.result) {
-      return {
-        phone: data.result.formatted_phone_number || null,
-        website: data.result.website || null,
-      }
+    return {
+      phone: data.nationalPhoneNumber || null,
+      website: data.websiteUri || null,
+      googleRating: data.rating || null,
+      userRatingCount: data.userRatingCount || null,
+      editorialSummary: data.editorialSummary?.text || null,
+      primaryType: data.primaryTypeDisplayName?.text || null,
     }
-
-    return { phone: null, website: null }
   } catch (error) {
-    console.error(`Failed to fetch details for place ${placeId}:`, error)
-    return { phone: null, website: null }
+    console.error(`[AI Research] Failed to fetch details for place ${placeId}:`, error)
+    return emptyResult
   }
 }
 
@@ -270,8 +295,8 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
 
     console.log(`AI Research: Top 20 music organizations selected`)
 
-    // Enrich top 20 with REAL contact information from Details API
-    console.log('AI Research: Fetching real contact details (phone, website)...')
+    // Enrich top 20 with REAL contact information from Places New API
+    console.log('[AI Research] Using Places New API — fetching details (phone, website, rating, summary)...')
 
     const enrichedPlaces = await Promise.all(
       top20.map(async (place) => {
@@ -280,11 +305,15 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
           ...place,
           phone: details.phone,
           website: details.website,
+          googleRating: details.googleRating,
+          userRatingCount: details.userRatingCount,
+          editorialSummary: details.editorialSummary,
+          primaryType: details.primaryType,
         }
       })
     )
 
-    console.log('AI Research: Contact details enriched')
+    console.log('[AI Research] Contact details enriched')
 
     // Batch convert places to leads and CREATE them in database
     const discovered = await placesToLeadsBatch(enrichedPlaces, campaign)
@@ -307,12 +336,10 @@ export async function discoverAIResearch(campaign: Campaign): Promise<Discovered
 }
 
 /**
- * Search Google Places API using keyword-based text search
+ * Search Google Places (New) API using Text Search
  *
- * Uses Text Search endpoint: https://developers.google.com/maps/documentation/places/web-service/search-text
- *
- * This provides more precise targeting than generic place types,
- * allowing us to search for "choir" or "barbershop quartet" specifically
+ * Uses POST https://places.googleapis.com/v1/places:searchText
+ * Returns place IDs, names, locations, types, and addresses.
  */
 async function searchPlacesByKeyword(
   lat: number,
@@ -322,35 +349,54 @@ async function searchPlacesByKeyword(
   keyword: string,
   apiKey: string
 ): Promise<any[]> {
-  const url = new URL('https://maps.googleapis.com/maps/api/place/textsearch/json')
-
-  // Construct query: "choir in Ottawa" or "barbershop quartet in Ottawa"
   const query = `${keyword} in ${location}`
 
-  url.searchParams.set('query', query)
-  url.searchParams.set('location', `${lat},${lng}`)
-  url.searchParams.set('radius', radius.toString())
-  url.searchParams.set('key', apiKey)
-
-  const response = await fetch(url.toString())
+  const response = await fetch('https://places.googleapis.com/v1/places:searchText', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'X-Goog-Api-Key': apiKey,
+      'X-Goog-FieldMask': 'places.displayName,places.id,places.location,places.types,places.formattedAddress',
+    },
+    body: JSON.stringify({
+      textQuery: query,
+      locationBias: {
+        circle: {
+          center: { latitude: lat, longitude: lng },
+          radiusMeters: radius,
+        },
+      },
+    }),
+  })
 
   if (!response.ok) {
-    throw new Error(`Places API error: ${response.statusText}`)
+    throw new Error(`Places New API error: ${response.status} ${response.statusText}`)
   }
 
   const data = await response.json()
+  const places = data.places || []
 
-  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    throw new Error(`Places API status: ${data.status}`)
-  }
-
-  return data.results || []
+  // Map New API response to match our internal format
+  return places.map((place: any) => ({
+    name: place.displayName?.text || '',
+    place_id: place.id,
+    geometry: {
+      location: {
+        lat: place.location?.latitude || 0,
+        lng: place.location?.longitude || 0,
+      },
+    },
+    types: place.types || [],
+    formatted_address: place.formattedAddress || '',
+  }))
 }
 
 /**
- * Batch convert Google Places to Leads (optimized)
+ * Batch convert Google Places to Leads with REAL enrichment
  *
- * Does a single database query to check for existing orgs instead of 1 query per place
+ * Does a single database query to check for existing orgs,
+ * then enriches new orgs by scraping their websites for real contact info.
+ * NEVER generates fake emails.
  */
 async function placesToLeadsBatch(places: any[], campaign: Campaign): Promise<DiscoveredLead[]> {
   if (places.length === 0) return []
@@ -414,137 +460,65 @@ async function placesToLeadsBatch(places: any[], campaign: Campaign): Promise<Di
         distance,
       })
     } else {
-      // Generate contact with REAL data from Details API (or synthetic fallback)
-      const firstName = 'Contact'
-      const lastName = `at ${organization}`
-      const email = generateContactEmail(organization, place.website || null)
+      // ENRICH: Scrape website for real contacts instead of generating fake ones
+      const enrichment = await enrichOrganization(
+        place.website || null,
+        place.phone || null,
+        organization
+      )
 
-      leads.push({
-        firstName,
-        lastName,
-        email,
-        phone: place.phone || null, // ← Use REAL phone from Details API
-        organization,
-        source: 'AI_RESEARCH',
-        latitude: place.geometry.location.lat,
-        longitude: place.geometry.location.lng,
-        score: 30,
-        distance,
-      })
+      if (enrichment.email) {
+        // Found a real email via enrichment
+        leads.push({
+          firstName: enrichment.firstName || 'Contact',
+          lastName: enrichment.lastName || `at ${organization}`,
+          email: enrichment.email,
+          phone: enrichment.phone,
+          organization,
+          source: 'AI_RESEARCH',
+          latitude: place.geometry.location.lat,
+          longitude: place.geometry.location.lng,
+          score: 30,
+          distance,
+          website: enrichment.website,
+          emailVerified: enrichment.emailVerified,
+          needsEnrichment: false,
+          enrichmentSource: enrichment.enrichmentSource,
+          contactTitle: enrichment.contactTitle || null,
+          editorialSummary: place.editorialSummary || null,
+          googleRating: place.googleRating || null,
+        })
+      } else {
+        // No email found - create lead with needsEnrichment flag
+        const placeholderEmail = `needs-enrichment+${organization.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 40)}@placeholder.local`
+
+        leads.push({
+          firstName: 'Contact',
+          lastName: `at ${organization}`,
+          email: placeholderEmail,
+          phone: enrichment.phone,
+          organization,
+          source: 'AI_RESEARCH',
+          latitude: place.geometry.location.lat,
+          longitude: place.geometry.location.lng,
+          score: 15, // Lower score for leads without emails
+          distance,
+          website: enrichment.website,
+          emailVerified: false,
+          needsEnrichment: true,
+          enrichmentSource: null,
+          contactTitle: enrichment.contactTitle || null,
+          editorialSummary: place.editorialSummary || null,
+          googleRating: place.googleRating || null,
+        })
+      }
     }
   }
 
   return leads
 }
 
-/**
- * Convert Google Place to Lead (DEPRECATED - use placesToLeadsBatch instead)
- *
- * Generates synthetic contact info since Places API doesn't provide individual contacts
- */
-async function placeToLead(place: any, campaign: Campaign): Promise<DiscoveredLead | null> {
-  // Extract organization name
-  const organization = place.name
-  if (!organization) return null
-
-  // Calculate distance
-  const distance = haversineDistance(
-    campaign.latitude,
-    campaign.longitude,
-    place.geometry.location.lat,
-    place.geometry.location.lng
-  )
-
-  // Check if this organization already exists in our database
-  const existingLead = await prisma.lead.findFirst({
-    where: {
-      organization: {
-        contains: organization,
-        mode: 'insensitive',
-      },
-    },
-  })
-
-  // If exists, return existing lead data
-  if (existingLead) {
-    return {
-      firstName: existingLead.firstName,
-      lastName: existingLead.lastName,
-      email: existingLead.email,
-      phone: existingLead.phone,
-      organization,
-      source: 'AI_RESEARCH',
-      latitude: place.geometry.location.lat,
-      longitude: place.geometry.location.lng,
-      score: 30, // Base score for AI research
-      distance,
-    }
-  }
-
-  // Generate synthetic contact (to be enriched later)
-  // Format: "Contact at [Organization Name]"
-  const firstName = 'Contact'
-  const lastName = `at ${organization}`
-  const email = generateOrgEmail(organization)
-
-  return {
-    firstName,
-    lastName,
-    email,
-    phone: null, // Will need manual enrichment
-    organization,
-    source: 'AI_RESEARCH',
-    latitude: place.geometry.location.lat,
-    longitude: place.geometry.location.lng,
-    score: 30,
-    distance,
-  }
-}
-
-/**
- * Generate a synthetic email for an organization
- * Format: contact@[domain-from-org-name].com
- */
-function generateOrgEmail(organization: string): string {
-  // Convert org name to domain-friendly format
-  const domain = organization
-    .toLowerCase()
-    .replace(/[^a-z0-9\s-]/g, '') // Remove special chars
-    .replace(/\s+/g, '-') // Replace spaces with hyphens
-    .replace(/-+/g, '-') // Remove duplicate hyphens
-    .substring(0, 50) // Limit length
-
-  return `contact@${domain}.com`
-}
-
-/**
- * Generate contact email using real website domain if available
- *
- * Uses actual website domain for more realistic emails (info@realwebsite.org)
- * Falls back to synthetic email if no website available
- *
- * @param organization - Organization name
- * @param website - Website URL from Places Details API (if available)
- * @returns Email address
- */
-function generateContactEmail(organization: string, website: string | null): string {
-  if (website) {
-    try {
-      // Extract domain from website URL
-      const url = new URL(website)
-      const domain = url.hostname.replace(/^www\./, '') // Remove www. prefix
-
-      // Use common email prefixes for organizations
-      return `info@${domain}`
-    } catch (error) {
-      // Invalid URL, fall back to synthetic email
-      console.warn(`Invalid website URL for ${organization}: ${website}`)
-    }
-  }
-
-  // Fallback to synthetic email based on org name
-  return generateOrgEmail(organization)
-}
+// Deprecated functions removed - all contact generation now goes through enrichment pipeline
 
 /**
  * Calculate distance between two points using Haversine formula
@@ -605,6 +579,15 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
           latitude: lead.latitude,
           longitude: lead.longitude,
           organization: lead.organization,
+          // Update enrichment fields
+          ...(lead.website && { website: lead.website }),
+          ...(lead.emailVerified !== undefined && { emailVerified: lead.emailVerified }),
+          ...(lead.needsEnrichment !== undefined && { needsEnrichment: lead.needsEnrichment }),
+          ...(lead.enrichmentSource && { enrichmentSource: lead.enrichmentSource }),
+          // New fields from Places New API + scraper
+          ...(lead.contactTitle && { contactTitle: lead.contactTitle }),
+          ...(lead.editorialSummary && { editorialSummary: lead.editorialSummary }),
+          ...(lead.googleRating && { googleRating: lead.googleRating }),
         },
         create: {
           firstName: lead.firstName,
@@ -617,14 +600,25 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
           score: lead.score,
           latitude: lead.latitude,
           longitude: lead.longitude,
+          // Enrichment fields
+          website: lead.website || null,
+          emailVerified: lead.emailVerified || false,
+          needsEnrichment: lead.needsEnrichment || false,
+          enrichmentSource: lead.enrichmentSource || null,
+          // New fields from Places New API + scraper
+          contactTitle: lead.contactTitle || null,
+          editorialSummary: lead.editorialSummary || null,
+          googleRating: lead.googleRating || null,
         },
       })
 
-      // Return with distance and source info
+      // Return with distance, source, and enrichment info
       createdLeads.push({
         ...dbLead,
         distance: lead.distance,
         source: lead.source,
+        needsEnrichment: lead.needsEnrichment || false,
+        emailVerified: lead.emailVerified || false,
       })
     } catch (error) {
       console.error(`Failed to create lead ${lead.email}:`, error)

@@ -1,137 +1,225 @@
 /**
  * Lead Scoring Algorithm
  *
- * Calculates a relevance score (0-100) for discovered leads based on:
- * - Source quality (past client > dormant > similar org > AI research)
- * - Geographic proximity (closer = better)
- * - Recency of last contact
- * - Relationship strength (booking count)
- * - Music relevance (music-specific organizations get bonus points)
+ * Calculates a relevance score (0-100) for discovered leads.
+ *
+ * COLD LEADS (AI_RESEARCH): Scored on email quality, org relevance, contact richness,
+ * proximity, Google rating, and website presence.
+ *
+ * WARM LEADS (PAST_CLIENT, DORMANT, SIMILAR_ORG): Scored on source quality, proximity,
+ * recency, relationship strength, music relevance, and email quality.
  */
 
 import type { OrgType } from './org-classifier'
 
 interface Lead {
   source: 'PAST_CLIENT' | 'DORMANT' | 'SIMILAR_ORG' | 'AI_RESEARCH'
-  distance: number
+  distance: number | null
   lastContactedAt?: Date | null
   bookings?: Array<{ id: string }> | null
   inquiries?: Array<{ id: string }> | null
   organization?: string | null
   orgType?: OrgType | null
+  // Enrichment fields
+  emailVerified?: boolean
+  needsEnrichment?: boolean
+  enrichmentSource?: string | null
+  website?: string | null
+  phone?: string | null
+  email?: string | null
+  // Google Places data
+  googleRating?: number | null
 }
 
 interface Campaign {
   radius: number
 }
 
-/**
- * Calculate music relevance bonus for a lead
- *
- * Music-specific organizations get bonus points to prioritize them
- * in lead discovery and outreach.
- *
- * @param lead - The discovered lead
- * @returns Music bonus score (0-15 points)
- */
-function calculateMusicBonus(lead: Lead): number {
-  // High-priority music organization types (15 points)
-  const musicOrgTypes: OrgType[] = [
-    'BARBERSHOP',
-    'A_CAPPELLA_GROUP',
-    'GOSPEL_CHOIR',
-    'COMMUNITY_CHORUS',
-    'YOUTH_CHOIR',
-    'CHOIR',
-    'MUSIC_SCHOOL',
-    'CONSERVATORY',
-  ]
+// ============================================
+// HIGH-VALUE MUSIC ORG TYPES
+// ============================================
 
-  if (lead.orgType && musicOrgTypes.includes(lead.orgType)) {
-    return 15
+const HIGH_VALUE_MUSIC_ORGS: OrgType[] = [
+  'BARBERSHOP', 'A_CAPPELLA_GROUP', 'GOSPEL_CHOIR',
+  'COMMUNITY_CHORUS', 'YOUTH_CHOIR', 'CHOIR',
+  'MUSIC_SCHOOL', 'CONSERVATORY',
+]
+
+const MEDIUM_VALUE_ORGS: OrgType[] = [
+  'UNIVERSITY', 'COLLEGE', 'HIGH_SCHOOL',
+  'PERFORMING_ARTS', 'ARTS_CENTER',
+]
+
+const LOW_VALUE_ORGS: OrgType[] = [
+  'CHURCH', 'SYNAGOGUE', 'COMMUNITY_CENTER',
+]
+
+// ============================================
+// COLD LEAD SCORING (AI_RESEARCH)
+// ============================================
+
+/**
+ * Score a cold lead discovered via AI Research (Google Places)
+ *
+ * | Factor           | Points | Logic                                                |
+ * |------------------|--------|------------------------------------------------------|
+ * | Email quality    | 0-25   | Personal verified=25, generic verified=15, scraped=10 |
+ * | Org relevance    | 0-25   | Music org=25, related=15, church=10, unknown=0       |
+ * | Contact richness | 0-15   | phone+email+website=15, two=10, one=5                |
+ * | Proximity        | 0-15   | Inner 25%=15, 50%=10, 75%=5, outer=0                |
+ * | Google rating    | 0-10   | rating * 2                                           |
+ * | Has website      | 0-10   | Website with email=10, website only=5, none=0        |
+ */
+function scoreColdLead(lead: Lead, campaign: Campaign): number {
+  let score = 0
+
+  // 1. Email quality (0-25)
+  if (lead.needsEnrichment || !lead.email || lead.email.includes('@placeholder.local')) {
+    score += 0
+  } else if (lead.emailVerified && lead.enrichmentSource === 'website_scrape') {
+    // Check if it's a personal email (has a real first name, not "Contact")
+    const isPersonal = lead.email && !lead.email.startsWith('info@') &&
+      !lead.email.startsWith('contact@') && !lead.email.startsWith('admin@') &&
+      !lead.email.startsWith('office@') && !lead.email.startsWith('hello@')
+    score += isPersonal ? 25 : 15
+  } else {
+    score += 10 // Has an email but unverified
   }
 
-  // Music keywords in organization name (10 points)
+  // 2. Org relevance (0-25)
+  score += scoreOrgRelevance(lead)
+
+  // 3. Contact richness (0-15)
+  const hasEmail = lead.email && !lead.email.includes('@placeholder.local')
+  const hasPhone = !!lead.phone
+  const hasWebsite = !!lead.website
+  const contactCount = [hasEmail, hasPhone, hasWebsite].filter(Boolean).length
+  if (contactCount >= 3) score += 15
+  else if (contactCount === 2) score += 10
+  else if (contactCount === 1) score += 5
+
+  // 4. Proximity (0-15)
+  score += scoreProximity(lead.distance, campaign.radius)
+
+  // 5. Google rating (0-10)
+  if (lead.googleRating && lead.googleRating > 0) {
+    score += Math.min(10, Math.round(lead.googleRating * 2))
+  }
+
+  // 6. Has website (0-10)
+  if (hasWebsite && hasEmail) score += 10
+  else if (hasWebsite) score += 5
+
+  return score
+}
+
+// ============================================
+// WARM LEAD SCORING (PAST_CLIENT, DORMANT, SIMILAR_ORG)
+// ============================================
+
+/**
+ * Score a warm lead (known relationship)
+ */
+function scoreWarmLead(lead: Lead, campaign: Campaign): number {
+  let score = 0
+
+  // 1. Base score by source (0-40)
+  const baseScores = {
+    PAST_CLIENT: 40,
+    DORMANT: 25,
+    SIMILAR_ORG: 20,
+    AI_RESEARCH: 0, // Should never hit this path
+  }
+  score += baseScores[lead.source] || 0
+
+  // 2. Proximity (0-15)
+  score += scoreProximity(lead.distance, campaign.radius)
+
+  // 3. Recency (0-10)
+  if (lead.lastContactedAt) {
+    const monthsAgo = (Date.now() - lead.lastContactedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
+    if (monthsAgo <= 12) score += 10
+    else if (monthsAgo <= 24) score += 5
+  }
+
+  // 4. Relationship strength (0-10)
+  const bookingCount = lead.bookings?.length || 0
+  if (bookingCount >= 3) score += 10
+  else if (bookingCount >= 2) score += 7
+  else if (bookingCount === 1) score += 5
+  else if (lead.inquiries?.length) score += 2
+
+  // 5. Music relevance (0-15)
+  score += scoreOrgRelevance(lead) > 15 ? 15 : scoreOrgRelevance(lead)
+
+  // 6. Email quality (0-10) - even warm leads benefit from verified emails
+  if (lead.emailVerified) score += 10
+  else if (lead.email && !lead.email.includes('@placeholder.local')) score += 5
+
+  return score
+}
+
+// ============================================
+// SHARED SCORING HELPERS
+// ============================================
+
+function scoreProximity(distance: number | null, radius: number): number {
+  if (distance === null || distance === undefined) return 0
+  const percentage = distance / radius
+  if (percentage <= 0.25) return 15
+  if (percentage <= 0.50) return 10
+  if (percentage <= 0.75) return 5
+  return 0
+}
+
+function scoreOrgRelevance(lead: Lead): number {
+  // Check by classified org type first
+  if (lead.orgType) {
+    if (HIGH_VALUE_MUSIC_ORGS.includes(lead.orgType)) return 25
+    if (MEDIUM_VALUE_ORGS.includes(lead.orgType)) return 15
+    if (LOW_VALUE_ORGS.includes(lead.orgType)) return 10
+  }
+
+  // Fallback: keyword matching on organization name
   if (lead.organization) {
     const name = lead.organization.toLowerCase()
-    if (/choir|chorus|barbershop|a\s?cappella|harmony|vocal|singers/i.test(name)) {
-      return 10
-    }
+    if (/choir|chorus|barbershop|a\s?cappella|harmony|vocal|singers/i.test(name)) return 25
+    if (/music|conservatory|school of music/i.test(name)) return 20
+    if (/university|college|high school/i.test(name)) return 15
+    if (/church|temple|synagogue/i.test(name)) return 10
   }
 
   return 0
 }
 
+// ============================================
+// PUBLIC API
+// ============================================
+
 /**
  * Calculate relevance score for a discovered lead
+ *
+ * Routes to cold or warm scoring based on source type.
  *
  * @param lead - The discovered lead
  * @param campaign - The campaign context
  * @returns Score from 0-100
  */
 export function calculateScore(lead: Lead, campaign: Campaign): number {
-  let score = 0
+  let score: number
 
-  // 1. Base score by source (0-70 points)
-  const baseScores = {
-    PAST_CLIENT: 70, // Highest - proven relationship
-    DORMANT: 50, // Medium-high - had interest before
-    SIMILAR_ORG: 40, // Medium - similar profile
-    AI_RESEARCH: 30, // Lowest - cold lead
-  }
-  score += baseScores[lead.source] || 30
-
-  // 2. Proximity bonus (0-15 points)
-  // Leads closer to the campaign center are more relevant
-  const distancePercent = lead.distance / campaign.radius
-
-  if (distancePercent <= 0.25) {
-    score += 15 // Within inner 25% of radius
-  } else if (distancePercent <= 0.5) {
-    score += 10 // Within 50% of radius
-  } else if (distancePercent <= 0.75) {
-    score += 5 // Within 75% of radius
-  }
-  // No bonus for outer 25% of radius
-
-  // 3. Recency bonus (0-10 points)
-  // More recent contact = better memory/relationship
-  if (lead.lastContactedAt) {
-    const monthsAgo = (Date.now() - lead.lastContactedAt.getTime()) / (1000 * 60 * 60 * 24 * 30)
-
-    if (monthsAgo <= 12) {
-      score += 10 // Contacted within last year
-    } else if (monthsAgo <= 24) {
-      score += 5 // Contacted within 2 years
-    }
-    // No bonus if contacted more than 2 years ago
+  if (lead.source === 'AI_RESEARCH') {
+    score = scoreColdLead(lead, campaign)
+  } else {
+    score = scoreWarmLead(lead, campaign)
   }
 
-  // 4. Relationship strength bonus (0-5 points)
-  // Multiple bookings indicate strong relationship
-  const bookingCount = lead.bookings?.length || 0
-
-  if (bookingCount >= 2) {
-    score += 5 // Multiple bookings - very strong relationship
-  } else if (bookingCount === 1) {
-    score += 3 // Single booking - proven relationship
-  } else if (lead.inquiries?.length) {
-    score += 1 // Had inquiry but no booking - some interest
-  }
-
-  // 5. Music relevance bonus (0-15 points)
-  // Music-specific organizations get prioritized for vocal coaching/workshops
-  score += calculateMusicBonus(lead)
-
-  // Clamp score to 0-100 range
+  // Clamp to 0-100
   return Math.min(100, Math.max(0, score))
 }
 
 /**
  * Calculate score distribution statistics for a set of leads
- *
- * @param scores - Array of lead scores
- * @returns Statistics about the score distribution
  */
 export function calculateScoreStats(scores: number[]): {
   min: number
@@ -139,10 +227,10 @@ export function calculateScoreStats(scores: number[]): {
   avg: number
   median: number
   distribution: {
-    excellent: number // 80-100
-    good: number // 60-79
-    fair: number // 40-59
-    poor: number // 0-39
+    excellent: number
+    good: number
+    fair: number
+    poor: number
   }
 } {
   if (scores.length === 0) {

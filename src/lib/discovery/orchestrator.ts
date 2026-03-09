@@ -57,6 +57,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
         },
       },
     },
+    // Also get targetOrgTypes for prospect mode
   })
 
   if (!campaign) {
@@ -88,8 +89,8 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     warnings.push('Campaign has no radius set — geo-based sources will return empty')
   }
 
-  if (!campaign.booking) {
-    warnings.push('Campaign has no linked booking — Similar Orgs source will be skipped')
+  if (!campaign.booking && !campaign.targetOrgTypes) {
+    warnings.push('Campaign has no linked booking or target org types — Similar Orgs source will be skipped')
   }
 
   // Check how many leads in DB have coordinates vs total
@@ -217,7 +218,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
           campaignId: campaign.id,
           leadId: lead.id,
           score: lead.score,
-          distance: lead.distance,
+          distance: lead.distance ?? null, // null for leads without coordinates
           source: lead.source,
           status: 'PENDING',
           // Phase 3: Store recommendations

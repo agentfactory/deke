@@ -57,7 +57,7 @@ interface Campaign {
   leads: Array<{
     id: string;
     score: number;
-    distance: number;
+    distance: number | null;
     source: string;
     status: string;
     lead: {
@@ -69,6 +69,9 @@ interface Campaign {
       organization: string | null;
       status: string;
       score: number;
+      emailVerified?: boolean;
+      needsEnrichment?: boolean;
+      website?: string | null;
     };
     outreachLogs: Array<{
       id: string;
@@ -179,10 +182,13 @@ export default function CampaignDetailPage({
     }
   };
 
+  const [isDiscovering, setIsDiscovering] = useState(false);
+
   const handleDiscoverLeads = async () => {
     if (!campaign) return;
 
     try {
+      setIsDiscovering(true);
       const response = await fetch(`/api/campaigns/${campaign.id}/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
@@ -193,23 +199,24 @@ export default function CampaignDetailPage({
       }
 
       const result = await response.json();
-      alert(`Discovered ${result.newLeadsCount} new leads!`);
-      await fetchCampaign(); // Refresh to show new leads
+      const msg = `Found ${result.discovered?.total || 0} leads, generated ${result.drafts?.generated || 0} email drafts.`;
+      alert(msg);
+      await fetchCampaign();
     } catch (err) {
       console.error("Error discovering leads:", err);
       alert("Failed to discover leads");
+    } finally {
+      setIsDiscovering(false);
     }
   };
 
   const handleSendOutreach = () => {
-    // For now, show the launch confirmation dialog
-    // TODO: In Phase 2, this will open lead selection dialog for targeted outreach
-    if (campaign?.status === "APPROVED") {
+    if (campaign?.status === "READY" || campaign?.status === "APPROVED") {
       setShowLaunchConfirm(true);
-    } else if (campaign?.status === "ACTIVE") {
-      alert("Campaign already launched. Use lead selection (coming in Phase 2) for targeted follow-ups.");
+    } else if (campaign?.status === "ACTIVE" || campaign?.status === "SENDING") {
+      alert("Campaign already launched.");
     } else {
-      alert("Campaign must be approved before launching outreach.");
+      alert("Run discovery first to prepare emails.");
     }
   };
 
@@ -250,8 +257,10 @@ export default function CampaignDetailPage({
   const getStatusBadge = (status: string) => {
     const variants: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
       DRAFT: "secondary",
+      READY: "default",
       APPROVED: "outline",
       ACTIVE: "default",
+      SENDING: "default",
       PAUSED: "secondary",
       COMPLETED: "outline",
       CANCELLED: "destructive",
@@ -333,16 +342,16 @@ export default function CampaignDetailPage({
           {/* Status action buttons with help text */}
           {campaign.status === "DRAFT" && (
             <div className="flex flex-col gap-2">
-              <Button onClick={() => handleStatusChange("APPROVED")}>
-                <Play className="h-4 w-4 mr-2" />
-                Approve Campaign
+              <Button onClick={handleDiscoverLeads}>
+                <Target className="h-4 w-4 mr-2" />
+                Discover & Draft
               </Button>
               <p className="text-sm text-muted-foreground">
-                Review leads and campaign details before launching outreach
+                Find leads, enrich contacts, and generate email drafts
               </p>
             </div>
           )}
-          {campaign.status === "APPROVED" && (
+          {(campaign.status === "READY" || campaign.status === "APPROVED") && (
             <div className="flex flex-col gap-2">
               <Button
                 onClick={() => setShowLaunchConfirm(true)}
@@ -350,10 +359,10 @@ export default function CampaignDetailPage({
                 className="flex items-center gap-2"
               >
                 <AlertTriangle className="h-4 w-4" />
-                Launch Outreach
+                Send All Emails
               </Button>
               <p className="text-sm text-muted-foreground">
-                ⚠️ This will send messages to {campaign._count?.leads || 0} leads. Cannot be undone.
+                Review drafts first, then send to {campaign._count?.leads || 0} leads
               </p>
             </div>
           )}
@@ -400,14 +409,13 @@ export default function CampaignDetailPage({
         </div>
       </div>
 
-      {/* Tabs */}
-      <Tabs defaultValue="overview" className="space-y-6">
+      {/* Tabs - default to drafts where the action is */}
+      <Tabs defaultValue={campaign.leads.length > 0 ? "drafts" : "overview"} className="space-y-6">
         <TabsList>
           <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads ({campaign.leads.length})</TabsTrigger>
           <TabsTrigger value="drafts">Drafts</TabsTrigger>
           <TabsTrigger value="messages">Messages ({campaign._count.outreachLogs})</TabsTrigger>
-          <TabsTrigger value="analytics">Analytics</TabsTrigger>
         </TabsList>
 
         <TabsContent value="overview" className="space-y-6">
@@ -633,16 +641,7 @@ export default function CampaignDetailPage({
           />
         </TabsContent>
 
-        <TabsContent value="analytics">
-          <Card>
-            <CardContent className="py-12 text-center">
-              <p className="font-medium">Analytics coming soon</p>
-              <p className="text-sm text-muted-foreground mt-2">
-                Track open rates, click rates, and conversion metrics
-              </p>
-            </CardContent>
-          </Card>
-        </TabsContent>
+        {/* Analytics tab removed - placeholder wasn't useful */}
       </Tabs>
 
       {/* Delete Confirmation Dialog */}

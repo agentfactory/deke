@@ -13,6 +13,7 @@ interface Campaign {
   latitude: number
   longitude: number
   radius: number
+  targetOrgTypes?: string | null // JSON array of org types for prospect mode
   booking?: {
     location: string | null
     lead?: {
@@ -30,34 +31,53 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
     leadOrg: campaign.booking?.lead?.organization,
   })
 
-  // Determine organization type from the booking location
-  const bookingLocation = campaign.booking?.location
-  if (!bookingLocation) {
-    console.warn('[Discovery:SimilarOrgs] No booking location — skipping')
-    return []
-  }
+  // Determine search keywords: from targetOrgTypes (prospect mode) or booking location
+  let keywords: string[] = []
 
-  let orgType = classifyFromLocation(bookingLocation)
-
-  // Fallback: if location is a street address (UNKNOWN), try classifying the lead's organization name
-  if (orgType === 'UNKNOWN' && campaign.booking?.lead?.organization) {
-    orgType = classifyOrganization(campaign.booking.lead.organization)
-    if (orgType !== 'UNKNOWN') {
-      console.log(`[Discovery:SimilarOrgs] Location unclassifiable, fell back to lead org: ${orgType}`)
+  if (campaign.targetOrgTypes) {
+    // Prospect mode: use explicit target org types
+    try {
+      const orgTypes = JSON.parse(campaign.targetOrgTypes) as string[]
+      for (const type of orgTypes) {
+        const typeKeywords = getSimilarOrgKeywords(type as any)
+        keywords.push(...typeKeywords)
+      }
+      // Deduplicate keywords
+      keywords = [...new Set(keywords)]
+      console.log(`[Discovery:SimilarOrgs] Using ${orgTypes.length} target org types with ${keywords.length} keywords`)
+    } catch (error) {
+      console.error('[Discovery:SimilarOrgs] Failed to parse targetOrgTypes:', error)
     }
   }
 
-  if (orgType === 'UNKNOWN') {
-    console.warn(`[Discovery:SimilarOrgs] Could not classify: "${bookingLocation}" — skipping`)
-    return []
-  }
-
-  console.log(`[Discovery:SimilarOrgs] Classified as ${orgType}`)
-
-  // Get keywords for similar organization search
-  const keywords = getSimilarOrgKeywords(orgType)
   if (keywords.length === 0) {
-    return []
+    // Booking-based mode: classify from booking location
+    const bookingLocation = campaign.booking?.location
+    if (!bookingLocation) {
+      console.warn('[Discovery:SimilarOrgs] No booking location or target org types — skipping')
+      return []
+    }
+
+    let orgType = classifyFromLocation(bookingLocation)
+
+    // Fallback: if location is a street address (UNKNOWN), try classifying the lead's organization name
+    if (orgType === 'UNKNOWN' && campaign.booking?.lead?.organization) {
+      orgType = classifyOrganization(campaign.booking.lead.organization)
+      if (orgType !== 'UNKNOWN') {
+        console.log(`[Discovery:SimilarOrgs] Location unclassifiable, fell back to lead org: ${orgType}`)
+      }
+    }
+
+    if (orgType === 'UNKNOWN') {
+      console.warn(`[Discovery:SimilarOrgs] Could not classify: "${bookingLocation}" — skipping`)
+      return []
+    }
+
+    console.log(`[Discovery:SimilarOrgs] Classified as ${orgType}`)
+    keywords = getSimilarOrgKeywords(orgType)
+    if (keywords.length === 0) {
+      return []
+    }
   }
 
   // Calculate bounding box for efficient database query
@@ -122,7 +142,6 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
         ...lead,
         distance,
         source: 'SIMILAR_ORG' as const,
-        orgType, // Include the detected organization type for debugging
       }
     })
     .filter((lead): lead is NonNullable<typeof lead> => lead !== null && lead.distance <= campaign.radius)

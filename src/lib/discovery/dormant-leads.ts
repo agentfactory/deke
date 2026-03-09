@@ -3,6 +3,8 @@
  *
  * Discovers leads that were contacted but have gone dormant (no contact in 6+ months).
  * Includes leads with DECLINED or EXPIRED inquiries that might be ready to reconsider.
+ *
+ * Phase 5: Includes leads without coordinates (lower proximity score, distance: null)
  */
 
 import { prisma } from '@/lib/db'
@@ -31,55 +33,67 @@ export async function discoverDormantLeads(campaign: Campaign) {
   const sixMonthsAgo = new Date()
   sixMonthsAgo.setMonth(sixMonthsAgo.getMonth() - 6)
 
-  // Find leads with no recent contact within the bounding box
-  const leads = await prisma.lead.findMany({
-    where: {
-      AND: [
-        {
-          OR: [
-            // Leads contacted but not recently
-            {
-              lastContactedAt: { lt: sixMonthsAgo },
-            },
-            // Leads with DECLINED or EXPIRED inquiries
-            {
-              inquiries: {
-                some: {
-                  status: { in: ['DECLINED', 'EXPIRED'] },
-                },
+  // Dormancy conditions (shared between geo and no-geo queries)
+  const dormancyConditions = {
+    AND: [
+      {
+        OR: [
+          { lastContactedAt: { lt: sixMonthsAgo } },
+          {
+            inquiries: {
+              some: {
+                status: { in: ['DECLINED', 'EXPIRED'] },
               },
             },
-          ],
-        },
-        // Must have coordinates
-        {
-          latitude: { gte: bbox.minLat, lte: bbox.maxLat },
-          longitude: { gte: bbox.minLon, lte: bbox.maxLon },
-        },
-        // Exclude leads that are already WON or COMPLETED (handled by past-clients)
-        {
-          status: { notIn: ['WON', 'COMPLETED'] },
-        },
-      ],
-    },
-    include: {
-      inquiries: {
-        where: { status: { in: ['DECLINED', 'EXPIRED'] } },
-        orderBy: { createdAt: 'desc' },
-        take: 1,
+          },
+        ],
       },
-      bookings: true,
-    },
-  })
+      { status: { notIn: ['WON', 'COMPLETED'] } },
+    ],
+  }
 
-  console.log(`[Discovery:Dormant] Found ${leads.length} leads in bounding box`)
+  // TWO queries: with and without coordinates
+  const [geoLeads, noGeoLeads] = await Promise.all([
+    prisma.lead.findMany({
+      where: {
+        ...dormancyConditions,
+        latitude: { gte: bbox.minLat, lte: bbox.maxLat },
+        longitude: { gte: bbox.minLon, lte: bbox.maxLon },
+      },
+      include: {
+        inquiries: {
+          where: { status: { in: ['DECLINED', 'EXPIRED'] } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        bookings: true,
+      },
+    }),
+    prisma.lead.findMany({
+      where: {
+        ...dormancyConditions,
+        OR: [
+          { latitude: null },
+          { longitude: null },
+        ],
+      },
+      include: {
+        inquiries: {
+          where: { status: { in: ['DECLINED', 'EXPIRED'] } },
+          orderBy: { createdAt: 'desc' },
+          take: 1,
+        },
+        bookings: true,
+      },
+    }),
+  ])
 
-  // Filter by exact haversine distance and calculate distance for each lead
-  const results = leads
+  console.log(`[Discovery:Dormant] Found ${geoLeads.length} geo leads + ${noGeoLeads.length} without coordinates`)
+
+  // Process geo leads with distance filter
+  const geoResults = geoLeads
     .map((lead) => {
-      if (lead.latitude === null || lead.longitude === null) {
-        return null
-      }
+      if (lead.latitude === null || lead.longitude === null) return null
 
       const distance = haversineDistance(
         { lat: campaign.latitude, lon: campaign.longitude },
@@ -95,6 +109,14 @@ export async function discoverDormantLeads(campaign: Campaign) {
     })
     .filter((lead): lead is NonNullable<typeof lead> => lead !== null && lead.distance <= campaign.radius)
 
-  console.log(`[Discovery:Dormant] Returning ${results.length} leads after distance filter`)
+  // Include no-geo leads with null distance
+  const noGeoResults = noGeoLeads.map((lead) => ({
+    ...lead,
+    distance: null as number | null,
+    source: 'DORMANT' as const,
+  }))
+
+  const results = [...geoResults, ...noGeoResults]
+  console.log(`[Discovery:Dormant] Returning ${results.length} leads (${geoResults.length} geo + ${noGeoResults.length} no-geo)`)
   return results
 }

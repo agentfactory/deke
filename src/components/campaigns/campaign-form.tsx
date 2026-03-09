@@ -22,7 +22,10 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 import { Slider } from "@/components/ui/slider";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Badge } from "@/components/ui/badge";
 import { Loader2 } from "lucide-react";
+import { useState } from "react";
 
 const campaignFormSchema = z.object({
   name: z.string().min(3, "Campaign name must be at least 3 characters"),
@@ -37,6 +40,7 @@ const campaignFormSchema = z.object({
     "ARRANGEMENTS",
     "SPEAKING",
   ]),
+  targetOrgTypes: z.array(z.string()).optional(),
 }).refine((data) => {
   const start = new Date(data.startDate);
   const end = new Date(data.endDate);
@@ -45,6 +49,20 @@ const campaignFormSchema = z.object({
   message: "End date must be after start date",
   path: ["endDate"],
 });
+
+const TARGET_ORG_OPTIONS = [
+  { value: "CHOIR", label: "Choir / Chorus" },
+  { value: "BARBERSHOP", label: "Barbershop" },
+  { value: "A_CAPPELLA_GROUP", label: "A Cappella Group" },
+  { value: "GOSPEL_CHOIR", label: "Gospel Choir" },
+  { value: "COMMUNITY_CHORUS", label: "Community Chorus" },
+  { value: "YOUTH_CHOIR", label: "Youth Choir" },
+  { value: "MUSIC_SCHOOL", label: "Music School" },
+  { value: "CONSERVATORY", label: "Conservatory" },
+  { value: "UNIVERSITY", label: "University" },
+  { value: "HIGH_SCHOOL", label: "High School" },
+  { value: "CHURCH", label: "Church" },
+];
 
 export type CampaignFormValues = z.infer<typeof campaignFormSchema>;
 
@@ -115,6 +133,7 @@ export function CampaignForm({
   };
 
   const computedInitialValues = getInitialValues();
+  const [prospectMode, setProspectMode] = useState(!initialBooking);
 
   const form = useForm<CampaignFormValues>({
     resolver: zodResolver(campaignFormSchema),
@@ -125,6 +144,7 @@ export function CampaignForm({
       startDate: computedInitialValues?.startDate || "",
       endDate: computedInitialValues?.endDate || "",
       serviceType: computedInitialValues?.serviceType || "COACHING",
+      targetOrgTypes: [],
     },
   });
 
@@ -271,6 +291,60 @@ export function CampaignForm({
             </FormItem>
           )}
         />
+
+        {/* Prospect Mode - Target Org Types */}
+        {!initialBooking && (
+          <div className="space-y-3 rounded-lg border p-4 bg-muted/30">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="font-medium text-sm">Prospect Mode</p>
+                <p className="text-xs text-muted-foreground">
+                  Discover leads without a linked booking - just enter a city
+                </p>
+              </div>
+              <Badge variant={prospectMode ? "default" : "outline"} className="text-xs">
+                {prospectMode ? "On" : "Off"}
+              </Badge>
+            </div>
+
+            {prospectMode && (
+              <FormField
+                control={form.control}
+                name="targetOrgTypes"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-sm">Target Organization Types</FormLabel>
+                    <div className="grid grid-cols-2 gap-2">
+                      {TARGET_ORG_OPTIONS.map((opt) => (
+                        <div key={opt.value} className="flex items-center gap-2">
+                          <Checkbox
+                            id={`org-${opt.value}`}
+                            checked={field.value?.includes(opt.value) || false}
+                            onCheckedChange={(checked) => {
+                              const current = field.value || []
+                              if (checked) {
+                                field.onChange([...current, opt.value])
+                              } else {
+                                field.onChange(current.filter((v: string) => v !== opt.value))
+                              }
+                            }}
+                            disabled={isLoading}
+                          />
+                          <label htmlFor={`org-${opt.value}`} className="text-sm cursor-pointer">
+                            {opt.label}
+                          </label>
+                        </div>
+                      ))}
+                    </div>
+                    <FormDescription>
+                      Select which types of organizations to search for
+                    </FormDescription>
+                  </FormItem>
+                )}
+              />
+            )}
+          </div>
+        )}
 
         <div className="flex gap-4 pt-4">
           <Button
