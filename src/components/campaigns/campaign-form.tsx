@@ -148,6 +148,26 @@ export function CampaignForm({
     },
   });
 
+  // Watch dates for auto-end-date logic and summary display
+  const watchStartDate = form.watch("startDate");
+  const watchEndDate = form.watch("endDate");
+
+  const handleStartDateChange = (newStartDate: string) => {
+    form.setValue("startDate", newStartDate);
+
+    if (newStartDate) {
+      const start = new Date(newStartDate);
+      const currentEnd = form.getValues("endDate");
+
+      // Auto-set end date if: empty, or end is before/equal to new start
+      if (!currentEnd || new Date(currentEnd) <= start) {
+        const autoEnd = new Date(start);
+        autoEnd.setDate(autoEnd.getDate() + 30);
+        form.setValue("endDate", autoEnd.toISOString().split("T")[0]);
+      }
+    }
+  };
+
   const handleSubmit = (isDraft: boolean) => {
     return form.handleSubmit((values) => onSubmit(values, isDraft));
   };
@@ -222,42 +242,87 @@ export function CampaignForm({
           )}
         />
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-          <FormField
-            control={form.control}
-            name="startDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Start Date</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    disabled={isLoading}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        {/* Date Selection */}
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <p className="text-sm font-medium">Availability Window</p>
+            <div className="flex gap-1.5">
+              {[
+                { label: "Next 2 wks", days: 14 },
+                { label: "Next month", days: 30 },
+                { label: "Next 2 mo", days: 60 },
+                { label: "Next 3 mo", days: 90 },
+              ].map((preset) => (
+                <Button
+                  key={preset.days}
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  className="text-xs h-7 px-2"
+                  disabled={isLoading}
+                  onClick={() => {
+                    const start = new Date();
+                    const end = new Date();
+                    end.setDate(end.getDate() + preset.days);
+                    form.setValue("startDate", start.toISOString().split("T")[0]);
+                    form.setValue("endDate", end.toISOString().split("T")[0]);
+                  }}
+                >
+                  {preset.label}
+                </Button>
+              ))}
+            </div>
+          </div>
 
-          <FormField
-            control={form.control}
-            name="endDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>End Date</FormLabel>
-                <FormControl>
-                  <Input
-                    type="date"
-                    {...field}
-                    disabled={isLoading}
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Start Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      value={field.value}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
+                      onBlur={field.onBlur}
+                      name={field.name}
+                      ref={field.ref}
+                      disabled={isLoading}
+                      min={new Date().toISOString().split("T")[0]}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="endDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>End Date</FormLabel>
+                  <FormControl>
+                    <Input
+                      type="date"
+                      {...field}
+                      disabled={isLoading}
+                      min={watchStartDate || new Date().toISOString().split("T")[0]}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+          </div>
+
+          {watchStartDate && watchEndDate && (
+            <p className="text-xs text-muted-foreground">
+              {Math.ceil((new Date(watchEndDate).getTime() - new Date(watchStartDate).getTime()) / (1000 * 60 * 60 * 24))} day window
+            </p>
+          )}
         </div>
 
         <FormField

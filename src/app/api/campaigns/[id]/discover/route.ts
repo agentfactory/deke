@@ -24,7 +24,7 @@ export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params
 
-    // Verify campaign exists
+    // Verify campaign exists (include booking for date context)
     const campaign = await prisma.campaign.findUnique({
       where: { id },
       select: {
@@ -35,6 +35,16 @@ export async function POST(request: NextRequest, { params }: Params) {
         longitude: true,
         radius: true,
         status: true,
+        startDate: true,
+        endDate: true,
+        booking: {
+          select: {
+            startDate: true,
+            endDate: true,
+            serviceType: true,
+            location: true,
+          },
+        },
       },
     })
 
@@ -50,9 +60,38 @@ export async function POST(request: NextRequest, { params }: Params) {
     let draftsSkipped = 0
 
     try {
+      // Build availability date string from campaign or booking dates
+      const formatDate = (d: Date | string | null) => {
+        if (!d) return null
+        return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
+      }
+
+      const availStart = formatDate(campaign.booking?.startDate || campaign.startDate)
+      const availEnd = formatDate(campaign.booking?.endDate || campaign.endDate)
+      let availabilityDates = ''
+      if (availStart && availEnd) {
+        availabilityDates = `${availStart} through ${availEnd}`
+      } else if (availStart) {
+        availabilityDates = `around ${availStart}`
+      }
+
+      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://dekesharon.com'
+      const workshopLink = `${baseUrl}/workshops`
+      const servicesLink = `${baseUrl}/services`
+
       // Find template
       let templateSubject = 'Collaboration Opportunity with Deke Sharon'
-      let templateBody = 'Hi {{firstName}},\n\nI\'m reaching out because I\'ll be in the {{baseLocation}} area soon and thought there might be an opportunity to work together.\n\nWould you be open to a conversation?\n\nBest,\nDeke Sharon'
+      let templateBody = `Hi {{firstName}},
+
+I'm Deke Sharon, and I'll be in the {{baseLocation}} area{{availabilityDates}} — I'd love to explore working with {{organization}}.
+
+I offer workshops, coaching, and masterclasses tailored to vocal groups of all levels. You can see the full list of what I offer here: {{workshopLink}}
+
+Would you be open to a quick conversation about what might be a good fit?
+
+Best,
+Deke Sharon
+{{servicesLink}}`
 
       const defaultTemplate = await prisma.messageTemplate.findFirst({
         where: { channel: 'EMAIL' },
@@ -93,7 +132,7 @@ export async function POST(request: NextRequest, { params }: Params) {
           continue
         }
 
-        const vars = {
+        const vars: Record<string, string> = {
           firstName: cl.lead.firstName,
           lastName: cl.lead.lastName,
           organization: cl.lead.organization || '',
@@ -101,6 +140,9 @@ export async function POST(request: NextRequest, { params }: Params) {
           editorialSummary: cl.lead.editorialSummary || '',
           email: cl.lead.email,
           baseLocation: campaign.baseLocation,
+          availabilityDates: availabilityDates ? ` ${availabilityDates}` : ' soon',
+          workshopLink,
+          servicesLink,
         }
 
         const renderedSubject = renderTemplate(templateSubject, vars)
