@@ -352,16 +352,16 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
   )
 
-  // LIMIT TO TOP 20 highest-quality leads
-  const top20 = sorted.slice(0, 20)
+  // LIMIT TO TOP 50 highest-quality leads
+  const topResults = sorted.slice(0, 50)
 
-  console.log(`[AI Research] Top ${top20.length} music organizations selected for enrichment`)
+  console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
 
-  // Enrich top 20 with REAL contact information from Places New API
+  // Enrich top results with REAL contact information from Places New API
   console.log('[AI Research] Using Places New API — fetching details (phone, website, rating, summary)...')
 
   const enrichedPlaces = await Promise.all(
-    top20.map(async (place) => {
+    topResults.map(async (place) => {
       const details = await fetchPlaceDetails(place.place_id, apiKey)
       return {
         ...place,

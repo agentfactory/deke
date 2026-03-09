@@ -378,7 +378,27 @@ export function CampaignForm({
                 name="targetOrgTypes"
                 render={({ field }) => (
                   <FormItem>
-                    <FormLabel className="text-sm">Target Organization Types</FormLabel>
+                    <div className="flex items-center justify-between">
+                      <FormLabel className="text-sm">Target Organization Types</FormLabel>
+                      <div className="flex gap-2">
+                        <button
+                          type="button"
+                          className="text-xs text-primary hover:underline"
+                          onClick={() => field.onChange(TARGET_ORG_OPTIONS.map(o => o.value))}
+                          disabled={isLoading}
+                        >
+                          Select All
+                        </button>
+                        <button
+                          type="button"
+                          className="text-xs text-muted-foreground hover:underline"
+                          onClick={() => field.onChange([])}
+                          disabled={isLoading}
+                        >
+                          Clear All
+                        </button>
+                      </div>
+                    </div>
                     <div className="grid grid-cols-2 gap-2">
                       {TARGET_ORG_OPTIONS.map((opt) => (
                         <div key={opt.value} className="flex items-center gap-2">

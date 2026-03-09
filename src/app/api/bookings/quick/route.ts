@@ -3,6 +3,8 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { handleApiError, ApiError } from "@/lib/api-error";
 import { sendBookingNotification } from "@/lib/notifications/booking-notification";
+import { geocodeAddress } from "@/lib/services/geocoding";
+import { discoverLeads } from "@/lib/discovery";
 
 // Zero-friction booking creation
 // Auto-creates Lead if needed, creates Booking, optionally links to Trip
@@ -127,7 +129,60 @@ export async function POST(request: NextRequest) {
       console.error('Failed to send booking notification:', error);
     });
 
-    return NextResponse.json(booking, { status: 201 });
+    // Step 4: Auto-create campaign if booking has location + startDate
+    let campaign = null;
+    if (location && startDate) {
+      try {
+        const geoResult = await geocodeAddress(location);
+        if (geoResult) {
+          const bookingStart = new Date(startDate);
+          const bookingEnd = endDate ? new Date(endDate) : bookingStart;
+          const campaignStart = new Date(bookingStart);
+          campaignStart.setDate(campaignStart.getDate() - (availabilityBefore ?? 3));
+          const campaignEnd = new Date(bookingEnd);
+          campaignEnd.setDate(campaignEnd.getDate() + (availabilityAfter ?? 3));
+
+          campaign = await prisma.campaign.create({
+            data: {
+              name: `${serviceType} - ${location} (${bookingStart.toLocaleDateString("en-US", { month: "short", day: "numeric" })})`,
+              baseLocation: location,
+              latitude: geoResult.latitude,
+              longitude: geoResult.longitude,
+              radius: 100,
+              startDate: campaignStart,
+              endDate: campaignEnd,
+              bookingId: booking.id,
+              status: "DRAFT",
+            },
+          });
+
+          // Trigger lead discovery async (non-blocking)
+          discoverLeads(campaign.id).catch((err) => {
+            console.error("Lead discovery failed (non-blocking):", err);
+          });
+        }
+      } catch (err) {
+        console.error("Campaign auto-creation failed (non-blocking):", err);
+        // Don't fail the booking — campaign is a bonus
+      }
+    }
+
+    return NextResponse.json(
+      {
+        ...booking,
+        ...(campaign && {
+          campaign: {
+            id: campaign.id,
+            name: campaign.name,
+            status: campaign.status,
+            radius: campaign.radius,
+            startDate: campaign.startDate,
+            endDate: campaign.endDate,
+          },
+        }),
+      },
+      { status: 201 }
+    );
   } catch (error) {
     return handleApiError(error);
   }
