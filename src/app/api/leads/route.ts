@@ -93,11 +93,21 @@ export async function GET(request: NextRequest) {
       offset: searchParams.get('offset') || undefined,
     })
 
+    const search = searchParams.get('search') || undefined
+
     const where: any = {}
     if (filters.status) where.status = filters.status
     if (filters.source) where.source = filters.source
     if (filters.email) where.email = { contains: filters.email, mode: 'insensitive' }
     if (filters.organization) where.organization = { contains: filters.organization, mode: 'insensitive' }
+    if (search) {
+      where.OR = [
+        { firstName: { contains: search, mode: 'insensitive' } },
+        { lastName: { contains: search, mode: 'insensitive' } },
+        { email: { contains: search, mode: 'insensitive' } },
+        { organization: { contains: search, mode: 'insensitive' } },
+      ]
+    }
 
     const limit = filters.limit ?? 50
     const offset = filters.offset ?? 0
@@ -117,6 +127,7 @@ export async function GET(request: NextRequest) {
               bookings: true,
               inquiries: true,
               orders: true,
+              campaignLeads: true,
             }
           }
         }

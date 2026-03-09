@@ -1,30 +1,14 @@
 import { prisma } from '@/lib/db'
-import Link from 'next/link'
 import { Users, Mail, UserPlus } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
 import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
+  Table, TableBody, TableCell, TableHead, TableHeader, TableRow,
 } from '@/components/ui/table'
+import ContactsClient from './contacts-client'
 
 export const dynamic = 'force-dynamic'
 export const revalidate = 0
-
-const STATUS_COLORS: Record<string, string> = {
-  NEW: 'bg-blue-500',
-  CONTACTED: 'bg-yellow-500',
-  QUALIFIED: 'bg-green-500',
-  PROPOSAL_SENT: 'bg-purple-500',
-  NEGOTIATING: 'bg-orange-500',
-  WON: 'bg-emerald-500',
-  LOST: 'bg-red-500',
-  DORMANT: 'bg-gray-400',
-}
 
 const REQUEST_STATUS_STYLES: Record<string, string> = {
   PENDING: 'bg-yellow-100 text-yellow-800 border-yellow-200',
@@ -35,9 +19,7 @@ const REQUEST_STATUS_STYLES: Record<string, string> = {
 
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-US', {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
+    month: 'short', day: 'numeric', year: 'numeric',
   }).format(date)
 }
 
@@ -55,6 +37,13 @@ export default async function ContactsPage() {
   } catch (error) {
     console.error('Error fetching contacts:', error)
   }
+
+  // Serialize dates for client component
+  const serializedLeads = leads.map(l => ({
+    ...l,
+    createdAt: l.createdAt.toISOString(),
+    lastContactedAt: l.lastContactedAt?.toISOString() ?? null,
+  }))
 
   return (
     <div className="bg-white dark:bg-stone-950 min-h-screen">
@@ -88,91 +77,9 @@ export default async function ContactsPage() {
             <TabsTrigger value="requests">Group Requests</TabsTrigger>
           </TabsList>
 
-          {/* All Leads Tab */}
+          {/* All Leads Tab - now uses client component */}
           <TabsContent value="leads" className="mt-4">
-            {leads.length === 0 ? (
-              <EmptyState
-                icon={<Users className="h-10 w-10 text-stone-300" aria-hidden="true" />}
-                message="No leads yet. They will appear here as inquiries come in."
-              />
-            ) : (
-              <div className="rounded-lg border border-stone-200 dark:border-stone-800 overflow-x-auto">
-                <Table>
-                  <TableHeader>
-                    <TableRow className="bg-stone-50 dark:bg-stone-900">
-                      <TableHead className="font-semibold">Name</TableHead>
-                      <TableHead className="font-semibold">Email</TableHead>
-                      <TableHead className="font-semibold">Organization</TableHead>
-                      <TableHead className="font-semibold">Source</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
-                      <TableHead className="font-semibold text-center">Score</TableHead>
-                      <TableHead className="font-semibold text-center">Bookings</TableHead>
-                      <TableHead className="font-semibold">Date</TableHead>
-                    </TableRow>
-                  </TableHeader>
-                  <TableBody>
-                    {leads.map((lead) => (
-                      <TableRow
-                        key={lead.id}
-                        className="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors"
-                      >
-                        <TableCell>
-                          <Link
-                            href={`/dashboard/leads/${lead.id}`}
-                            className="font-medium text-stone-900 dark:text-white hover:text-blue-600 dark:hover:text-blue-400 transition-colors"
-                          >
-                            {lead.firstName} {lead.lastName}
-                          </Link>
-                        </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400 max-w-[200px] truncate">
-                          {lead.email}
-                        </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400">
-                          {lead.organization || '\u2014'}
-                        </TableCell>
-                        <TableCell>
-                          {lead.source ? (
-                            <Badge variant="outline" className="text-xs capitalize">
-                              {lead.source}
-                            </Badge>
-                          ) : (
-                            <span className="text-stone-400">{'\u2014'}</span>
-                          )}
-                        </TableCell>
-                        <TableCell>
-                          <span className="inline-flex items-center gap-1.5 text-xs text-stone-700 dark:text-stone-300">
-                            <span
-                              className={`h-2 w-2 rounded-full shrink-0 ${STATUS_COLORS[lead.status] || 'bg-gray-400'}`}
-                              aria-hidden="true"
-                            />
-                            {lead.status}
-                          </span>
-                        </TableCell>
-                        <TableCell className="text-center">
-                          <div className="inline-flex flex-col items-center gap-0.5">
-                            <span className="text-sm font-medium text-stone-900 dark:text-white">
-                              {lead.score}
-                            </span>
-                            <div className="w-8 h-1 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
-                              <div
-                                className="h-full rounded-full bg-blue-500"
-                                style={{ width: `${Math.min(lead.score, 100)}%` }}
-                              />
-                            </div>
-                          </div>
-                        </TableCell>
-                        <TableCell className="text-center text-stone-600 dark:text-stone-400">
-                          {lead._count.bookings}
-                        </TableCell>
-                        <TableCell className="text-stone-500 dark:text-stone-400 text-sm whitespace-nowrap">
-                          {formatDate(lead.createdAt)}
-                        </TableCell>
-                      </TableRow>
-                    ))}
-                  </TableBody>
-                </Table>
-              </div>
-            )}
+            <ContactsClient initialLeads={serializedLeads} />
           </TabsContent>
 
           {/* Subscribers Tab */}
@@ -279,11 +186,7 @@ export default async function ContactsPage() {
                           <div className="flex flex-wrap gap-1">
                             {req.genres.length > 0 ? (
                               req.genres.slice(0, 3).map((genre) => (
-                                <Badge
-                                  key={genre}
-                                  variant="secondary"
-                                  className="text-xs capitalize"
-                                >
+                                <Badge key={genre} variant="secondary" className="text-xs capitalize">
                                   {genre}
                                 </Badge>
                               ))
@@ -330,7 +233,6 @@ function EmptyState({ icon, message }: { icon: React.ReactNode; message: string 
 async function fetchLeads() {
   return prisma.lead.findMany({
     orderBy: { createdAt: 'desc' },
-    take: 50,
     select: {
       id: true,
       firstName: true,
@@ -342,6 +244,7 @@ async function fetchLeads() {
       status: true,
       score: true,
       createdAt: true,
+      lastContactedAt: true,
       _count: { select: { bookings: true, campaignLeads: true } },
     },
   })
