@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { handleApiError, ApiError } from "@/lib/api-error";
 import { sendBookingNotification } from "@/lib/notifications/booking-notification";
+import { sendCloudflareNotification } from "@/lib/notifications/cloudflare-notify";
 
 // Map project type from form to service type
 const projectTypeToServiceType: Record<string, string> = {
@@ -137,6 +138,21 @@ export async function POST(request: NextRequest) {
       clientNotes: booking.clientNotes,
     }).catch((error) => {
       console.error("Failed to send booking notification:", error);
+    });
+
+    // Also notify via Cloudflare Worker (independent backup)
+    sendCloudflareNotification({
+      type: 'booking_request',
+      name,
+      email,
+      phone: phone || undefined,
+      organization: organization || undefined,
+      serviceType: projectType,
+      eventDate: eventDate || undefined,
+      budget: budget || undefined,
+      message: message || undefined,
+    }).catch((error) => {
+      console.error("Failed to send Cloudflare notification:", error);
     });
 
     return NextResponse.json({

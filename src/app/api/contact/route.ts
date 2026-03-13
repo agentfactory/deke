@@ -3,6 +3,7 @@ import { z } from "zod";
 import { prisma } from "@/lib/db";
 import { handleApiError, ApiError } from "@/lib/api-error";
 import { sendSignupNotification } from "@/lib/notifications/signup-notification";
+import { sendCloudflareNotification } from "@/lib/notifications/cloudflare-notify";
 
 const ContactFormSchema = z.object({
   firstName: z.string().min(1, "First name is required"),
@@ -57,7 +58,15 @@ export async function POST(request: NextRequest) {
       name: `${firstName} ${lastName}`,
       email,
       message: `Subject: ${subject}\n\n${message}`,
-    }).catch(err => console.error('Contact notification failed:', err))
+    }).catch(err => console.error('Contact notification failed:', err));
+
+    // Also notify via Cloudflare Worker (independent backup)
+    sendCloudflareNotification({
+      type: 'contact',
+      name: `${firstName} ${lastName}`,
+      email,
+      message: `Subject: ${subject}\n\n${message}`,
+    }).catch(err => console.error('Cloudflare notification failed:', err));
 
     return NextResponse.json({
       success: true,
