@@ -98,16 +98,25 @@ export async function POST(request: NextRequest) {
     });
 
     // Step 3: Create Booking Request (pending status)
+    // Parse eventDate safely — it's a free-text field so only use it if it's a valid date
+    let parsedDate: Date | null = null;
+    if (eventDate) {
+      const d = new Date(eventDate);
+      if (!isNaN(d.getTime())) {
+        parsedDate = d;
+      }
+    }
+
     const booking = await prisma.booking.create({
       data: {
         leadId: lead.id,
         inquiryId: inquiry.id,
         serviceType,
         status: "PENDING",
-        startDate: eventDate ? new Date(eventDate) : null,
+        startDate: parsedDate,
         paymentStatus: "UNPAID",
         clientNotes: message,
-        internalNotes: budget ? `Budget: ${budget}` : null,
+        internalNotes: [budget ? `Budget: ${budget}` : null, eventDate && !parsedDate ? `Preferred dates: ${eventDate}` : null].filter(Boolean).join('\n') || null,
       },
       include: {
         lead: {
@@ -124,36 +133,39 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send booking notification emails (async - don't block response)
-    sendBookingNotification({
-      bookingId: booking.id,
-      leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
-      leadEmail: booking.lead.email,
-      leadPhone: booking.lead.phone,
-      organization: booking.lead.organization,
-      serviceType: booking.serviceType,
-      startDate: booking.startDate,
-      location: null,
-      amount: null,
-      clientNotes: booking.clientNotes,
-    }).catch((error) => {
-      console.error("Failed to send booking notification:", error);
-    });
+    // Send notifications — await both so they complete before the response
+    const [resendResult, cfResult] = await Promise.allSettled([
+      sendBookingNotification({
+        bookingId: booking.id,
+        leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
+        leadEmail: booking.lead.email,
+        leadPhone: booking.lead.phone,
+        organization: booking.lead.organization,
+        serviceType: booking.serviceType,
+        startDate: booking.startDate,
+        location: null,
+        amount: null,
+        clientNotes: booking.clientNotes,
+      }),
+      sendCloudflareNotification({
+        type: 'booking_request',
+        name,
+        email,
+        phone: phone || undefined,
+        organization: organization || undefined,
+        serviceType: projectType,
+        eventDate: eventDate || undefined,
+        budget: budget || undefined,
+        message: message || undefined,
+      }),
+    ]);
 
-    // Also notify via Cloudflare Worker (independent backup)
-    sendCloudflareNotification({
-      type: 'booking_request',
-      name,
-      email,
-      phone: phone || undefined,
-      organization: organization || undefined,
-      serviceType: projectType,
-      eventDate: eventDate || undefined,
-      budget: budget || undefined,
-      message: message || undefined,
-    }).catch((error) => {
-      console.error("Failed to send Cloudflare notification:", error);
-    });
+    if (resendResult.status === 'rejected') {
+      console.error("[BOOKING-REQUEST] Resend notification threw:", resendResult.reason);
+    }
+    if (cfResult.status === 'rejected') {
+      console.error("[BOOKING-REQUEST] Cloudflare notification threw:", cfResult.reason);
+    }
 
     return NextResponse.json({
       success: true,
