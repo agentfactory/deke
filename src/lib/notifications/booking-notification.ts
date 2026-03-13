@@ -249,9 +249,10 @@ export async function sendBookingNotification(
   const apiKey = process.env.RESEND_API_KEY
   const fromEmail = process.env.RESEND_FROM_EMAIL
 
-  // Check if email is configured
+  console.log('[NOTIFICATION:RESEND:BOOKING] Starting...', { bookingId: data.bookingId, serviceType: data.serviceType, to: NOTIFICATION_EMAILS, clientEmail: data.leadEmail })
+
   if (!apiKey || !fromEmail) {
-    console.warn('Email notifications not configured - RESEND_API_KEY or RESEND_FROM_EMAIL missing')
+    console.error('[NOTIFICATION:RESEND:BOOKING] NOT CONFIGURED — missing:', [!apiKey && 'RESEND_API_KEY', !fromEmail && 'RESEND_FROM_EMAIL'].filter(Boolean).join(', '))
     return {
       success: false,
       error: 'Email service not configured',
@@ -275,12 +276,12 @@ export async function sendBookingNotification(
     })
 
     if (adminResult.error) {
-      console.error('Failed to send admin notification:', adminResult.error)
+      console.error('[NOTIFICATION:RESEND:BOOKING] Admin email failed:', adminResult.error)
       results.error = adminResult.error.message
       results.success = false
     } else {
       results.adminEmailId = adminResult.data?.id
-      console.log(`Admin notification sent to ${NOTIFICATION_EMAILS.join(', ')}: ${results.adminEmailId}`)
+      console.log(`[NOTIFICATION:RESEND:BOOKING] Admin email sent to ${NOTIFICATION_EMAILS.join(', ')}: ${results.adminEmailId}`)
     }
 
     // Send client confirmation
@@ -296,19 +297,19 @@ export async function sendBookingNotification(
     })
 
     if (clientResult.error) {
-      console.error('Failed to send client confirmation:', clientResult.error)
+      console.error('[NOTIFICATION:RESEND:BOOKING] Client confirmation failed:', clientResult.error)
       // Don't fail the whole thing if only client email fails
       if (!results.error) {
         results.error = `Client email failed: ${clientResult.error.message}`
       }
     } else {
       results.clientEmailId = clientResult.data?.id
-      console.log(`Client confirmation sent successfully: ${results.clientEmailId}`)
+      console.log(`[NOTIFICATION:RESEND:BOOKING] Client confirmation sent: ${results.clientEmailId}`)
     }
 
     return results
   } catch (error) {
-    console.error('Booking notification error:', error)
+    console.error('[NOTIFICATION:RESEND:BOOKING] Error:', error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error sending notifications',

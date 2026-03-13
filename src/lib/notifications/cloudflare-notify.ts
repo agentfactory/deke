@@ -25,10 +25,10 @@ export interface FormNotificationData {
 export async function sendCloudflareNotification(
   data: FormNotificationData
 ): Promise<{ success: boolean; error?: string }> {
+  console.log('[NOTIFICATION:CF] Starting...', { type: data.type, name: data.name, workerConfigured: !!WORKER_URL, secretConfigured: !!WEBHOOK_SECRET });
+
   if (!WORKER_URL || !WEBHOOK_SECRET) {
-    console.warn(
-      'Cloudflare notification not configured — set CF_NOTIFICATION_WORKER_URL and CF_NOTIFICATION_SECRET'
-    );
+    console.error('[NOTIFICATION:CF] NOT CONFIGURED — missing:', [!WORKER_URL && 'CF_NOTIFICATION_WORKER_URL', !WEBHOOK_SECRET && 'CF_NOTIFICATION_SECRET'].filter(Boolean).join(', '));
     return { success: false, error: 'Not configured' };
   }
 
@@ -47,15 +47,15 @@ export async function sendCloudflareNotification(
 
     if (!response.ok) {
       const errorBody = await response.text();
-      console.error('Cloudflare notification failed:', response.status, errorBody);
+      console.error('[NOTIFICATION:CF] Worker returned error:', response.status, errorBody);
       return { success: false, error: `HTTP ${response.status}` };
     }
 
     const result = await response.json();
-    console.log('Cloudflare notification sent:', result);
+    console.log('[NOTIFICATION:CF] Sent successfully:', result);
     return { success: true };
   } catch (error) {
-    console.error('Cloudflare notification error:', error);
+    console.error('[NOTIFICATION:CF] Fetch error:', error);
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error',

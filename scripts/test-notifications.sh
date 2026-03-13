@@ -58,8 +58,7 @@ echo "4/4 - Booking request (/api/booking-request)..."
 curl -s -X POST "$BASE_URL/api/booking-request" \
   -H "Content-Type: application/json" \
   -d "{
-    \"firstName\": \"Test\",
-    \"lastName\": \"Booking\",
+    \"name\": \"Test Booking\",
     \"email\": \"test-booking-${TIMESTAMP}@example.com\",
     \"projectType\": \"workshop\",
     \"message\": \"Test booking request to verify admin notification.\",
