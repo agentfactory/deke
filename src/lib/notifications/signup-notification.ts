@@ -123,8 +123,10 @@ export async function sendSignupNotification(
   const apiKey = process.env.RESEND_API_KEY
   const fromEmail = process.env.RESEND_FROM_EMAIL
 
+  console.log(`[NOTIFICATION:RESEND:SIGNUP] Starting (${data.type})...`, { name: data.name, email: data.email, to: NOTIFICATION_EMAILS })
+
   if (!apiKey || !fromEmail) {
-    console.warn('Email notifications not configured - RESEND_API_KEY or RESEND_FROM_EMAIL missing')
+    console.error('[NOTIFICATION:RESEND:SIGNUP] NOT CONFIGURED — missing:', [!apiKey && 'RESEND_API_KEY', !fromEmail && 'RESEND_FROM_EMAIL'].filter(Boolean).join(', '))
     return { success: false, error: 'Email service not configured' }
   }
 
@@ -143,14 +145,14 @@ export async function sendSignupNotification(
     })
 
     if (result.error) {
-      console.error(`Failed to send ${data.type} signup notification:`, result.error)
+      console.error(`[NOTIFICATION:RESEND:SIGNUP] ${data.type} failed:`, result.error)
       return { success: false, error: result.error.message }
     }
 
-    console.log(`Signup notification (${data.type}) sent to ${NOTIFICATION_EMAILS.join(', ')}: ${result.data?.id}`)
+    console.log(`[NOTIFICATION:RESEND:SIGNUP] ${data.type} sent to ${NOTIFICATION_EMAILS.join(', ')}: ${result.data?.id}`)
     return { success: true, adminEmailId: result.data?.id }
   } catch (error) {
-    console.error(`Signup notification error (${data.type}):`, error)
+    console.error(`[NOTIFICATION:RESEND:SIGNUP] ${data.type} error:`, error)
     return {
       success: false,
       error: error instanceof Error ? error.message : 'Unknown error sending notification',
