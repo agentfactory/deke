@@ -52,21 +52,28 @@ export async function POST(request: NextRequest) {
       },
     });
 
-    // Send admin notification (fire-and-forget)
-    sendSignupNotification({
-      type: 'contact',
-      name: `${firstName} ${lastName}`,
-      email,
-      message: `Subject: ${subject}\n\n${message}`,
-    }).catch(err => console.error('Contact notification failed:', err));
+    // Send notifications — await both so they complete before the response
+    const [resendResult, cfResult] = await Promise.allSettled([
+      sendSignupNotification({
+        type: 'contact',
+        name: `${firstName} ${lastName}`,
+        email,
+        message: `Subject: ${subject}\n\n${message}`,
+      }),
+      sendCloudflareNotification({
+        type: 'contact',
+        name: `${firstName} ${lastName}`,
+        email,
+        message: `Subject: ${subject}\n\n${message}`,
+      }),
+    ]);
 
-    // Also notify via Cloudflare Worker (independent backup)
-    sendCloudflareNotification({
-      type: 'contact',
-      name: `${firstName} ${lastName}`,
-      email,
-      message: `Subject: ${subject}\n\n${message}`,
-    }).catch(err => console.error('Cloudflare notification failed:', err));
+    if (resendResult.status === 'rejected') {
+      console.error("[CONTACT] Resend notification threw:", resendResult.reason);
+    }
+    if (cfResult.status === 'rejected') {
+      console.error("[CONTACT] Cloudflare notification threw:", cfResult.reason);
+    }
 
     return NextResponse.json({
       success: true,
