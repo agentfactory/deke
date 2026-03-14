@@ -35,10 +35,10 @@ export async function POST(
     }
 
     // Validate campaign can be approved
-    if (campaign.status !== 'DRAFT') {
+    if (campaign.status !== 'DRAFT' && campaign.status !== 'READY') {
       throw new ApiError(
         400,
-        'Only draft campaigns can be approved',
+        'Only draft or ready campaigns can be approved',
         'INVALID_STATUS'
       )
     }
