@@ -191,6 +191,7 @@ Deke Sharon
             dormantLeads: result.bySource.DORMANT,
             similarOrgs: result.bySource.SIMILAR_ORG,
             aiResearch: result.bySource.AI_RESEARCH,
+            directoryResearch: result.bySource.DIRECTORY_RESEARCH,
           },
         },
         drafts: {

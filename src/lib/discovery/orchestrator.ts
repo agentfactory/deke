@@ -11,6 +11,7 @@ import { discoverPastClients } from './past-clients'
 import { discoverDormantLeads } from './dormant-leads'
 import { discoverSimilarOrgs } from './similar-orgs'
 import { discoverAIResearch, type AIResearchDiagnostics } from './ai-research'
+import { discoverFromDirectories, type DirectoryDiagnostics } from './directory-sources'
 import { calculateScore, calculateScoreStats } from './scorer'
 import { deduplicate, getDeduplicationStats } from './deduplicator'
 import { classifyOrganization } from './org-classifier'
@@ -37,6 +38,7 @@ export interface DiscoveryResult {
     DORMANT: number
     SIMILAR_ORG: number
     AI_RESEARCH: number
+    DIRECTORY_RESEARCH: number
   }
   avgScore: number
   scoreStats: ReturnType<typeof calculateScoreStats>
@@ -149,10 +151,11 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     }
   }
 
-  // AI Research needs special handling for its richer result type
+  // AI Research and Directory Research need special handling for their richer result types
   let aiResearchDiagnostics: AIResearchDiagnostics | undefined
+  let directoryDiagnostics: DirectoryDiagnostics | undefined
 
-  const [pastClientsResult, dormantResult, similarResult, aiResearchResult] = await Promise.all([
+  const [pastClientsResult, dormantResult, similarResult, aiResearchResult, directoryResult] = await Promise.all([
     runSource('Past Clients', () => discoverPastClients(campaign)),
     runSource('Dormant Leads', () => discoverDormantLeads(campaign)),
     runSource('Similar Orgs', () => discoverSimilarOrgs(campaign)),
@@ -167,6 +170,17 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       }
       return result.leads
     }),
+    runSource('Directory Research', async () => {
+      const result = await discoverFromDirectories(campaign)
+      directoryDiagnostics = result.diagnostics
+      // Surface Directory Research errors as warnings
+      if (result.diagnostics.errors.length > 0) {
+        for (const err of result.diagnostics.errors) {
+          warnings.push(`Directory Research: ${err}`)
+        }
+      }
+      return result.leads
+    }),
   ])
 
   // Attach AI Research detailed diagnostics after runSource has pushed its entry
@@ -177,16 +191,26 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     }
   }
 
+  // Attach Directory Research diagnostics
+  if (directoryDiagnostics) {
+    const dirDiag = sourceDiagnostics.find(d => d.source === 'Directory Research')
+    if (dirDiag) {
+      (dirDiag as any).directoryDetails = directoryDiagnostics
+    }
+  }
+
   const pastClients = pastClientsResult || []
   const dormant = dormantResult || []
   const similar = similarResult || []
   const aiResearch = aiResearchResult || []
+  const directoryResearch = directoryResult || []
 
   console.log('[Discovery:Orchestrator] Source results', {
     pastClients: pastClients.length,
     dormant: dormant.length,
     similar: similar.length,
     aiResearch: aiResearch.length,
+    directoryResearch: directoryResearch.length,
   })
 
   // Track counts by source before deduplication
@@ -195,10 +219,11 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     DORMANT: dormant.length,
     SIMILAR_ORG: similar.length,
     AI_RESEARCH: aiResearch.length,
+    DIRECTORY_RESEARCH: directoryResearch.length,
   }
 
-  // Merge all leads
-  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch]
+  // Merge all leads (directory sources are primary, Google Places is supplementary)
+  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch, ...directoryResearch]
   const originalCount = allLeads.length
 
   // Deduplicate by email (keeping highest score per email)
@@ -260,7 +285,9 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     if ((lead as any).needsEnrichment) return false
 
     // Enforce minimum score by source
-    const threshold = lead.source === 'AI_RESEARCH' ? COLD_SCORE_THRESHOLD : WARM_SCORE_THRESHOLD
+    // Directory and AI Research are cold sources; others are warm (lower threshold)
+    const coldSources = ['AI_RESEARCH', 'DIRECTORY_RESEARCH']
+    const threshold = coldSources.includes(lead.source) ? COLD_SCORE_THRESHOLD : WARM_SCORE_THRESHOLD
     return lead.score >= threshold
   })
 
@@ -402,6 +429,7 @@ export async function getDiscoveryStats(campaignId: string) {
     DORMANT: leads.filter((l) => l.source === 'DORMANT').length,
     SIMILAR_ORG: leads.filter((l) => l.source === 'SIMILAR_ORG').length,
     AI_RESEARCH: leads.filter((l) => l.source === 'AI_RESEARCH').length,
+    DIRECTORY_RESEARCH: leads.filter((l) => l.source === 'DIRECTORY_RESEARCH').length,
   }
 
   const byStatus = {

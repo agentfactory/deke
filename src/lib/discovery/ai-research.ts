@@ -56,27 +56,48 @@ export interface AIResearchResult {
 
 // Music-specific keywords for targeted search
 // Uses Text Search API for more precise matching than generic place types
+//
+// NOTE: Google Places is a SUPPLEMENTARY source. The primary source for
+// comprehensive lead discovery is directory-sources.ts which scrapes
+// CAMMAC, BHS chapter finder, Sweet Adelines, Choirs Ontario, etc.
+// Google Maps only returns groups with active, optimized GMB listings.
 const MUSIC_KEYWORDS = [
   // Vocal music groups (specific organizations to avoid haircut barbershops)
   'choir',
   'chorus',
   'chorale',
+  'choral society',
   'Sweet Adelines',
   'Harmony Inc',
   'Barbershop Harmony Society',
   'BHS chorus',
+  'barbershop chorus',
   'CASA a cappella',
   'a cappella group',
+  'a cappella ensemble',
   'vocal ensemble',
+  'vocal harmony group',
   'gospel choir',
   'community chorus',
+  'community choir',
+  'men\'s chorus',
+  'women\'s chorus',
+  'ladies chorus',
 
   // Youth music education
   'high school choir',
   'middle school choir',
+  'university choir',
+  'college choir',
   'music school',
   'conservatory',
   'youth choir',
+  'children\'s choir',
+
+  // Broader music organizations that book Deke
+  'singing group',
+  'choral ensemble',
+  'glee club',
 ]
 
 /**
@@ -105,12 +126,22 @@ function calculateMusicRelevance(place: any): number {
   }
 
   // +20 pts: General music keywords in name (excluding "barbershop" alone due to ambiguity)
-  if (/\bchoir\b|\bchorus\b|\bchorale\b|\bsingers?\b|\bvocal\b|\bharmony\b/i.test(name)) {
+  if (/\bchoir\b|\bchorus\b|\bchorale\b|\bsingers?\b|\bvocal\b|\bharmony\b|\bchoral\b/i.test(name)) {
+    score += 20
+  }
+
+  // +20 pts: A cappella groups (Deke's #1 target audience)
+  if (/a\s?cappella|acappella/i.test(name)) {
     score += 20
   }
 
   // +15 pts: Specific music organizations (high-value targets)
-  if (/sweet adelines|sai|harmony inc|harmony incorporated|casa|a\s?cappella/i.test(name)) {
+  if (/sweet adelines|sai|harmony inc|harmony incorporated|casa/i.test(name)) {
+    score += 15
+  }
+
+  // +15 pts: Barbershop organizations (BHS, SPEBSQSA)
+  if (/barbershop harmony|bhs|spebsqsa/i.test(name)) {
     score += 15
   }
 
@@ -121,6 +152,11 @@ function calculateMusicRelevance(place: any): number {
 
   // +10 pts: Youth music programs
   if (/youth.*choir|children.*choir|student.*choir|school.*choir/i.test(name)) {
+    score += 10
+  }
+
+  // +10 pts: Community choirs (broad reach, often book workshops)
+  if (/community\s+(choir|chorus)|civic\s+chorus/i.test(name)) {
     score += 10
   }
 

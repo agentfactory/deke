@@ -19,6 +19,7 @@ export { discoverPastClients } from './past-clients'
 export { discoverDormantLeads } from './dormant-leads'
 export { discoverSimilarOrgs } from './similar-orgs'
 export { discoverAIResearch } from './ai-research'
+export { discoverFromDirectories } from './directory-sources'
 
 // Scoring and deduplication utilities
 export { calculateScore, calculateScoreStats } from './scorer'
