@@ -6,6 +6,7 @@
  */
 
 import { prisma } from '@/lib/db'
+import { eventBus } from '@/lib/event-bus'
 import { discoverPastClients } from './past-clients'
 import { discoverDormantLeads } from './dormant-leads'
 import { discoverSimilarOrgs } from './similar-orgs'
@@ -15,6 +16,10 @@ import { deduplicate, getDeduplicationStats } from './deduplicator'
 import { classifyOrganization } from './org-classifier'
 import { getRecommendations, buildRecommendationReason } from '@/lib/recommendations/engine'
 import { calculateRecommendationBonus } from '@/lib/recommendations/scorer'
+
+// Minimum score thresholds for quality gate
+const COLD_SCORE_THRESHOLD = 40
+const WARM_SCORE_THRESHOLD = 25
 
 export interface SourceDiagnostic {
   source: string
@@ -26,6 +31,7 @@ export interface SourceDiagnostic {
 
 export interface DiscoveryResult {
   total: number
+  filteredOut: number
   bySource: {
     PAST_CLIENT: number
     DORMANT: number
@@ -247,19 +253,36 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     score: calculateScore(lead, campaign) + (lead.recommendationBonus || 0),
   }))
 
-  // Calculate score statistics
-  const scores = scored.map((lead) => lead.score)
+  // Quality gate: reject low-score and unenriched leads
+  const qualityFiltered = scored.filter((lead) => {
+    // Reject placeholder emails
+    if ((lead as any).email?.includes('@placeholder.local')) return false
+    if ((lead as any).needsEnrichment) return false
+
+    // Enforce minimum score by source
+    const threshold = lead.source === 'AI_RESEARCH' ? COLD_SCORE_THRESHOLD : WARM_SCORE_THRESHOLD
+    return lead.score >= threshold
+  })
+
+  const filteredOutCount = scored.length - qualityFiltered.length
+  if (filteredOutCount > 0) {
+    console.log(`[Discovery:Orchestrator] Quality gate filtered out ${filteredOutCount} leads (score threshold or placeholder email)`)
+    warnings.push(`${filteredOutCount} leads filtered out by quality gate (score < ${COLD_SCORE_THRESHOLD} for cold / ${WARM_SCORE_THRESHOLD} for warm, or placeholder email)`)
+  }
+
+  // Calculate score statistics (on filtered leads)
+  const scores = qualityFiltered.map((lead) => lead.score)
   const scoreStats = calculateScoreStats(scores)
   const avgScore = scores.length > 0 ? scores.reduce((sum, s) => sum + s, 0) / scores.length : 0
 
   // Insert CampaignLead records in database
   // For SQLite compatibility, filter out existing campaign-lead pairs before inserting
-  if (scored.length > 0) {
+  if (qualityFiltered.length > 0) {
     // Get existing campaign-lead pairs to avoid duplicates
     const existingPairs = await prisma.campaignLead.findMany({
       where: {
         campaignId: campaign.id,
-        leadId: { in: scored.map((lead) => lead.id) },
+        leadId: { in: qualityFiltered.map((lead) => lead.id) },
       },
       select: {
         leadId: true,
@@ -269,7 +292,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     const existingLeadIds = new Set(existingPairs.map((pair) => pair.leadId))
 
     // Filter out leads that are already in the campaign
-    const newLeads = scored.filter((lead) => !existingLeadIds.has(lead.id))
+    const newLeads = qualityFiltered.filter((lead) => !existingLeadIds.has(lead.id))
 
     // Insert only new leads
     if (newLeads.length > 0) {
@@ -300,10 +323,29 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     console.warn('[Discovery:Orchestrator] Warnings:', warnings)
   }
 
-  console.log(`[Discovery:Orchestrator] Complete: ${scored.length} leads in ${duration}ms`)
+  console.log(`[Discovery:Orchestrator] Complete: ${qualityFiltered.length} leads in ${duration}ms (${filteredOutCount} filtered out)`)
+
+  // Emit discovery_completed event to trigger CURATOR quality evaluation
+  try {
+    await eventBus.emit({
+      eventId: crypto.randomUUID(),
+      sourceAgent: 'scout',
+      eventType: 'discovery_completed',
+      payload: {
+        campaignId: campaign.id,
+        totalLeads: qualityFiltered.length,
+        filteredOut: filteredOutCount,
+        avgScore: Math.round(avgScore * 10) / 10,
+      },
+      timestamp: new Date(),
+    })
+  } catch (eventError) {
+    console.error('[Discovery:Orchestrator] Failed to emit discovery_completed event:', eventError)
+  }
 
   return {
-    total: scored.length,
+    total: qualityFiltered.length,
+    filteredOut: filteredOutCount,
     bySource,
     avgScore: Math.round(avgScore * 10) / 10, // Round to 1 decimal
     scoreStats,

@@ -59,11 +59,29 @@ export async function POST(
       throw new ApiError(400, 'No matching campaign leads found', 'NO_LEADS')
     }
 
+    // Quality gate: filter out leads that shouldn't receive drafts
+    const genericPrefixes = ['info@', 'hello@', 'contact@', 'admin@', 'office@', 'general@']
+    const draftableLeads = campaignLeads.filter((cl: any) => {
+      // No placeholder emails
+      if (cl.lead.email?.includes('@placeholder.local')) return false
+      // No fake "Contact at Org" names from unenriched leads
+      if (cl.lead.firstName === 'Contact' && cl.lead.lastName?.startsWith('at ')) return false
+      // For cold leads, reject generic-only emails (info@, hello@, etc.)
+      if (cl.source === 'AI_RESEARCH') {
+        if (genericPrefixes.some(p => cl.lead.email?.startsWith(p))) return false
+      }
+      // Gate on CURATOR quality evaluation if it has been run
+      if (cl.qualityPassed === false) return false
+      return true
+    })
+
+    const qualityFiltered = campaignLeads.length - draftableLeads.length
+
     // Check which already have drafts
     const existingDrafts = await prisma.emailDraft.findMany({
       where: {
         campaignId,
-        campaignLeadId: { in: campaignLeads.map(cl => cl.id) },
+        campaignLeadId: { in: draftableLeads.map(cl => cl.id) },
       },
       select: { campaignLeadId: true },
     })
@@ -72,7 +90,7 @@ export async function POST(
     let created = 0
     let skipped = 0
 
-    for (const cl of campaignLeads) {
+    for (const cl of draftableLeads) {
       if (existingIds.has(cl.id)) {
         skipped++
         continue
@@ -102,7 +120,7 @@ export async function POST(
       created++
     }
 
-    return NextResponse.json({ created, skipped })
+    return NextResponse.json({ created, skipped, qualityFiltered })
   } catch (error) {
     return handleApiError(error)
   }

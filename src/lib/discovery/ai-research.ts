@@ -327,8 +327,9 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     }
   })
 
-  // Filter: ONLY organizations with music relevance (score > 0)
-  const musicOrgs = scoredPlaces.filter((p) => p.musicScore > 0)
+  // Filter: ONLY organizations with strong music relevance (score >= 10)
+  // Requires at least one real music signal (choir/chorus=20, music education=15, youth program=10)
+  const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 10)
   diagnostics.musicRelevant = musicOrgs.length
 
   const filteredOut = uniquePlaces.length - musicOrgs.length
