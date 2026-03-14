@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
-import { curatorAgent } from '@agents/curator'
+import { curatorAgent } from '../../../../../agents/curator'
 
 /**
  * POST /api/campaigns/[id]/evaluate-quality
