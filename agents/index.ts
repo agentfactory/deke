@@ -9,6 +9,7 @@ import { harmonyAgent } from './harmony';
 import { maestroAgent } from './maestro';
 import { conductorAgent } from './conductor';
 import { scoutAgent } from './scout';
+import { curatorAgent } from './curator';
 
 // Export all agents
 export const agents = {
@@ -16,6 +17,7 @@ export const agents = {
   maestro: maestroAgent,
   conductor: conductorAgent,
   scout: scoutAgent,
+  curator: curatorAgent,
 } as const;
 
 // Type for agent IDs

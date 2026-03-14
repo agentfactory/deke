@@ -510,6 +510,12 @@ model CampaignLead {
   recommendationReason String?  // Why these services? (for template variables)
   recommendationScore  Int?     // 0-15 bonus from recommendations
 
+  // Lead quality evaluation (CURATOR agent)
+  qualityScore        Int?         // 0-100 AI-assessed quality
+  qualityReason       String?      // Why this quality score
+  qualityPassed       Boolean?     // Passes minimum quality gate
+  qualityEvaluatedAt  DateTime?    // When CURATOR last evaluated
+
   // Phase 6: Follow-up automation
   scheduledFollowUpDate  DateTime?  // When next follow-up should be sent
   followUpCount          Int        @default(0)  // How many follow-ups sent (0, 1, 2)

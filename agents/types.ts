@@ -15,7 +15,8 @@ export type AgentId =
   | 'scribe'       // Content creation
   | 'repertoire'   // Song recommendations
   | 'metrics'      // Analytics dashboard
-  | 'scout';       // Opportunity finder
+  | 'scout'        // Opportunity finder
+  | 'curator';     // Lead quality evaluator
 
 // Agent Tiers
 export type AgentTier =
