@@ -13,7 +13,7 @@
 import type { OrgType } from './org-classifier'
 
 interface Lead {
-  source: 'PAST_CLIENT' | 'DORMANT' | 'SIMILAR_ORG' | 'AI_RESEARCH'
+  source: 'PAST_CLIENT' | 'DORMANT' | 'SIMILAR_ORG' | 'AI_RESEARCH' | 'DIRECTORY_RESEARCH'
   distance: number | null
   lastContactedAt?: Date | null
   bookings?: Array<{ id: string }> | null
@@ -124,11 +124,12 @@ function scoreWarmLead(lead: Lead, campaign: Campaign): number {
   let score = 0
 
   // 1. Base score by source (0-40)
-  const baseScores = {
+  const baseScores: Record<string, number> = {
     PAST_CLIENT: 40,
     DORMANT: 25,
     SIMILAR_ORG: 20,
     AI_RESEARCH: 0, // Should never hit this path
+    DIRECTORY_RESEARCH: 0, // Should never hit this path (routed to cold scoring)
   }
   score += baseScores[lead.source] || 0
 
@@ -208,7 +209,8 @@ function scoreOrgRelevance(lead: Lead): number {
 export function calculateScore(lead: Lead, campaign: Campaign): number {
   let score: number
 
-  if (lead.source === 'AI_RESEARCH') {
+  const coldSources = ['AI_RESEARCH', 'DIRECTORY_RESEARCH']
+  if (coldSources.includes(lead.source)) {
     score = scoreColdLead(lead, campaign)
   } else {
     score = scoreWarmLead(lead, campaign)

@@ -458,6 +458,74 @@ const DIRECTORY_SOURCES: DirectorySource[] = [
     },
     parseGroups: (html, location) => parseGenericChoralPage(html, location),
   },
+
+  // 7. CASA Acapedia — Contemporary A Cappella Society group directory (2,400+ profiles)
+  // Deke Sharon founded CASA, so this is a primary source for a cappella groups.
+  // The Acapedia wiki has group profiles with school/affiliation, rosters, and history.
+  // Note: casa.org may block automated requests; we try multiple URL patterns and
+  // fall back to Google search for CASA-listed groups in the area.
+  {
+    name: 'CASA Acapedia',
+    coverage: ['US', 'CA'],
+    buildSearchUrls: (location, region, _country) => {
+      const encodedLocation = encodeURIComponent(location)
+      const urls: string[] = []
+
+      // Acapedia main directory and category pages
+      urls.push('https://casa.org/acapedia')
+      urls.push('https://www.casa.org/acapedia')
+
+      // Regional/state pages (CASA uses state abbreviations and full names)
+      if (region) {
+        const encodedRegion = encodeURIComponent(region)
+        urls.push(`https://www.casa.org/${encodedRegion}`)
+        urls.push(`https://casa.org/${encodedRegion}`)
+      }
+
+      // Group category pages
+      urls.push('https://www.casa.org/acappella/all-male')
+      urls.push('https://www.casa.org/acappella/all-female')
+      urls.push('https://www.casa.org/acappella/mixed')
+      urls.push('https://www.casa.org/acappella/collegiate')
+
+      // Search-style queries via Google for CASA-listed groups in the area
+      urls.push(`https://www.google.com/search?q=site:casa.org+${encodedLocation}+a+cappella+group`)
+      urls.push(`https://www.google.com/search?q=CASA+acapedia+${encodedLocation}+a+cappella`)
+
+      return urls
+    },
+    parseGroups: (html, location) => {
+      const groups = parseGenericChoralPage(html, location)
+      // Tag all CASA groups as a cappella by default (CASA is an a cappella organization)
+      return groups.map(g => ({
+        ...g,
+        type: g.type || 'a_cappella',
+      }))
+    },
+  },
+
+  // 8. Collegiate A Cappella Directory (collegiate-acappella.com)
+  // Comprehensive directory of college a cappella groups — complementary to CASA.
+  {
+    name: 'Collegiate A Cappella',
+    coverage: ['US', 'CA'],
+    buildSearchUrls: (location, _region, _country) => {
+      const encodedLocation = encodeURIComponent(location)
+      return [
+        'https://www.collegiate-acappella.com/CA-DirectoryA-G.html',
+        'https://www.collegiate-acappella.com/CA-DirectoryH-N.html',
+        'https://www.collegiate-acappella.com/CA-DirectoryO-Z.html',
+        `https://www.google.com/search?q=site:collegiate-acappella.com+${encodedLocation}`,
+      ]
+    },
+    parseGroups: (html, location) => {
+      const groups = parseGenericChoralPage(html, location)
+      return groups.map(g => ({
+        ...g,
+        type: g.type || 'a_cappella',
+      }))
+    },
+  },
 ]
 
 /**
@@ -480,6 +548,10 @@ function buildSupplementarySearchUrls(city: string, region: string, country: str
     urls.push(`https://www.google.com/search?q=CAMMAC+${encodedCity}+choirs`)
     urls.push(`https://www.google.com/search?q=choirs+ontario+${encodedCity}`)
   }
+
+  // CASA / a cappella specific searches (global)
+  urls.push(`https://www.google.com/search?q=CASA+a+cappella+groups+near+${encodedCity}`)
+  urls.push(`https://www.google.com/search?q=${encodedCity}+collegiate+a+cappella+groups`)
 
   return urls
 }
