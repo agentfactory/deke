@@ -161,9 +161,14 @@ function deduplicateByPlaceId(places: any[]): any[] {
     const placeId = place.place_id
     if (!placeId) continue
 
-    // Keep first occurrence (all data is the same for same place_id)
     if (!placeMap.has(placeId)) {
-      placeMap.set(placeId, place)
+      placeMap.set(placeId, { ...place, _searchKeywords: [place._searchKeyword] })
+    } else {
+      // Accumulate all keywords that found this place
+      const existing = placeMap.get(placeId)
+      if (place._searchKeyword && !existing._searchKeywords.includes(place._searchKeyword)) {
+        existing._searchKeywords.push(place._searchKeyword)
+      }
     }
   }
 
@@ -232,6 +237,52 @@ async function fetchPlaceDetails(
   }
 }
 
+// Maximum API calls to prevent runaway costs
+const MAX_API_CALLS = 200
+
+/**
+ * Generate search grid points to cover the full campaign radius
+ *
+ * Google Places API caps search radius at 50km. For larger campaign radii,
+ * we create a grid of overlapping 50km circles to cover the full area.
+ *
+ * @param lat - Campaign center latitude
+ * @param lng - Campaign center longitude
+ * @param radiusMeters - Campaign radius in meters
+ * @returns Array of {lat, lng, searchRadius} covering the full area
+ */
+function generateSearchGrid(lat: number, lng: number, radiusMeters: number): Array<{ lat: number; lng: number; searchRadius: number }> {
+  const MAX_SEARCH_RADIUS = 50000 // Google's 50km limit
+
+  if (radiusMeters <= MAX_SEARCH_RADIUS) {
+    return [{ lat, lng, searchRadius: radiusMeters }]
+  }
+
+  // Center point always included
+  const points: Array<{ lat: number; lng: number; searchRadius: number }> = [
+    { lat, lng, searchRadius: MAX_SEARCH_RADIUS },
+  ]
+
+  // Place additional points at cardinal directions ~80km from center
+  // With 50km search radius each, this covers up to ~130km from center
+  const offsetKm = 80
+  const earthRadiusKm = 6371
+
+  // Latitude offset: ~80km north and south
+  const latOffset = offsetKm / earthRadiusKm * (180 / Math.PI)
+
+  // Longitude offset: ~80km east and west (adjusted for latitude)
+  const lngOffset = offsetKm / (earthRadiusKm * Math.cos(lat * Math.PI / 180)) * (180 / Math.PI)
+
+  // Cardinal directions: N, S, E, W
+  points.push({ lat: lat + latOffset, lng, searchRadius: MAX_SEARCH_RADIUS }) // North
+  points.push({ lat: lat - latOffset, lng, searchRadius: MAX_SEARCH_RADIUS }) // South
+  points.push({ lat, lng: lng + lngOffset, searchRadius: MAX_SEARCH_RADIUS }) // East
+  points.push({ lat, lng: lng - lngOffset, searchRadius: MAX_SEARCH_RADIUS }) // West
+
+  return points
+}
+
 /**
  * Search Google Places API for organizations in the campaign radius
  *
@@ -266,30 +317,45 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
   // Convert radius from miles to meters (Places API uses meters)
   const radiusMeters = campaign.radius * 1609.34
 
-  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
+  // Generate search grid to cover full campaign radius (works around 50km API limit)
+  const searchGrid = generateSearchGrid(campaign.latitude, campaign.longitude, radiusMeters)
 
-  // Search for each music keyword using Text Search API
+  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords × ${searchGrid.length} grid point${searchGrid.length > 1 ? 's' : ''}, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
+
+  // Search for each music keyword across all grid points
   for (const keyword of MUSIC_KEYWORDS) {
-    diagnostics.apiCallsMade++
-    try {
-      const places = await searchPlacesByKeyword(
-        campaign.latitude,
-        campaign.longitude,
-        campaign.baseLocation,
-        radiusMeters,
-        keyword,
-        apiKey
-      )
-      diagnostics.keywordResults.push({ keyword, count: places.length })
-      allPlaces.push(...places)
-    } catch (error) {
-      diagnostics.apiCallsFailed++
-      const errMsg = error instanceof Error ? error.message : String(error)
-      diagnostics.keywordResults.push({ keyword, count: 0, error: errMsg })
-      diagnostics.errors.push(`Keyword "${keyword}": ${errMsg}`)
-      console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
-      // Continue with other keywords
+    let keywordTotal = 0
+
+    for (const gridPoint of searchGrid) {
+      // Safety cap on total API calls
+      if (diagnostics.apiCallsMade >= MAX_API_CALLS) {
+        console.warn(`[AI Research] Reached MAX_API_CALLS limit (${MAX_API_CALLS}), stopping search`)
+        break
+      }
+
+      diagnostics.apiCallsMade++
+      try {
+        const places = await searchPlacesByKeyword(
+          gridPoint.lat,
+          gridPoint.lng,
+          campaign.baseLocation,
+          gridPoint.searchRadius,
+          keyword,
+          apiKey
+        )
+        keywordTotal += places.length
+        allPlaces.push(...places)
+      } catch (error) {
+        diagnostics.apiCallsFailed++
+        const errMsg = error instanceof Error ? error.message : String(error)
+        diagnostics.errors.push(`Keyword "${keyword}" at grid (${gridPoint.lat.toFixed(2)},${gridPoint.lng.toFixed(2)}): ${errMsg}`)
+        console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
+      }
     }
+
+    diagnostics.keywordResults.push({ keyword, count: keywordTotal })
+
+    if (diagnostics.apiCallsMade >= MAX_API_CALLS) break
   }
 
   diagnostics.rawPlaces = allPlaces.length
@@ -310,6 +376,14 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     `[AI Research] ${uniquePlaces.length} unique places (removed ${allPlaces.length - uniquePlaces.length} duplicates)`
   )
 
+  // Music-specific keywords that provide strong signal when Google returns a result for them
+  const MUSIC_SPECIFIC_KEYWORDS = [
+    'choir', 'chorus', 'chorale', 'a cappella', 'vocal ensemble',
+    'gospel choir', 'community chorus', 'youth choir', 'high school choir',
+    'middle school choir', 'sweet adelines', 'harmony inc',
+    'barbershop harmony society', 'bhs chorus', 'casa a cappella',
+  ]
+
   // Score each UNIQUE place by music relevance + proximity
   const scoredPlaces = uniquePlaces.map((place) => {
     const distance = haversineDistance(
@@ -319,9 +393,23 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
       place.geometry.location.lng
     )
 
+    let musicScore = calculateMusicRelevance(place)
+
+    // Keyword trust boost: if Google returned this place for a music-specific query
+    // but the name doesn't contain music keywords (e.g., "First Baptist Church" for "choir"),
+    // give it enough score to pass the filter
+    if (musicScore < 10 && musicScore >= 0 && place._searchKeywords) {
+      const hasSpecificKeyword = place._searchKeywords.some((kw: string) =>
+        MUSIC_SPECIFIC_KEYWORDS.some(mk => kw.toLowerCase().includes(mk))
+      )
+      if (hasSpecificKeyword) {
+        musicScore = Math.max(musicScore, 10)
+      }
+    }
+
     return {
       ...place,
-      musicScore: calculateMusicRelevance(place),
+      musicScore,
       proximityScore: calculateProximityBonus(distance, campaign.radius),
       distance,
     }
@@ -329,6 +417,7 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
   // Filter: ONLY organizations with strong music relevance (score >= 10)
   // Requires at least one real music signal (choir/chorus=20, music education=15, youth program=10)
+  // or keyword trust boost from Google returning the place for a music-specific query
   const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 10)
   diagnostics.musicRelevant = musicOrgs.length
 
@@ -355,28 +444,43 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
   )
 
-  // LIMIT TO TOP 50 highest-quality leads
-  const topResults = sorted.slice(0, 50)
+  // Limit to top candidates for enrichment
+  const MAX_ENRICHMENT_CANDIDATES = 150
+  const topResults = sorted.slice(0, MAX_ENRICHMENT_CANDIDATES)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
 
   // Enrich top results with REAL contact information from Places New API
+  // Process in batches to avoid rate limiting
   console.log('[AI Research] Using Places New API — fetching details (phone, website, rating, summary)...')
 
-  const enrichedPlaces = await Promise.all(
-    topResults.map(async (place) => {
-      const details = await fetchPlaceDetails(place.place_id, apiKey)
-      return {
-        ...place,
-        phone: details.phone,
-        website: details.website,
-        googleRating: details.googleRating,
-        userRatingCount: details.userRatingCount,
-        editorialSummary: details.editorialSummary,
-        primaryType: details.primaryType,
-      }
-    })
-  )
+  const ENRICHMENT_BATCH_SIZE = 20
+  const enrichedPlaces: any[] = []
+
+  for (let i = 0; i < topResults.length; i += ENRICHMENT_BATCH_SIZE) {
+    const batch = topResults.slice(i, i + ENRICHMENT_BATCH_SIZE)
+    const batchResults = await Promise.all(
+      batch.map(async (place) => {
+        const details = await fetchPlaceDetails(place.place_id, apiKey)
+        diagnostics.apiCallsMade++
+        return {
+          ...place,
+          phone: details.phone,
+          website: details.website,
+          googleRating: details.googleRating,
+          userRatingCount: details.userRatingCount,
+          editorialSummary: details.editorialSummary,
+          primaryType: details.primaryType,
+        }
+      })
+    )
+    enrichedPlaces.push(...batchResults)
+
+    // Small delay between batches to respect rate limits
+    if (i + ENRICHMENT_BATCH_SIZE < topResults.length) {
+      await new Promise(resolve => setTimeout(resolve, 500))
+    }
+  }
 
   diagnostics.enriched = enrichedPlaces.length
   console.log(`[AI Research] ${enrichedPlaces.length} places enriched with contact details`)
@@ -446,8 +550,41 @@ async function searchPlacesByKeyword(
     throw new Error(`Places API error: ${data.status}`)
   }
 
-  const places = data.results || []
-  console.log(`[AI Research] "${keyword}" → ${places.length} results`)
+  let places = data.results || []
+
+  // Paginate: Google Text Search returns up to 20 results per page, max 3 pages (60 results)
+  let nextPageToken = data.next_page_token
+  let pageCount = 1
+
+  while (nextPageToken && pageCount < 3) {
+    // Google requires ~2 second delay before next_page_token becomes valid
+    await new Promise(resolve => setTimeout(resolve, 2000))
+
+    const pageParams = new URLSearchParams({
+      pagetoken: nextPageToken,
+      key: apiKey,
+    })
+
+    try {
+      const pageResponse = await fetch(
+        `https://maps.googleapis.com/maps/api/place/textsearch/json?${pageParams}`
+      )
+
+      if (!pageResponse.ok) break
+
+      const pageData = await pageResponse.json()
+      if (pageData.status !== 'OK') break
+
+      const pageResults = pageData.results || []
+      places.push(...pageResults)
+      nextPageToken = pageData.next_page_token
+      pageCount++
+    } catch {
+      break
+    }
+  }
+
+  console.log(`[AI Research] "${keyword}" → ${places.length} results (${pageCount} page${pageCount > 1 ? 's' : ''})`)
 
   return places.map((place: any) => ({
     name: place.name || '',
@@ -460,6 +597,7 @@ async function searchPlacesByKeyword(
     },
     types: place.types || [],
     formatted_address: place.formatted_address || '',
+    _searchKeyword: keyword,
   }))
 }
 
@@ -573,7 +711,7 @@ async function placesToLeadsBatch(places: any[], campaign: Campaign): Promise<Di
           source: 'AI_RESEARCH',
           latitude: place.geometry.location.lat,
           longitude: place.geometry.location.lng,
-          score: 15, // Lower score for leads without emails
+          score: 20, // Lower score for leads without emails (but still valid music orgs)
           distance,
           website: enrichment.website,
           emailVerified: false,
