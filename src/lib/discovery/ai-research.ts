@@ -233,6 +233,63 @@ async function fetchPlaceDetails(
 }
 
 /**
+ * Generate a grid of search points to cover a large radius
+ *
+ * When the desired radius exceeds the API max (50km), we generate
+ * offset points in a grid pattern so overlapping circles cover the full area.
+ */
+function generateSearchGrid(
+  centerLat: number,
+  centerLng: number,
+  totalRadiusMeters: number,
+  maxSearchRadius: number
+): Array<{ lat: number; lng: number }> {
+  // If total radius fits in one search, just use center
+  if (totalRadiusMeters <= maxSearchRadius) {
+    return [{ lat: centerLat, lng: centerLng }]
+  }
+
+  // Calculate how many offset steps we need in each direction
+  // Use 70% overlap between circles for good coverage
+  const stepMeters = maxSearchRadius * 1.4 // ~70% of diameter
+  const stepsNeeded = Math.ceil(totalRadiusMeters / stepMeters)
+
+  const points: Array<{ lat: number; lng: number }> = []
+
+  // Degrees per meter (approximate)
+  const latPerMeter = 1 / 111320
+  const lngPerMeter = 1 / (111320 * Math.cos(centerLat * Math.PI / 180))
+
+  for (let dx = -stepsNeeded; dx <= stepsNeeded; dx++) {
+    for (let dy = -stepsNeeded; dy <= stepsNeeded; dy++) {
+      const offsetLat = centerLat + (dy * stepMeters * latPerMeter)
+      const offsetLng = centerLng + (dx * stepMeters * lngPerMeter)
+
+      // Only include points within the total radius from center
+      const distFromCenter = Math.sqrt(
+        Math.pow(dx * stepMeters, 2) + Math.pow(dy * stepMeters, 2)
+      )
+      if (distFromCenter <= totalRadiusMeters) {
+        points.push({ lat: offsetLat, lng: offsetLng })
+      }
+    }
+  }
+
+  // Cap at 7 search points to avoid excessive API calls (7 points × 15 keywords = 105 calls max)
+  if (points.length > 7) {
+    // Sort by distance from center, keep closest 7
+    points.sort((a, b) => {
+      const distA = Math.pow(a.lat - centerLat, 2) + Math.pow(a.lng - centerLng, 2)
+      const distB = Math.pow(b.lat - centerLat, 2) + Math.pow(b.lng - centerLng, 2)
+      return distA - distB
+    })
+    return points.slice(0, 7)
+  }
+
+  return points
+}
+
+/**
  * Search Google Places API for organizations in the campaign radius
  *
  * @param campaign - Campaign with location and radius
@@ -265,30 +322,44 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
   // Convert radius from miles to meters (Places API uses meters)
   const radiusMeters = campaign.radius * 1609.34
+  // Google Places API caps at 50km per search
+  const MAX_SEARCH_RADIUS = 50000
 
-  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
+  // For large radii, generate offset search points to cover the full area
+  const searchPoints = generateSearchGrid(
+    campaign.latitude,
+    campaign.longitude,
+    radiusMeters,
+    MAX_SEARCH_RADIUS
+  )
 
-  // Search for each music keyword using Text Search API
+  const effectiveRadius = Math.min(radiusMeters, MAX_SEARCH_RADIUS)
+
+  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords × ${searchPoints.length} search points, radius=${effectiveRadius}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
+
+  // Search for each music keyword at each search point
   for (const keyword of MUSIC_KEYWORDS) {
-    diagnostics.apiCallsMade++
-    try {
-      const places = await searchPlacesByKeyword(
-        campaign.latitude,
-        campaign.longitude,
-        campaign.baseLocation,
-        radiusMeters,
-        keyword,
-        apiKey
-      )
-      diagnostics.keywordResults.push({ keyword, count: places.length })
-      allPlaces.push(...places)
-    } catch (error) {
-      diagnostics.apiCallsFailed++
-      const errMsg = error instanceof Error ? error.message : String(error)
-      diagnostics.keywordResults.push({ keyword, count: 0, error: errMsg })
-      diagnostics.errors.push(`Keyword "${keyword}": ${errMsg}`)
-      console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
-      // Continue with other keywords
+    for (const point of searchPoints) {
+      diagnostics.apiCallsMade++
+      try {
+        const places = await searchPlacesByKeyword(
+          point.lat,
+          point.lng,
+          campaign.baseLocation,
+          effectiveRadius,
+          keyword,
+          apiKey
+        )
+        diagnostics.keywordResults.push({ keyword, count: places.length })
+        allPlaces.push(...places)
+      } catch (error) {
+        diagnostics.apiCallsFailed++
+        const errMsg = error instanceof Error ? error.message : String(error)
+        diagnostics.keywordResults.push({ keyword, count: 0, error: errMsg })
+        diagnostics.errors.push(`Keyword "${keyword}": ${errMsg}`)
+        console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
+        // Continue with other keywords
+      }
     }
   }
 
@@ -327,9 +398,9 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     }
   })
 
-  // Filter: ONLY organizations with strong music relevance (score >= 10)
-  // Requires at least one real music signal (choir/chorus=20, music education=15, youth program=10)
-  const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 10)
+  // Filter: organizations with music relevance (score >= 5)
+  // Allows: youth programs (10), music education (15), choirs (20), specific orgs (15)
+  const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 5)
   diagnostics.musicRelevant = musicOrgs.length
 
   const filteredOut = uniquePlaces.length - musicOrgs.length
@@ -355,8 +426,8 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
   )
 
-  // LIMIT TO TOP 50 highest-quality leads
-  const topResults = sorted.slice(0, 50)
+  // LIMIT TO TOP 100 highest-quality leads
+  const topResults = sorted.slice(0, 100)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
 

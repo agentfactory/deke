@@ -96,41 +96,52 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
 
   console.log(`[Discovery:SimilarOrgs] Searching with ${keywords.length} keywords:`, keywords)
 
-  // Find leads with similar organization names within the bounding box
-  const leads = await prisma.lead.findMany({
-    where: {
-      AND: [
-        {
-          OR: orgConditions,
-        },
-        // Must have coordinates
-        {
-          latitude: { gte: bbox.minLat, lte: bbox.maxLat },
-          longitude: { gte: bbox.minLon, lte: bbox.maxLon },
-        },
-        // Exclude leads that are already WON or COMPLETED (handled by past-clients)
-        {
-          status: { notIn: ['WON', 'COMPLETED'] },
-        },
-      ],
-    },
-    include: {
-      inquiries: {
-        orderBy: { createdAt: 'desc' },
-        take: 1,
+  // Find leads with similar organization names — two queries:
+  // 1. Leads WITH coordinates (geo-filtered by bounding box)
+  // 2. Leads WITHOUT coordinates (included but with null distance)
+  const [geoLeads, noGeoLeads] = await Promise.all([
+    prisma.lead.findMany({
+      where: {
+        AND: [
+          { OR: orgConditions },
+          {
+            latitude: { gte: bbox.minLat, lte: bbox.maxLat },
+            longitude: { gte: bbox.minLon, lte: bbox.maxLon },
+          },
+          { status: { notIn: ['WON', 'COMPLETED'] } },
+        ],
       },
-      bookings: true,
-    },
-  })
+      include: {
+        inquiries: { orderBy: { createdAt: 'desc' }, take: 1 },
+        bookings: true,
+      },
+    }),
+    prisma.lead.findMany({
+      where: {
+        AND: [
+          { OR: orgConditions },
+          {
+            OR: [
+              { latitude: null },
+              { longitude: null },
+            ],
+          },
+          { status: { notIn: ['WON', 'COMPLETED'] } },
+        ],
+      },
+      include: {
+        inquiries: { orderBy: { createdAt: 'desc' }, take: 1 },
+        bookings: true,
+      },
+    }),
+  ])
 
-  console.log(`[Discovery:SimilarOrgs] Found ${leads.length} leads in bounding box`)
+  console.log(`[Discovery:SimilarOrgs] Found ${geoLeads.length} geo leads + ${noGeoLeads.length} no-geo leads`)
 
-  // Filter by exact haversine distance and calculate distance for each lead
-  const results = leads
+  // Filter geo leads by exact haversine distance
+  const geoResults = geoLeads
     .map((lead) => {
-      if (lead.latitude === null || lead.longitude === null) {
-        return null
-      }
+      if (lead.latitude === null || lead.longitude === null) return null
 
       const distance = haversineDistance(
         { lat: campaign.latitude, lon: campaign.longitude },
@@ -138,14 +149,18 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
         'miles'
       )
 
-      return {
-        ...lead,
-        distance,
-        source: 'SIMILAR_ORG' as const,
-      }
+      return { ...lead, distance, source: 'SIMILAR_ORG' as const }
     })
     .filter((lead): lead is NonNullable<typeof lead> => lead !== null && lead.distance <= campaign.radius)
 
-  console.log(`[Discovery:SimilarOrgs] Returning ${results.length} leads after distance filter`)
+  // Include no-geo leads with null distance
+  const noGeoResults = noGeoLeads.map((lead) => ({
+    ...lead,
+    distance: null as number | null,
+    source: 'SIMILAR_ORG' as const,
+  }))
+
+  const results = [...geoResults, ...noGeoResults]
+  console.log(`[Discovery:SimilarOrgs] Returning ${results.length} leads (${geoResults.length} geo + ${noGeoResults.length} no-geo)`)
   return results
 }

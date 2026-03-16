@@ -7,12 +7,9 @@ import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import {
   ArrowLeft,
-  Calendar,
-  MapPin,
   Target,
   Users,
   Mail,
-  TrendingUp,
   Play,
   Pause,
   Trash2,
@@ -33,7 +30,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { MessagesTab } from "@/components/campaigns/messages-tab";
 import { LeadsTableSelectable } from "@/components/campaigns/leads-table-selectable";
 import { BulkActionsToolbar } from "@/components/campaigns/bulk-actions-toolbar";
-import { SourceStats } from "@/components/campaigns/source-stats";
+// SourceStats removed - diagnostics simplified
 import { DraftsTab } from "@/components/campaigns/drafts-tab";
 
 interface Campaign {
@@ -60,6 +57,8 @@ interface Campaign {
     distance: number | null;
     source: string;
     status: string;
+    recommendedServices: string | null;
+    recommendationReason: string | null;
     lead: {
       id: string;
       firstName: string;
@@ -216,22 +215,6 @@ export default function CampaignDetailPage({
     } finally {
       setIsDiscovering(false);
     }
-  };
-
-  const handleSendOutreach = () => {
-    if (campaign?.status === "READY" || campaign?.status === "APPROVED") {
-      setShowLaunchConfirm(true);
-    } else if (campaign?.status === "ACTIVE" || campaign?.status === "SENDING") {
-      alert("Campaign already launched.");
-    } else {
-      alert("Run discovery first to prepare emails.");
-    }
-  };
-
-  const handleViewAnalytics = () => {
-    // Navigate to analytics page (when implemented)
-    // For now, show a placeholder message
-    alert("Analytics dashboard coming soon! Will show open rates, click rates, and conversion metrics.");
   };
 
   const handleDelete = async () => {
@@ -420,269 +403,30 @@ export default function CampaignDetailPage({
         </div>
       </div>
 
-      {/* Tabs - default to drafts where the action is */}
-      <Tabs defaultValue={campaign.leads.length > 0 ? "drafts" : "overview"} className="space-y-6">
+      {/* Tabs - default to leads where the action is */}
+      <Tabs defaultValue={campaign.leads.length > 0 ? "leads" : "drafts"} className="space-y-6">
         <TabsList>
-          <TabsTrigger value="overview">Overview</TabsTrigger>
           <TabsTrigger value="leads">Leads ({campaign.leads.length})</TabsTrigger>
           <TabsTrigger value="drafts">Drafts</TabsTrigger>
           <TabsTrigger value="messages">Messages ({campaign._count.outreachLogs})</TabsTrigger>
         </TabsList>
 
-        <TabsContent value="overview" className="space-y-6">
-          {/* Stats Cards */}
-          <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Total Leads</CardTitle>
-            <Users className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{campaign._count.leads}</div>
-            <p className="text-xs text-muted-foreground">
-              Discovered in campaign area
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Contacted</CardTitle>
-            <Mail className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {campaign.leads.filter((l) => l.status === "CONTACTED").length}
-            </div>
-            <p className="text-xs text-muted-foreground">
-              {campaign._count.outreachLogs} total outreach attempts
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Engaged</CardTitle>
-            <TrendingUp className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {
-                campaign.leads.filter(
-                  (l) => l.status === "RESPONDED" || l.status === "INTERESTED"
-                ).length
-              }
-            </div>
-            <p className="text-xs text-muted-foreground">
-              Responded or expressed interest
-            </p>
-          </CardContent>
-        </Card>
-
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-            <CardTitle className="text-sm font-medium">Avg Score</CardTitle>
-            <Target className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">
-              {campaign.leads.length > 0
-                ? Math.round(
-                    campaign.leads.reduce((sum, l) => sum + l.score, 0) /
-                      campaign.leads.length
-                  )
-                : 0}
-            </div>
-            <p className="text-xs text-muted-foreground">Lead quality score</p>
-          </CardContent>
-        </Card>
-      </div>
-
-      {/* Source Stats */}
-      {campaign.leads.length > 0 && (
-        <SourceStats leads={campaign.leads} />
-      )}
-
-      {/* Discovery Diagnostics (shown when discovery ran but found 0 leads or had warnings) */}
-      {discoveryResult && (
-        <Card className={discoveryResult.error || discoveryResult.status === 'no_results' ? 'border-amber-500 bg-amber-50 dark:bg-amber-950/20' : 'border-green-500 bg-green-50 dark:bg-green-950/20'}>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-sm flex items-center gap-2">
-              {discoveryResult.error || discoveryResult.status === 'no_results' ? (
-                <><AlertTriangle className="h-4 w-4 text-amber-500" /> Discovery Results — {discoveryResult.error ? 'Error' : 'No Leads Found'}</>
-              ) : (
-                <>Discovery Complete — {discoveryResult.discovered?.total} leads found</>
-              )}
-            </CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3 text-sm">
-            {discoveryResult.error && (
-              <p className="text-red-600 font-medium">{discoveryResult.error}</p>
-            )}
-
-            {/* Per-source breakdown */}
-            {discoveryResult.diagnostics && discoveryResult.diagnostics.length > 0 && (
-              <div>
-                <p className="font-medium mb-1">Source Breakdown:</p>
-                <div className="space-y-1">
-                  {discoveryResult.diagnostics.map((d: any, i: number) => (
-                    <div key={i} className="flex items-center justify-between text-xs font-mono bg-white dark:bg-gray-900 rounded px-2 py-1">
-                      <span>{d.source}</span>
-                      <span className={d.error ? 'text-red-500' : 'text-muted-foreground'}>
-                        {d.error ? `ERROR: ${d.error.substring(0, 80)}` : `${d.count} leads (${d.durationMs}ms)`}
-                      </span>
-                    </div>
-                  ))}
-                </div>
-              </div>
-            )}
-
-            {/* AI Research details */}
-            {discoveryResult.diagnostics?.find((d: any) => d.source === 'AI Research')?.details && (() => {
-              const aiDetails = discoveryResult.diagnostics.find((d: any) => d.source === 'AI Research').details;
-              return (
-                <div>
-                  <p className="font-medium mb-1">AI Research Pipeline:</p>
-                  <div className="text-xs font-mono bg-white dark:bg-gray-900 rounded px-2 py-1 space-y-0.5">
-                    <p>API calls: {aiDetails.apiCallsMade} made, {aiDetails.apiCallsFailed} failed</p>
-                    <p>Places: {aiDetails.rawPlaces} raw → {aiDetails.uniquePlaces} unique → {aiDetails.musicRelevant} music-relevant</p>
-                    <p>Enriched: {aiDetails.enriched} → {aiDetails.leadsCreated} leads created</p>
-                  </div>
-                </div>
-              );
-            })()}
-
-            {/* Warnings */}
-            {discoveryResult.warnings && discoveryResult.warnings.length > 0 && (
-              <div>
-                <p className="font-medium mb-1">Warnings:</p>
-                <ul className="list-disc list-inside text-xs text-amber-700 dark:text-amber-400 space-y-0.5">
-                  {discoveryResult.warnings.map((w: string, i: number) => (
-                    <li key={i}>{w}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            {/* Errors */}
-            {discoveryResult.errors && discoveryResult.errors.length > 0 && (
-              <div>
-                <p className="font-medium mb-1 text-red-600">Errors:</p>
-                <ul className="list-disc list-inside text-xs text-red-600 space-y-0.5">
-                  {discoveryResult.errors.map((e: string, i: number) => (
-                    <li key={i}>{e}</li>
-                  ))}
-                </ul>
-              </div>
-            )}
-
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setDiscoveryResult(null)}
-              className="mt-2"
-            >
-              Dismiss
-            </Button>
-          </CardContent>
-        </Card>
-      )}
-
-      {/* Campaign Info */}
-      <div className="grid gap-6 md:grid-cols-2">
-        {/* Details Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Campaign Details</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-4">
-            <div className="flex items-start gap-3">
-              <MapPin className="h-5 w-5 text-muted-foreground mt-0.5" />
-              <div>
-                <p className="font-medium">Location & Radius</p>
-                <p className="text-sm text-muted-foreground">
-                  {campaign.baseLocation}
-                </p>
-                <p className="text-sm text-muted-foreground">
-                  {campaign.radius} miles radius
-                </p>
-              </div>
-            </div>
-
-            {(campaign.startDate || campaign.endDate) && (
-              <div className="flex items-start gap-3">
-                <Calendar className="h-5 w-5 text-muted-foreground mt-0.5" />
-                <div>
-                  <p className="font-medium">Campaign Period</p>
-                  <p className="text-sm text-muted-foreground">
-                    {campaign.startDate
-                      ? new Date(campaign.startDate).toLocaleDateString()
-                      : "Not set"}{" "}
-                    -{" "}
-                    {campaign.endDate
-                      ? new Date(campaign.endDate).toLocaleDateString()
-                      : "Not set"}
-                  </p>
-                </div>
-              </div>
-            )}
-
-            {campaign.booking && (
-              <div className="pt-2 border-t">
-                <p className="font-medium text-sm mb-2">Linked Booking</p>
-                <Link href={`/dashboard/bookings/${campaign.booking.id}`}>
-                  <Button variant="outline" size="sm">
-                    View Booking Details
-                  </Button>
-                </Link>
-              </div>
-            )}
-          </CardContent>
-        </Card>
-
-        {/* Quick Actions Card */}
-        <Card>
-          <CardHeader>
-            <CardTitle>Quick Actions</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={() => {
-                // Navigate to the Drafts tab
-                const tabsTrigger = document.querySelector('[data-state][value="drafts"]') as HTMLElement;
-                tabsTrigger?.click();
-              }}
-              disabled={!campaign || campaign.leads.length === 0}
-            >
-              <Mail className="h-4 w-4 mr-2" />
-              Generate Email Drafts
-            </Button>
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={handleDiscoverLeads}
-              disabled={!campaign || isDiscovering}
-            >
-              {isDiscovering ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
-              ) : (
-                <><Target className="h-4 w-4 mr-2" />Discover More Leads</>
-              )}
-            </Button>
-            <Button
-              className="w-full"
-              variant="outline"
-              onClick={handleViewAnalytics}
-            >
-              <TrendingUp className="h-4 w-4 mr-2" />
-              View Analytics
-            </Button>
-          </CardContent>
-        </Card>
-      </div>
-        </TabsContent>
+        {/* Discovery result banner (shown inline above leads) */}
+        {discoveryResult && (
+          <Card className={discoveryResult.error ? 'border-red-300 bg-red-50 dark:bg-red-950/20' : 'border-green-300 bg-green-50 dark:bg-green-950/20'}>
+            <CardContent className="py-3 flex items-center justify-between">
+              <p className="text-sm">
+                {discoveryResult.error
+                  ? <span className="text-red-600">{discoveryResult.error}</span>
+                  : <span>Discovery complete: {discoveryResult.discovered?.total} leads found{discoveryResult.discovered?.needsResearch > 0 && `, ${discoveryResult.discovered.needsResearch} need research`}</span>
+                }
+              </p>
+              <Button variant="ghost" size="sm" onClick={() => setDiscoveryResult(null)}>
+                Dismiss
+              </Button>
+            </CardContent>
+          </Card>
+        )}
 
         <TabsContent value="leads">
           <div className="space-y-4">

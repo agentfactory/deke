@@ -18,8 +18,8 @@ import { getRecommendations, buildRecommendationReason } from '@/lib/recommendat
 import { calculateRecommendationBonus } from '@/lib/recommendations/scorer'
 
 // Minimum score thresholds for quality gate
-const COLD_SCORE_THRESHOLD = 40
-const WARM_SCORE_THRESHOLD = 25
+const COLD_SCORE_THRESHOLD = 20
+const WARM_SCORE_THRESHOLD = 10
 
 export interface SourceDiagnostic {
   source: string
@@ -31,6 +31,7 @@ export interface SourceDiagnostic {
 
 export interface DiscoveryResult {
   total: number
+  needsResearch: number
   filteredOut: number
   bySource: {
     PAST_CLIENT: number
@@ -253,21 +254,40 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     score: calculateScore(lead, campaign) + (lead.recommendationBonus || 0),
   }))
 
-  // Quality gate: reject low-score and unenriched leads
-  const qualityFiltered = scored.filter((lead) => {
-    // Reject placeholder emails
-    if ((lead as any).email?.includes('@placeholder.local')) return false
-    if ((lead as any).needsEnrichment) return false
+  // Quality gate: split into "ready to contact" and "needs research" tiers
+  const readyToContact: typeof scored = []
+  const needsResearchLeads: typeof scored = []
+  const filteredOut: typeof scored = []
 
-    // Enforce minimum score by source
+  for (const lead of scored) {
+    const hasPlaceholderEmail = (lead as any).email?.includes('@placeholder.local')
+    const needsEnrichment = (lead as any).needsEnrichment
     const threshold = lead.source === 'AI_RESEARCH' ? COLD_SCORE_THRESHOLD : WARM_SCORE_THRESHOLD
-    return lead.score >= threshold
-  })
 
-  const filteredOutCount = scored.length - qualityFiltered.length
+    if (hasPlaceholderEmail || needsEnrichment) {
+      // Org found but no contact — keep as "needs research" if score is reasonable
+      if (lead.score >= Math.max(threshold - 10, 5)) {
+        needsResearchLeads.push(lead)
+      } else {
+        filteredOut.push(lead)
+      }
+    } else if (lead.score >= threshold) {
+      readyToContact.push(lead)
+    } else {
+      filteredOut.push(lead)
+    }
+  }
+
+  // Combine both tiers for insertion (ready + needs research)
+  const qualityFiltered = [...readyToContact, ...needsResearchLeads]
+
+  const filteredOutCount = filteredOut.length
   if (filteredOutCount > 0) {
-    console.log(`[Discovery:Orchestrator] Quality gate filtered out ${filteredOutCount} leads (score threshold or placeholder email)`)
-    warnings.push(`${filteredOutCount} leads filtered out by quality gate (score < ${COLD_SCORE_THRESHOLD} for cold / ${WARM_SCORE_THRESHOLD} for warm, or placeholder email)`)
+    console.log(`[Discovery:Orchestrator] Quality gate filtered out ${filteredOutCount} leads (score too low)`)
+    warnings.push(`${filteredOutCount} leads filtered out by quality gate (score too low)`)
+  }
+  if (needsResearchLeads.length > 0) {
+    console.log(`[Discovery:Orchestrator] ${needsResearchLeads.length} leads need research (org found, no contact info)`)
   }
 
   // Calculate score statistics (on filtered leads)
@@ -294,6 +314,9 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     // Filter out leads that are already in the campaign
     const newLeads = qualityFiltered.filter((lead) => !existingLeadIds.has(lead.id))
 
+    // Build a set of needsResearch lead IDs for status assignment
+    const needsResearchIds = new Set(needsResearchLeads.map((l) => l.id))
+
     // Insert only new leads
     if (newLeads.length > 0) {
       await prisma.campaignLead.createMany({
@@ -303,7 +326,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
           score: lead.score,
           distance: lead.distance ?? null, // null for leads without coordinates
           source: lead.source,
-          status: 'PENDING',
+          status: needsResearchIds.has(lead.id) ? 'NEEDS_RESEARCH' : 'PENDING',
           // Phase 3: Store recommendations
           recommendedServices: lead.recommendations && lead.recommendations.length > 0
             ? JSON.stringify(lead.recommendations.map((r: any) => r.serviceType))
@@ -323,7 +346,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     console.warn('[Discovery:Orchestrator] Warnings:', warnings)
   }
 
-  console.log(`[Discovery:Orchestrator] Complete: ${qualityFiltered.length} leads in ${duration}ms (${filteredOutCount} filtered out)`)
+  console.log(`[Discovery:Orchestrator] Complete: ${readyToContact.length} ready + ${needsResearchLeads.length} needs-research in ${duration}ms (${filteredOutCount} filtered out)`)
 
   // Emit discovery_completed event to trigger CURATOR quality evaluation
   try {
@@ -333,7 +356,8 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       eventType: 'discovery_completed',
       payload: {
         campaignId: campaign.id,
-        totalLeads: qualityFiltered.length,
+        totalLeads: readyToContact.length,
+        needsResearch: needsResearchLeads.length,
         filteredOut: filteredOutCount,
         avgScore: Math.round(avgScore * 10) / 10,
       },
@@ -344,7 +368,8 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   }
 
   return {
-    total: qualityFiltered.length,
+    total: readyToContact.length,
+    needsResearch: needsResearchLeads.length,
     filteredOut: filteredOutCount,
     bySource,
     avgScore: Math.round(avgScore * 10) / 10, // Round to 1 decimal

@@ -42,12 +42,42 @@ export async function GET(
             baseLocation: true,
             startDate: true,
             endDate: true,
+            radius: true,
             _count: {
               select: {
                 leads: true,
                 outreachLogs: true,
               }
-            }
+            },
+            leads: {
+              select: {
+                id: true,
+                score: true,
+                distance: true,
+                source: true,
+                status: true,
+                recommendedServices: true,
+                recommendationReason: true,
+                recommendationScore: true,
+                lead: {
+                  select: {
+                    id: true,
+                    firstName: true,
+                    lastName: true,
+                    email: true,
+                    phone: true,
+                    organization: true,
+                    website: true,
+                    emailVerified: true,
+                    needsEnrichment: true,
+                    contactTitle: true,
+                    editorialSummary: true,
+                    googleRating: true,
+                  }
+                },
+              },
+              orderBy: { score: 'desc' },
+            },
           }
         },
         travelExpenses: {

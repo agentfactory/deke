@@ -21,6 +21,8 @@ interface CampaignLead {
   distance: number | null
   source: string
   status: string
+  recommendedServices: string | null
+  recommendationReason: string | null
   lead: {
     id: string
     firstName: string
@@ -185,6 +187,34 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
             {config.label}
           </Badge>
         )
+      },
+    },
+    {
+      id: 'recommendation',
+      header: 'Recommended',
+      cell: ({ row }) => {
+        const services = row.original.recommendedServices
+        const reason = row.original.recommendationReason
+        if (!services) return <span className="text-muted-foreground">—</span>
+        try {
+          const parsed = JSON.parse(services) as string[]
+          return (
+            <div>
+              <div className="flex gap-1 flex-wrap">
+                {parsed.slice(0, 2).map((s: string) => (
+                  <Badge key={s} variant="secondary" className="text-xs">
+                    {s.replace(/_/g, ' ').replace(/\b\w/g, (c: string) => c.toUpperCase())}
+                  </Badge>
+                ))}
+              </div>
+              {reason && (
+                <p className="text-xs text-muted-foreground mt-0.5 line-clamp-1">{reason}</p>
+              )}
+            </div>
+          )
+        } catch {
+          return <span className="text-muted-foreground">—</span>
+        }
       },
     },
     {
