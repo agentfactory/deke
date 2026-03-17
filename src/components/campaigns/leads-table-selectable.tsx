@@ -13,7 +13,14 @@ import { Checkbox } from '@/components/ui/checkbox'
 import { Button } from '@/components/ui/button'
 import { Badge } from '@/components/ui/badge'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
-import { ArrowUpDown, UserMinus, UserPlus, CheckCircle, AlertCircle, HelpCircle } from 'lucide-react'
+import {
+  Sheet,
+  SheetContent,
+  SheetHeader,
+  SheetTitle,
+  SheetDescription,
+} from '@/components/ui/sheet'
+import { ArrowUpDown, UserMinus, UserPlus, CheckCircle, AlertCircle, ExternalLink, Phone, Mail, Globe, Building2, MapPin, Star } from 'lucide-react'
 
 interface CampaignLead {
   id: string
@@ -65,6 +72,7 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
   const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null)
+  const [previewLead, setPreviewLead] = useState<CampaignLead | null>(null)
 
   const handleToggleStatus = useCallback(async (leadId: string, currentStatus: string) => {
     if (!campaignId) return
@@ -101,137 +109,134 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
           onCheckedChange={(value) => row.toggleSelected(!!value)}
         />
       ),
+      size: 32,
     },
     {
       accessorKey: 'lead.firstName',
       header: ({ column }) => (
         <Button
           variant="ghost"
+          size="sm"
+          className="h-7 px-2 -ml-2 text-xs"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Name
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
       cell: ({ row }) => {
         const lead = row.original.lead
-        const isPlaceholder = lead.email.includes('@placeholder.local')
         return (
-          <div>
-            <div className="font-medium flex items-center gap-1.5">
+          <button
+            type="button"
+            className="text-left hover:underline cursor-pointer"
+            onClick={() => setPreviewLead(row.original)}
+          >
+            <span className="font-medium text-xs flex items-center gap-1">
               {lead.firstName} {lead.lastName}
               {lead.emailVerified && (
-                <span title="Verified email"><CheckCircle className="h-3.5 w-3.5 text-emerald-500" /></span>
+                <CheckCircle className="h-3 w-3 text-emerald-500 inline-flex shrink-0" />
               )}
               {lead.needsEnrichment && (
-                <span title="Needs enrichment"><AlertCircle className="h-3.5 w-3.5 text-amber-500" /></span>
+                <AlertCircle className="h-3 w-3 text-amber-500 inline-flex shrink-0" />
               )}
-            </div>
-            <div className="text-sm text-muted-foreground">
-              {isPlaceholder ? (
-                <span className="text-amber-500 italic">No email found</span>
-              ) : (
-                lead.email
-              )}
-            </div>
-          </div>
+            </span>
+            {lead.organization && (
+              <span className="text-[11px] text-muted-foreground block truncate max-w-[180px]">
+                {lead.organization}
+              </span>
+            )}
+          </button>
         )
       },
-    },
-    {
-      accessorKey: 'lead.organization',
-      header: 'Organization',
-      cell: ({ row }) => row.original.lead.organization || '—',
     },
     {
       accessorKey: 'distance',
       header: ({ column }) => (
         <Button
           variant="ghost"
+          size="sm"
+          className="h-7 px-2 -ml-2 text-xs"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
-          Distance
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          Dist
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
       cell: ({ row }) => {
         const dist = row.original.distance
-        return dist != null ? `${Math.round(dist)} mi` : '—'
+        return <span className="text-xs">{dist != null ? `${Math.round(dist)} mi` : '—'}</span>
       },
+      size: 60,
     },
     {
       accessorKey: 'score',
       header: ({ column }) => (
         <Button
           variant="ghost"
+          size="sm"
+          className="h-7 px-2 -ml-2 text-xs"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
         >
           Score
-          <ArrowUpDown className="ml-2 h-4 w-4" />
+          <ArrowUpDown className="ml-1 h-3 w-3" />
         </Button>
       ),
       cell: ({ row }) => (
-        <div className="text-right">{row.getValue('score')}</div>
+        <span className="text-xs tabular-nums">{row.getValue('score')}</span>
       ),
+      size: 55,
     },
     {
       accessorKey: 'source',
-      header: 'Source',
+      header: () => <span className="text-xs">Source</span>,
       cell: ({ row }) => {
         const source = row.original.source
         const config = SOURCE_BADGE[source] || { label: source, className: 'bg-zinc-500/20 text-zinc-400' }
         return (
-          <Badge variant="outline" className={config.className}>
+          <Badge variant="outline" className={`${config.className} text-[10px] px-1.5 py-0`}>
             {config.label}
           </Badge>
         )
       },
+      size: 85,
     },
     {
-      id: 'enrichment',
-      header: 'Contact',
+      id: 'contact',
+      header: () => <span className="text-xs">Contact</span>,
       cell: ({ row }) => {
         const lead = row.original.lead
-        if (lead.emailVerified) {
-          return (
-            <Badge variant="outline" className="bg-emerald-500/20 text-emerald-400 border-emerald-500/30">
-              Verified
-            </Badge>
-          )
-        }
-        if (lead.needsEnrichment) {
-          return (
-            <Badge variant="outline" className="bg-red-500/20 text-red-400 border-red-500/30">
-              No Email
-            </Badge>
-          )
-        }
-        // Has email but not enriched/verified
-        const isGeneric = lead.email.startsWith('info@') || lead.email.startsWith('contact@') || lead.email.startsWith('admin@')
-        if (isGeneric) {
-          return (
-            <Badge variant="outline" className="bg-amber-500/20 text-amber-400 border-amber-500/30">
-              Generic
-            </Badge>
-          )
-        }
+        const hasPhone = !!lead.phone
+        const hasWebsite = !!lead.website
         return (
-          <Badge variant="outline" className="bg-blue-500/20 text-blue-400 border-blue-500/30">
-            Email
-          </Badge>
+          <div className="flex items-center gap-1">
+            {lead.emailVerified ? (
+              <Mail className="h-3 w-3 text-emerald-500" title="Verified email" />
+            ) : lead.needsEnrichment ? (
+              <Mail className="h-3 w-3 text-red-400" title="No email" />
+            ) : (
+              <Mail className="h-3 w-3 text-blue-400" title="Has email" />
+            )}
+            {hasPhone && <Phone className="h-3 w-3 text-muted-foreground" title="Has phone" />}
+            {hasWebsite && <Globe className="h-3 w-3 text-muted-foreground" title="Has website" />}
+          </div>
         )
       },
+      size: 65,
     },
     {
       accessorKey: 'status',
-      header: 'Status',
+      header: () => <span className="text-xs">Status</span>,
       cell: ({ row }) => (
-        <Badge variant="outline">{row.getValue('status')}</Badge>
+        <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+          {row.getValue('status') as string}
+        </Badge>
       ),
+      size: 75,
     },
     {
       id: 'actions',
-      header: 'Action',
+      header: '',
       cell: ({ row }) => {
         const isRemoved = row.original.status === 'REMOVED'
         const isUpdating = updatingLeadId === row.original.id
@@ -239,14 +244,15 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
           <Button
             variant="ghost"
             size="icon"
-            className={isRemoved ? 'text-emerald-500 hover:text-emerald-400' : 'text-destructive hover:text-destructive'}
+            className={`h-6 w-6 ${isRemoved ? 'text-emerald-500 hover:text-emerald-400' : 'text-destructive hover:text-destructive'}`}
             onClick={() => handleToggleStatus(row.original.id, row.original.status)}
             disabled={isUpdating}
           >
-            {isRemoved ? <UserPlus className="h-4 w-4" /> : <UserMinus className="h-4 w-4" />}
+            {isRemoved ? <UserPlus className="h-3.5 w-3.5" /> : <UserMinus className="h-3.5 w-3.5" />}
           </Button>
         ) : null
       },
+      size: 36,
     },
   ]
 
@@ -267,33 +273,212 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
   }, [rowSelection, onSelectionChange, table])
 
   return (
-    <Table>
-      <TableHeader>
-        {table.getHeaderGroups().map((headerGroup) => (
-          <TableRow key={headerGroup.id}>
-            {headerGroup.headers.map((header) => (
-              <TableHead key={header.id}>
-                {flexRender(header.column.columnDef.header, header.getContext())}
-              </TableHead>
-            ))}
-          </TableRow>
-        ))}
-      </TableHeader>
-      <TableBody>
-        {table.getRowModel().rows.map((row) => (
-          <TableRow
-            key={row.id}
-            data-state={row.getIsSelected() && 'selected'}
-            className={row.original.status === 'REMOVED' ? 'opacity-40' : ''}
-          >
-            {row.getVisibleCells().map((cell) => (
-              <TableCell key={cell.id}>
-                {flexRender(cell.column.columnDef.cell, cell.getContext())}
-              </TableCell>
-            ))}
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <>
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((headerGroup) => (
+            <TableRow key={headerGroup.id}>
+              {headerGroup.headers.map((header) => (
+                <TableHead key={header.id} className="py-1.5 px-2 h-8">
+                  {flexRender(header.column.columnDef.header, header.getContext())}
+                </TableHead>
+              ))}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+            <TableRow
+              key={row.id}
+              data-state={row.getIsSelected() && 'selected'}
+              className={`${row.original.status === 'REMOVED' ? 'opacity-40' : ''} cursor-pointer hover:bg-muted/50`}
+            >
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id} className="py-1.5 px-2">
+                  {flexRender(cell.column.columnDef.cell, cell.getContext())}
+                </TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+
+      {/* Lead Preview Sheet */}
+      <Sheet open={!!previewLead} onOpenChange={(open) => !open && setPreviewLead(null)}>
+        <SheetContent side="right" className="sm:max-w-md overflow-y-auto">
+          {previewLead && (
+            <>
+              <SheetHeader>
+                <SheetTitle className="text-lg">
+                  {previewLead.lead.firstName} {previewLead.lead.lastName}
+                </SheetTitle>
+                <SheetDescription>
+                  Lead preview — score {previewLead.score}/100
+                </SheetDescription>
+              </SheetHeader>
+
+              <div className="space-y-5 px-4 pb-4">
+                {/* Score & Source */}
+                <div className="flex items-center gap-2">
+                  {(() => {
+                    const config = SOURCE_BADGE[previewLead.source] || { label: previewLead.source, className: 'bg-zinc-500/20 text-zinc-400' }
+                    return (
+                      <Badge variant="outline" className={config.className}>
+                        {config.label}
+                      </Badge>
+                    )
+                  })()}
+                  <Badge variant="outline">{previewLead.status}</Badge>
+                  {previewLead.distance != null && (
+                    <span className="text-sm text-muted-foreground flex items-center gap-1">
+                      <MapPin className="h-3.5 w-3.5" />
+                      {Math.round(previewLead.distance)} mi
+                    </span>
+                  )}
+                </div>
+
+                {/* Score bar */}
+                <div>
+                  <div className="flex justify-between text-sm mb-1">
+                    <span className="text-muted-foreground">Quality Score</span>
+                    <span className="font-semibold">{previewLead.score}</span>
+                  </div>
+                  <div className="h-2 bg-muted rounded-full overflow-hidden">
+                    <div
+                      className={`h-full rounded-full transition-all ${
+                        previewLead.score >= 70 ? 'bg-emerald-500' :
+                        previewLead.score >= 40 ? 'bg-amber-500' : 'bg-red-500'
+                      }`}
+                      style={{ width: `${previewLead.score}%` }}
+                    />
+                  </div>
+                </div>
+
+                {/* Organization */}
+                {previewLead.lead.organization && (
+                  <div className="flex items-start gap-3">
+                    <Building2 className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                    <div>
+                      <p className="text-xs text-muted-foreground">Organization</p>
+                      <p className="font-medium text-sm">{previewLead.lead.organization}</p>
+                    </div>
+                  </div>
+                )}
+
+                {/* Email */}
+                <div className="flex items-start gap-3">
+                  <Mail className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">
+                      Email
+                      {previewLead.lead.emailVerified && (
+                        <span className="text-emerald-500 ml-1">(verified)</span>
+                      )}
+                    </p>
+                    {previewLead.lead.email.includes('@placeholder.local') ? (
+                      <p className="text-sm text-amber-500 italic">No email found</p>
+                    ) : (
+                      <a
+                        href={`mailto:${previewLead.lead.email}`}
+                        className="text-sm font-medium hover:underline text-primary"
+                      >
+                        {previewLead.lead.email}
+                      </a>
+                    )}
+                  </div>
+                </div>
+
+                {/* Phone */}
+                <div className="flex items-start gap-3">
+                  <Phone className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Phone</p>
+                    {previewLead.lead.phone ? (
+                      <a
+                        href={`tel:${previewLead.lead.phone}`}
+                        className="text-sm font-medium hover:underline text-primary"
+                      >
+                        {previewLead.lead.phone}
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Not available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Website */}
+                <div className="flex items-start gap-3">
+                  <Globe className="h-4 w-4 text-muted-foreground mt-0.5 shrink-0" />
+                  <div>
+                    <p className="text-xs text-muted-foreground">Website</p>
+                    {previewLead.lead.website ? (
+                      <a
+                        href={previewLead.lead.website.startsWith('http') ? previewLead.lead.website : `https://${previewLead.lead.website}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="text-sm font-medium hover:underline text-primary flex items-center gap-1"
+                      >
+                        {previewLead.lead.website.replace(/^https?:\/\//, '').replace(/\/$/, '')}
+                        <ExternalLink className="h-3 w-3 shrink-0" />
+                      </a>
+                    ) : (
+                      <p className="text-sm text-muted-foreground italic">Not available</p>
+                    )}
+                  </div>
+                </div>
+
+                {/* Outreach History */}
+                {previewLead.outreachLogs.length > 0 && (
+                  <div className="border-t pt-4">
+                    <p className="text-xs text-muted-foreground mb-2">Outreach History</p>
+                    <div className="space-y-2">
+                      {previewLead.outreachLogs.map((log) => (
+                        <div key={log.id} className="flex items-center justify-between text-xs bg-muted/50 rounded px-2 py-1.5">
+                          <span>{log.channel}</span>
+                          <Badge variant="outline" className="text-[10px] px-1.5 py-0">
+                            {log.status}
+                          </Badge>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                )}
+
+                {/* Actions */}
+                <div className="border-t pt-4 flex gap-2">
+                  {campaignId && (
+                    <Button
+                      variant={previewLead.status === 'REMOVED' ? 'default' : 'destructive'}
+                      size="sm"
+                      onClick={() => {
+                        handleToggleStatus(previewLead.id, previewLead.status)
+                        setPreviewLead(null)
+                      }}
+                      className="flex-1"
+                    >
+                      {previewLead.status === 'REMOVED' ? (
+                        <><UserPlus className="h-3.5 w-3.5 mr-1.5" />Re-add to Campaign</>
+                      ) : (
+                        <><UserMinus className="h-3.5 w-3.5 mr-1.5" />Remove from Campaign</>
+                      )}
+                    </Button>
+                  )}
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    asChild
+                  >
+                    <a href={`/dashboard/leads/${previewLead.lead.id}`}>
+                      Full Profile
+                      <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                    </a>
+                  </Button>
+                </div>
+              </div>
+            </>
+          )}
+        </SheetContent>
+      </Sheet>
+    </>
   )
 }
