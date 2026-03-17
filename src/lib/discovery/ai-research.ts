@@ -241,49 +241,6 @@ async function fetchPlaceDetails(
 const MAX_API_CALLS = 200
 
 /**
- * Generate search grid points to cover the full campaign radius
- *
- * Google Places API caps search radius at 50km. For larger campaign radii,
- * we create a grid of overlapping 50km circles to cover the full area.
- *
- * @param lat - Campaign center latitude
- * @param lng - Campaign center longitude
- * @param radiusMeters - Campaign radius in meters
- * @returns Array of {lat, lng, searchRadius} covering the full area
- */
-function generateSearchGrid(lat: number, lng: number, radiusMeters: number): Array<{ lat: number; lng: number; searchRadius: number }> {
-  const MAX_SEARCH_RADIUS = 50000 // Google's 50km limit
-
-  if (radiusMeters <= MAX_SEARCH_RADIUS) {
-    return [{ lat, lng, searchRadius: radiusMeters }]
-  }
-
-  // Center point always included
-  const points: Array<{ lat: number; lng: number; searchRadius: number }> = [
-    { lat, lng, searchRadius: MAX_SEARCH_RADIUS },
-  ]
-
-  // Place additional points at cardinal directions ~80km from center
-  // With 50km search radius each, this covers up to ~130km from center
-  const offsetKm = 80
-  const earthRadiusKm = 6371
-
-  // Latitude offset: ~80km north and south
-  const latOffset = offsetKm / earthRadiusKm * (180 / Math.PI)
-
-  // Longitude offset: ~80km east and west (adjusted for latitude)
-  const lngOffset = offsetKm / (earthRadiusKm * Math.cos(lat * Math.PI / 180)) * (180 / Math.PI)
-
-  // Cardinal directions: N, S, E, W
-  points.push({ lat: lat + latOffset, lng, searchRadius: MAX_SEARCH_RADIUS }) // North
-  points.push({ lat: lat - latOffset, lng, searchRadius: MAX_SEARCH_RADIUS }) // South
-  points.push({ lat, lng: lng + lngOffset, searchRadius: MAX_SEARCH_RADIUS }) // East
-  points.push({ lat, lng: lng - lngOffset, searchRadius: MAX_SEARCH_RADIUS }) // West
-
-  return points
-}
-
-/**
  * Search Google Places API for organizations in the campaign radius
  *
  * @param campaign - Campaign with location and radius
@@ -315,47 +272,38 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
   const allPlaces: any[] = []
 
   // Convert radius from miles to meters (Places API uses meters)
-  const radiusMeters = campaign.radius * 1609.34
+  // Google Text Search query includes location name, so it covers the area well
+  // even beyond the 50km radius parameter limit
+  const radiusMeters = Math.min(campaign.radius * 1609.34, 50000)
 
-  // Generate search grid to cover full campaign radius (works around 50km API limit)
-  const searchGrid = generateSearchGrid(campaign.latitude, campaign.longitude, radiusMeters)
+  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
 
-  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords × ${searchGrid.length} grid point${searchGrid.length > 1 ? 's' : ''}, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
-
-  // Search for each music keyword across all grid points
+  // Search for each music keyword
   for (const keyword of MUSIC_KEYWORDS) {
-    let keywordTotal = 0
-
-    for (const gridPoint of searchGrid) {
-      // Safety cap on total API calls
-      if (diagnostics.apiCallsMade >= MAX_API_CALLS) {
-        console.warn(`[AI Research] Reached MAX_API_CALLS limit (${MAX_API_CALLS}), stopping search`)
-        break
-      }
-
-      diagnostics.apiCallsMade++
-      try {
-        const places = await searchPlacesByKeyword(
-          gridPoint.lat,
-          gridPoint.lng,
-          campaign.baseLocation,
-          gridPoint.searchRadius,
-          keyword,
-          apiKey
-        )
-        keywordTotal += places.length
-        allPlaces.push(...places)
-      } catch (error) {
-        diagnostics.apiCallsFailed++
-        const errMsg = error instanceof Error ? error.message : String(error)
-        diagnostics.errors.push(`Keyword "${keyword}" at grid (${gridPoint.lat.toFixed(2)},${gridPoint.lng.toFixed(2)}): ${errMsg}`)
-        console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
-      }
+    if (diagnostics.apiCallsMade >= MAX_API_CALLS) {
+      console.warn(`[AI Research] Reached MAX_API_CALLS limit (${MAX_API_CALLS}), stopping search`)
+      break
     }
 
-    diagnostics.keywordResults.push({ keyword, count: keywordTotal })
-
-    if (diagnostics.apiCallsMade >= MAX_API_CALLS) break
+    diagnostics.apiCallsMade++
+    try {
+      const places = await searchPlacesByKeyword(
+        campaign.latitude,
+        campaign.longitude,
+        campaign.baseLocation,
+        radiusMeters,
+        keyword,
+        apiKey
+      )
+      diagnostics.keywordResults.push({ keyword, count: places.length })
+      allPlaces.push(...places)
+    } catch (error) {
+      diagnostics.apiCallsFailed++
+      const errMsg = error instanceof Error ? error.message : String(error)
+      diagnostics.keywordResults.push({ keyword, count: 0, error: errMsg })
+      diagnostics.errors.push(`Keyword "${keyword}": ${errMsg}`)
+      console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
+    }
   }
 
   diagnostics.rawPlaces = allPlaces.length
@@ -444,8 +392,8 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
   )
 
-  // Limit to top candidates for enrichment
-  const MAX_ENRICHMENT_CANDIDATES = 150
+  // Limit to top candidates for enrichment (keep modest to avoid timeouts from website scraping)
+  const MAX_ENRICHMENT_CANDIDATES = 75
   const topResults = sorted.slice(0, MAX_ENRICHMENT_CANDIDATES)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
@@ -550,41 +498,9 @@ async function searchPlacesByKeyword(
     throw new Error(`Places API error: ${data.status}`)
   }
 
-  let places = data.results || []
+  const places = data.results || []
 
-  // Paginate: Google Text Search returns up to 20 results per page, max 3 pages (60 results)
-  let nextPageToken = data.next_page_token
-  let pageCount = 1
-
-  while (nextPageToken && pageCount < 3) {
-    // Google requires ~2 second delay before next_page_token becomes valid
-    await new Promise(resolve => setTimeout(resolve, 2000))
-
-    const pageParams = new URLSearchParams({
-      pagetoken: nextPageToken,
-      key: apiKey,
-    })
-
-    try {
-      const pageResponse = await fetch(
-        `https://maps.googleapis.com/maps/api/place/textsearch/json?${pageParams}`
-      )
-
-      if (!pageResponse.ok) break
-
-      const pageData = await pageResponse.json()
-      if (pageData.status !== 'OK') break
-
-      const pageResults = pageData.results || []
-      places.push(...pageResults)
-      nextPageToken = pageData.next_page_token
-      pageCount++
-    } catch {
-      break
-    }
-  }
-
-  console.log(`[AI Research] "${keyword}" → ${places.length} results (${pageCount} page${pageCount > 1 ? 's' : ''})`)
+  console.log(`[AI Research] "${keyword}" → ${places.length} results`)
 
   return places.map((place: any) => ({
     name: place.name || '',
