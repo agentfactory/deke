@@ -92,16 +92,16 @@ function calculateMusicRelevance(place: any): number {
   const name = (place.name || '').toLowerCase()
   const types = place.types || []
 
-  // CRITICAL: Exclude haircut barbershops (return 0 immediately)
-  const haircutKeywords = /\bcut\b|\bhaircut\b|\bbarber\s*shop\b|\bgrooming\b|\bshave\b|\bfade\b|\btrim\b|\bsalon\b/i
+  // CRITICAL: Exclude haircut barbershops (return -1 to signal explicit exclusion)
+  const haircutKeywords = /\bcut\b|\bhaircut\b|\bbarber\s*shop\b|\bgrooming\b|\bshave\b|\bfade\b|\btrim\b|\bsalon\b|\brazor\b/i
   if (haircutKeywords.test(name)) {
-    return 0 // Not a music organization - it's a haircut place
+    return -1 // Not a music organization - it's a haircut place
   }
 
   // Also check Google Place types for hair care
   const haircutTypes = ['hair_care', 'beauty_salon', 'barber_shop']
   if (types.some((type: string) => haircutTypes.includes(type))) {
-    return 0 // Definitely a haircut place
+    return -1 // Definitely a haircut place
   }
 
   // +20 pts: General music keywords in name (excluding "barbershop" alone due to ambiguity)
@@ -345,8 +345,9 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
     // Keyword trust boost: if Google returned this place for a music-specific query
     // but the name doesn't contain music keywords (e.g., "First Baptist Church" for "choir"),
-    // give it enough score to pass the filter
-    if (musicScore < 10 && musicScore >= 0 && place._searchKeywords) {
+    // give it enough score to pass the filter.
+    // Skip if musicScore is -1 (explicitly excluded as haircut shop etc.)
+    if (musicScore >= 0 && musicScore < 10 && place._searchKeywords) {
       const hasSpecificKeyword = place._searchKeywords.some((kw: string) =>
         MUSIC_SPECIFIC_KEYWORDS.some(mk => kw.toLowerCase().includes(mk))
       )
@@ -366,7 +367,9 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
   // Filter: ONLY organizations with strong music relevance (score >= 10)
   // Requires at least one real music signal (choir/chorus=20, music education=15, youth program=10)
   // or keyword trust boost from Google returning the place for a music-specific query
-  const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 10)
+  // Also enforce max distance: 2x campaign radius (Google Text Search sometimes returns distant results)
+  const maxDistance = campaign.radius * 2
+  const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 10 && p.distance <= maxDistance)
   diagnostics.musicRelevant = musicOrgs.length
 
   const filteredOut = uniquePlaces.length - musicOrgs.length
@@ -392,8 +395,9 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
   )
 
-  // Limit to top candidates for enrichment (keep modest to avoid timeouts from website scraping)
-  const MAX_ENRICHMENT_CANDIDATES = 75
+  // Limit to top candidates for enrichment
+  // Each candidate gets website-scraped (up to 4 pages), so keep this modest to avoid timeouts
+  const MAX_ENRICHMENT_CANDIDATES = 50
   const topResults = sorted.slice(0, MAX_ENRICHMENT_CANDIDATES)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
