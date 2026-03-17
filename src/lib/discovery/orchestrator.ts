@@ -18,7 +18,7 @@ import { getRecommendations, buildRecommendationReason } from '@/lib/recommendat
 import { calculateRecommendationBonus } from '@/lib/recommendations/scorer'
 
 // Minimum score thresholds for quality gate
-const COLD_SCORE_THRESHOLD = 40
+const COLD_SCORE_THRESHOLD = 15
 const WARM_SCORE_THRESHOLD = 25
 
 export interface SourceDiagnostic {
@@ -253,12 +253,8 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     score: calculateScore(lead, campaign) + (lead.recommendationBonus || 0),
   }))
 
-  // Quality gate: reject low-score and unenriched leads
+  // Quality gate: reject low-score leads
   const qualityFiltered = scored.filter((lead) => {
-    // Reject placeholder emails
-    if ((lead as any).email?.includes('@placeholder.local')) return false
-    if ((lead as any).needsEnrichment) return false
-
     // Enforce minimum score by source
     const threshold = lead.source === 'AI_RESEARCH' ? COLD_SCORE_THRESHOLD : WARM_SCORE_THRESHOLD
     return lead.score >= threshold
@@ -267,7 +263,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   const filteredOutCount = scored.length - qualityFiltered.length
   if (filteredOutCount > 0) {
     console.log(`[Discovery:Orchestrator] Quality gate filtered out ${filteredOutCount} leads (score threshold or placeholder email)`)
-    warnings.push(`${filteredOutCount} leads filtered out by quality gate (score < ${COLD_SCORE_THRESHOLD} for cold / ${WARM_SCORE_THRESHOLD} for warm, or placeholder email)`)
+    warnings.push(`${filteredOutCount} leads filtered out by quality gate (score < ${COLD_SCORE_THRESHOLD} for cold / ${WARM_SCORE_THRESHOLD} for warm)`)
   }
 
   // Calculate score statistics (on filtered leads)
