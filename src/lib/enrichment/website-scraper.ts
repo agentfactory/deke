@@ -188,7 +188,7 @@ function extractTitleEmailPairs(text: string): ScrapedEmail[] {
 /**
  * Fetch a page with timeout
  */
-async function fetchPage(url: string, timeoutMs: number = 10000): Promise<string | null> {
+async function fetchPage(url: string, timeoutMs: number = 5000): Promise<string | null> {
   try {
     const controller = new AbortController()
     const timeout = setTimeout(() => controller.abort(), timeoutMs)
@@ -269,7 +269,7 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
 
   const allEmails = new Map<string, ScrapedEmail>()
   let pagesScraped = 0
-  const maxPages = 8 // Cover more contact page URL patterns
+  const maxPages = 4 // Homepage + 3 contact pages (keeps enrichment fast)
 
   // Scrape homepage + contact pages
   const pagesToScrape = [baseUrl, ...CONTACT_PATHS.map(path => `${baseUrl}${path}`)]
