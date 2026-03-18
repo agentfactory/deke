@@ -11,6 +11,7 @@ import { discoverPastClients } from './past-clients'
 import { discoverDormantLeads } from './dormant-leads'
 import { discoverSimilarOrgs } from './similar-orgs'
 import { discoverAIResearch, type AIResearchDiagnostics } from './ai-research'
+import { discoverPerplexity, type PerplexityDiagnostics } from './perplexity'
 import { calculateScore, calculateScoreStats } from './scorer'
 import { deduplicate, getDeduplicationStats } from './deduplicator'
 import { classifyOrganization } from './org-classifier'
@@ -124,6 +125,11 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     warnings.push('GOOGLE_PLACES_API_KEY not configured — AI Research source will be skipped')
   }
 
+  // Check Perplexity API key
+  if (!process.env.PERPLEXITY_API_KEY) {
+    warnings.push('PERPLEXITY_API_KEY not configured — Perplexity AI discovery will be skipped')
+  }
+
   // Run all discovery sources in parallel, each wrapped in individual try/catch
   const sourceDiagnostics: SourceDiagnostic[] = []
   const sourceErrors: string[] = []
@@ -149,10 +155,11 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     }
   }
 
-  // AI Research needs special handling for its richer result type
+  // AI Research and Perplexity need special handling for their richer result types
   let aiResearchDiagnostics: AIResearchDiagnostics | undefined
+  let perplexityDiagnostics: PerplexityDiagnostics | undefined
 
-  const [pastClientsResult, dormantResult, similarResult, aiResearchResult] = await Promise.all([
+  const [pastClientsResult, dormantResult, similarResult, aiResearchResult, perplexityResult] = await Promise.all([
     runSource('Past Clients', () => discoverPastClients(campaign)),
     runSource('Dormant Leads', () => discoverDormantLeads(campaign)),
     runSource('Similar Orgs', () => discoverSimilarOrgs(campaign)),
@@ -163,6 +170,16 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       if (result.diagnostics.errors.length > 0) {
         for (const err of result.diagnostics.errors) {
           warnings.push(`AI Research: ${err}`)
+        }
+      }
+      return result.leads
+    }),
+    runSource('Perplexity AI', async () => {
+      const result = await discoverPerplexity(campaign)
+      perplexityDiagnostics = result.diagnostics
+      if (result.diagnostics.errors.length > 0) {
+        for (const err of result.diagnostics.errors) {
+          warnings.push(`Perplexity: ${err}`)
         }
       }
       return result.leads
@@ -181,24 +198,27 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   const dormant = dormantResult || []
   const similar = similarResult || []
   const aiResearch = aiResearchResult || []
+  const perplexity = perplexityResult || []
 
   console.log('[Discovery:Orchestrator] Source results', {
     pastClients: pastClients.length,
     dormant: dormant.length,
     similar: similar.length,
     aiResearch: aiResearch.length,
+    perplexity: perplexity.length,
   })
 
   // Track counts by source before deduplication
+  // Perplexity leads are tagged as AI_RESEARCH source, so combine the counts
   const bySource = {
     PAST_CLIENT: pastClients.length,
     DORMANT: dormant.length,
     SIMILAR_ORG: similar.length,
-    AI_RESEARCH: aiResearch.length,
+    AI_RESEARCH: aiResearch.length + perplexity.length,
   }
 
-  // Merge all leads
-  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch]
+  // Merge all leads (Perplexity leads use AI_RESEARCH source for scoring consistency)
+  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch, ...perplexity]
   const originalCount = allLeads.length
 
   // Deduplicate by email (keeping highest score per email)
@@ -253,11 +273,15 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     score: calculateScore(lead, campaign) + (lead.recommendationBonus || 0),
   }))
 
-  // Quality gate: reject low-score and unenriched leads
+  // Quality gate: reject low-score leads, but KEEP leads with website/phone even without email
   const qualityFiltered = scored.filter((lead) => {
-    // Reject placeholder emails — can't be used for outreach
-    if ((lead as any).email?.includes('@placeholder.local')) return false
-    if ((lead as any).needsEnrichment) return false
+    const hasPlaceholderEmail = (lead as any).email?.includes('@placeholder.local')
+    const needsEnrichment = (lead as any).needsEnrichment
+    const hasWebsite = !!(lead as any).website
+    const hasPhone = !!(lead as any).phone
+
+    // If no email AND no website AND no phone → truly useless, reject
+    if (hasPlaceholderEmail && !hasWebsite && !hasPhone) return false
 
     // Enforce minimum score by source
     const threshold = lead.source === 'AI_RESEARCH' ? COLD_SCORE_THRESHOLD : WARM_SCORE_THRESHOLD
