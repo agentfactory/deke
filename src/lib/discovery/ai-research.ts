@@ -278,32 +278,41 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
   console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
 
-  // Search for each music keyword
-  for (const keyword of MUSIC_KEYWORDS) {
+  // Search all keywords in parallel batches of 4 to avoid rate limits but stay fast
+  const BATCH_SIZE = 4
+  for (let i = 0; i < MUSIC_KEYWORDS.length; i += BATCH_SIZE) {
     if (diagnostics.apiCallsMade >= MAX_API_CALLS) {
       console.warn(`[AI Research] Reached MAX_API_CALLS limit (${MAX_API_CALLS}), stopping search`)
       break
     }
 
-    diagnostics.apiCallsMade++
-    try {
-      const places = await searchPlacesByKeyword(
-        campaign.latitude,
-        campaign.longitude,
-        campaign.baseLocation,
-        radiusMeters,
-        keyword,
-        apiKey,
-        diagnostics
-      )
-      diagnostics.keywordResults.push({ keyword, count: places.length })
-      allPlaces.push(...places)
-    } catch (error) {
-      diagnostics.apiCallsFailed++
-      const errMsg = error instanceof Error ? error.message : String(error)
-      diagnostics.keywordResults.push({ keyword, count: 0, error: errMsg })
-      diagnostics.errors.push(`Keyword "${keyword}": ${errMsg}`)
-      console.error(`[AI Research] Error searching for "${keyword}":`, errMsg)
+    const batch = MUSIC_KEYWORDS.slice(i, i + BATCH_SIZE)
+    const batchResults = await Promise.allSettled(
+      batch.map(async (keyword) => {
+        diagnostics.apiCallsMade++
+        const places = await searchPlacesByKeyword(
+          campaign.latitude,
+          campaign.longitude,
+          campaign.baseLocation,
+          radiusMeters,
+          keyword,
+          apiKey,
+          diagnostics
+        )
+        return { keyword, places }
+      })
+    )
+
+    for (const result of batchResults) {
+      if (result.status === 'fulfilled') {
+        diagnostics.keywordResults.push({ keyword: result.value.keyword, count: result.value.places.length })
+        allPlaces.push(...result.value.places)
+      } else {
+        diagnostics.apiCallsFailed++
+        const errMsg = result.reason instanceof Error ? result.reason.message : String(result.reason)
+        diagnostics.errors.push(`Keyword search failed: ${errMsg}`)
+        console.error(`[AI Research] Keyword batch error:`, errMsg)
+      }
     }
   }
 
@@ -532,7 +541,7 @@ async function searchPlacesByKeyword(
     // Follow pagination if available
     if (data.next_page_token) {
       // Google requires a short delay before the next_page_token becomes valid
-      await new Promise(resolve => setTimeout(resolve, 2000))
+      await new Promise(resolve => setTimeout(resolve, 1500))
       pageUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${data.next_page_token}&key=${apiKey}`
       pageNum++
     } else {
