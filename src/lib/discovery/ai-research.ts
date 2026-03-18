@@ -272,9 +272,9 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
   const allPlaces: any[] = []
 
   // Convert radius from miles to meters (Places API uses meters)
-  // Google Text Search query includes location name, so it covers the area well
-  // even beyond the 50km radius parameter limit
-  const radiusMeters = Math.min(campaign.radius * 1609.34, 50000)
+  // Text Search with location bias uses radius as a preference, not a hard limit,
+  // so we pass the full radius. The query includes location name for additional targeting.
+  const radiusMeters = Math.round(campaign.radius * 1609.34)
 
   console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
 
@@ -293,7 +293,8 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
         campaign.baseLocation,
         radiusMeters,
         keyword,
-        apiKey
+        apiKey,
+        diagnostics
       )
       diagnostics.keywordResults.push({ keyword, count: places.length })
       allPlaces.push(...places)
@@ -396,8 +397,8 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
   )
 
   // Limit to top candidates for enrichment
-  // Each candidate gets website-scraped (up to 4 pages), so keep this modest to avoid timeouts
-  const MAX_ENRICHMENT_CANDIDATES = 50
+  // Each candidate gets website-scraped (up to 4 pages), so keep this reasonable
+  const MAX_ENRICHMENT_CANDIDATES = 100
   const topResults = sorted.slice(0, MAX_ENRICHMENT_CANDIDATES)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
@@ -470,55 +471,78 @@ async function searchPlacesByKeyword(
   location: string,
   radius: number,
   keyword: string,
-  apiKey: string
+  apiKey: string,
+  diagnostics: AIResearchDiagnostics
 ): Promise<any[]> {
+  const allPlaces: any[] = []
   const query = `${keyword} in ${location}`
+
+  // First page
   const params = new URLSearchParams({
     query,
     location: `${lat},${lng}`,
-    radius: String(Math.min(radius, 50000)), // Legacy API max 50km
+    radius: String(radius),
     key: apiKey,
   })
 
-  const response = await fetch(
-    `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`
-  )
+  let pageUrl: string | null = `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`
+  let pageNum = 0
+  const MAX_PAGES = 3 // Google allows up to 3 pages (60 results total)
 
-  if (!response.ok) {
-    const errorBody = await response.text().catch(() => 'unknown')
-    console.error(`[AI Research] Places Text Search failed for "${query}":`, errorBody)
-    throw new Error(`Places API error: ${response.status} ${response.statusText}`)
-  }
+  while (pageUrl && pageNum < MAX_PAGES) {
+    if (pageNum > 0) {
+      diagnostics.apiCallsMade++ // Count pagination calls
+    }
 
-  const data = await response.json()
+    const response = await fetch(pageUrl)
 
-  if (data.status === 'REQUEST_DENIED') {
-    console.error(`[AI Research] Places API denied for "${query}": ${data.error_message || 'unknown'}`)
-    throw new Error(`Places API denied: ${data.error_message || 'Check API key and enabled APIs'}`)
-  }
+    if (!response.ok) {
+      const errorBody = await response.text().catch(() => 'unknown')
+      console.error(`[AI Research] Places Text Search failed for "${query}" page ${pageNum}:`, errorBody)
+      throw new Error(`Places API error: ${response.status} ${response.statusText}`)
+    }
 
-  if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-    console.error(`[AI Research] Places API status "${data.status}" for "${query}": ${data.error_message || ''}`)
-    throw new Error(`Places API error: ${data.status}`)
-  }
+    const data = await response.json()
 
-  const places = data.results || []
+    if (data.status === 'REQUEST_DENIED') {
+      console.error(`[AI Research] Places API denied for "${query}": ${data.error_message || 'unknown'}`)
+      throw new Error(`Places API denied: ${data.error_message || 'Check API key and enabled APIs'}`)
+    }
 
-  console.log(`[AI Research] "${keyword}" → ${places.length} results`)
+    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
+      console.error(`[AI Research] Places API status "${data.status}" for "${query}": ${data.error_message || ''}`)
+      throw new Error(`Places API error: ${data.status}`)
+    }
 
-  return places.map((place: any) => ({
-    name: place.name || '',
-    place_id: place.place_id,
-    geometry: {
-      location: {
-        lat: place.geometry?.location?.lat || 0,
-        lng: place.geometry?.location?.lng || 0,
+    const places = data.results || []
+    allPlaces.push(...places.map((place: any) => ({
+      name: place.name || '',
+      place_id: place.place_id,
+      geometry: {
+        location: {
+          lat: place.geometry?.location?.lat || 0,
+          lng: place.geometry?.location?.lng || 0,
+        },
       },
-    },
-    types: place.types || [],
-    formatted_address: place.formatted_address || '',
-    _searchKeyword: keyword,
-  }))
+      types: place.types || [],
+      formatted_address: place.formatted_address || '',
+      _searchKeyword: keyword,
+    })))
+
+    // Follow pagination if available
+    if (data.next_page_token) {
+      // Google requires a short delay before the next_page_token becomes valid
+      await new Promise(resolve => setTimeout(resolve, 2000))
+      pageUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${data.next_page_token}&key=${apiKey}`
+      pageNum++
+    } else {
+      pageUrl = null
+    }
+  }
+
+  console.log(`[AI Research] "${keyword}" → ${allPlaces.length} results (${pageNum + 1} page${pageNum > 0 ? 's' : ''})`)
+
+  return allPlaces
 }
 
 /**
