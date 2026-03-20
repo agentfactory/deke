@@ -1,6 +1,6 @@
 "use client";
 
-import { use, useEffect, useState } from "react";
+import { use, useCallback, useEffect, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -184,37 +184,99 @@ export default function CampaignDetailPage({
 
   const [isDiscovering, setIsDiscovering] = useState(false);
   const [discoveryResult, setDiscoveryResult] = useState<any>(null);
+  const [discoveryElapsed, setDiscoveryElapsed] = useState(0);
+  const pollIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const stopPolling = useCallback(() => {
+    if (pollIntervalRef.current) {
+      clearInterval(pollIntervalRef.current);
+      pollIntervalRef.current = null;
+    }
+  }, []);
+
+  const pollDiscoveryStatus = useCallback(async () => {
+    try {
+      const response = await fetch(`/api/campaigns/${id}/discover`);
+      if (!response.ok) return;
+
+      const data = await response.json();
+
+      if (data.status === "running") {
+        setDiscoveryElapsed(data.elapsedMs || 0);
+      } else if (data.status === "completed") {
+        stopPolling();
+        setIsDiscovering(false);
+        setDiscoveryResult(data);
+        await fetchCampaign();
+      } else if (data.status === "failed") {
+        stopPolling();
+        setIsDiscovering(false);
+        setDiscoveryResult({ error: data.error || "Discovery failed" });
+      }
+    } catch {
+      // Network error during poll — keep trying
+    }
+  }, [id, stopPolling]);
+
+  // Start polling for discovery status
+  const startPolling = useCallback(() => {
+    stopPolling();
+    setIsDiscovering(true);
+    setDiscoveryElapsed(0);
+    pollIntervalRef.current = setInterval(pollDiscoveryStatus, 3000);
+  }, [stopPolling, pollDiscoveryStatus]);
+
+  // Clean up polling on unmount
+  useEffect(() => {
+    return () => stopPolling();
+  }, [stopPolling]);
+
+  // Auto-resume polling if discovery is already running when page loads
+  useEffect(() => {
+    if (!campaign) return;
+
+    const checkRunning = async () => {
+      try {
+        const response = await fetch(`/api/campaigns/${id}/discover`);
+        if (!response.ok) return;
+        const data = await response.json();
+        if (data.status === "running") {
+          startPolling();
+        }
+      } catch {
+        // Ignore
+      }
+    };
+    checkRunning();
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [campaign?.id]);
 
   const handleDiscoverLeads = async () => {
     if (!campaign) return;
 
     try {
-      setIsDiscovering(true);
       setDiscoveryResult(null);
       const response = await fetch(`/api/campaigns/${campaign.id}/discover`, {
         method: "POST",
         headers: { "Content-Type": "application/json" }
       });
 
+      if (response.status === 409) {
+        // Already running — just start polling
+        startPolling();
+        return;
+      }
+
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}));
-        throw new Error(errorData.message || "Failed to discover leads");
+        throw new Error(errorData.message || "Failed to start discovery");
       }
 
-      const result = await response.json();
-      setDiscoveryResult(result);
-
-      if (result.discovered?.total === 0) {
-        // Don't use alert — the UI will show diagnostics inline
-        console.warn("Discovery returned 0 leads. Diagnostics:", result.diagnostics);
-      }
-
-      await fetchCampaign();
+      // Started successfully — begin polling
+      startPolling();
     } catch (err) {
-      console.error("Error discovering leads:", err);
-      setDiscoveryResult({ error: err instanceof Error ? err.message : "Failed to discover leads" });
-    } finally {
-      setIsDiscovering(false);
+      console.error("Error starting discovery:", err);
+      setDiscoveryResult({ error: err instanceof Error ? err.message : "Failed to start discovery" });
     }
   };
 
@@ -352,13 +414,15 @@ export default function CampaignDetailPage({
             <div className="flex flex-col gap-2">
               <Button onClick={handleDiscoverLeads} disabled={isDiscovering}>
                 {isDiscovering ? (
-                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
+                  <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering... {discoveryElapsed > 0 ? `${Math.round(discoveryElapsed / 1000)}s` : ''}</>
                 ) : (
                   <><Target className="h-4 w-4 mr-2" />Discover & Draft</>
                 )}
               </Button>
               <p className="text-sm text-muted-foreground">
-                Find leads, enrich contacts, and generate email drafts
+                {isDiscovering
+                  ? "Running in background — safe to navigate away"
+                  : "Find leads, enrich contacts, and generate email drafts"}
               </p>
             </div>
           )}
@@ -666,7 +730,7 @@ export default function CampaignDetailPage({
               disabled={!campaign || isDiscovering}
             >
               {isDiscovering ? (
-                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
+                <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering... {discoveryElapsed > 0 ? `${Math.round(discoveryElapsed / 1000)}s` : ''}</>
               ) : (
                 <><Target className="h-4 w-4 mr-2" />Discover More Leads</>
               )}
@@ -712,7 +776,7 @@ export default function CampaignDetailPage({
                     variant="outline"
                   >
                     {isDiscovering ? (
-                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering...</>
+                      <><Loader2 className="h-4 w-4 mr-2 animate-spin" />Discovering... {discoveryElapsed > 0 ? `${Math.round(discoveryElapsed / 1000)}s` : ''}</>
                     ) : (
                       <><Target className="h-4 w-4 mr-2" />{discoveryResult ? 'Re-run Discovery' : 'Run Discovery'}</>
                     )}

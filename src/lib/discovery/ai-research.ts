@@ -62,21 +62,14 @@ const MUSIC_KEYWORDS = [
   'chorus',
   'chorale',
   'Sweet Adelines',
-  'Harmony Inc',
   'Barbershop Harmony Society',
-  'BHS chorus',
-  'CASA a cappella',
   'a cappella group',
   'vocal ensemble',
-  'gospel choir',
   'community chorus',
 
   // Youth music education
   'high school choir',
-  'middle school choir',
   'music school',
-  'conservatory',
-  'youth choir',
 ]
 
 /**
@@ -398,7 +391,7 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
   // Limit to top candidates for enrichment
   // Each candidate gets website-scraped (up to 4 pages), so keep this reasonable
-  const MAX_ENRICHMENT_CANDIDATES = 100
+  const MAX_ENRICHMENT_CANDIDATES = 50
   const topResults = sorted.slice(0, MAX_ENRICHMENT_CANDIDATES)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
@@ -487,7 +480,7 @@ async function searchPlacesByKeyword(
 
   let pageUrl: string | null = `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`
   let pageNum = 0
-  const MAX_PAGES = 3 // Google allows up to 3 pages (60 results total)
+  const MAX_PAGES = 2 // Limit to 2 pages (40 results) to reduce processing time
 
   while (pageUrl && pageNum < MAX_PAGES) {
     if (pageNum > 0) {

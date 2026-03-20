@@ -1,8 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
-import { discoverLeads } from '@/lib/discovery'
-import { renderTemplate } from '@/lib/outreach/template-renderer'
+import { runDiscoveryInBackground } from '@/lib/discovery/background-runner'
 
 type Params = {
   params: Promise<{
@@ -10,39 +9,106 @@ type Params = {
   }>
 }
 
+// Stale job timeout: 10 minutes
+const STALE_JOB_TIMEOUT_MS = 10 * 60 * 1000
+
 /**
  * POST /api/campaigns/[id]/discover
  *
- * Streamlined 3-step workflow: Create -> [auto: discover + enrich + draft] -> Review & Send
- *
- * 1. Runs all discovery sources (past clients, dormant, similar orgs, AI research)
- * 2. AI Research now enriches via website scraping (real contacts, not fake)
- * 3. Auto-generates email drafts for leads with verified/scraped emails
- * 4. Sets campaign status to READY
+ * Starts discovery as a background job. Returns 202 Accepted immediately.
+ * Poll GET /api/campaigns/[id]/discover for status.
  */
 export async function POST(request: NextRequest, { params }: Params) {
   try {
     const { id } = await params
 
-    // Verify campaign exists (include booking for date context)
     const campaign = await prisma.campaign.findUnique({
       where: { id },
       select: {
         id: true,
         name: true,
-        baseLocation: true,
-        latitude: true,
-        longitude: true,
-        radius: true,
+        discoveryStatus: true,
+        discoveryStartedAt: true,
+      },
+    })
+
+    if (!campaign) {
+      throw new ApiError(404, 'Campaign not found', 'CAMPAIGN_NOT_FOUND')
+    }
+
+    // Check if discovery is already running
+    if (campaign.discoveryStatus === 'RUNNING') {
+      // Check for stale job
+      const startedAt = campaign.discoveryStartedAt?.getTime() || 0
+      const isStale = Date.now() - startedAt > STALE_JOB_TIMEOUT_MS
+
+      if (!isStale) {
+        return NextResponse.json(
+          { message: 'Discovery is already running', status: 'running' },
+          { status: 409 }
+        )
+      }
+
+      // Stale job — mark it failed and allow restart
+      console.warn(`[Discover] Stale discovery job detected for campaign ${id}, allowing restart`)
+      await prisma.campaign.update({
+        where: { id },
+        data: {
+          discoveryStatus: 'FAILED',
+          discoveryError: 'Discovery timed out (server may have restarted)',
+        },
+      })
+    }
+
+    // Mark as running
+    await prisma.campaign.update({
+      where: { id },
+      data: {
+        discoveryStatus: 'RUNNING',
+        discoveryStartedAt: new Date(),
+        discoveryError: null,
+      },
+    })
+
+    // Fire and forget — do NOT await
+    runDiscoveryInBackground(id)
+
+    return NextResponse.json(
+      {
+        message: 'Discovery started',
+        status: 'started',
+        campaignId: id,
+        campaignName: campaign.name,
+      },
+      { status: 202 }
+    )
+  } catch (error) {
+    return handleApiError(error)
+  }
+}
+
+/**
+ * GET /api/campaigns/[id]/discover
+ *
+ * Returns current discovery status. Frontend polls this every few seconds.
+ */
+export async function GET(request: NextRequest, { params }: Params) {
+  try {
+    const { id } = await params
+
+    const campaign = await prisma.campaign.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        name: true,
         status: true,
-        startDate: true,
-        endDate: true,
-        booking: {
+        discoveryStatus: true,
+        discoveryStartedAt: true,
+        discoveryError: true,
+        _count: {
           select: {
-            startDate: true,
-            endDate: true,
-            serviceType: true,
-            location: true,
+            leads: true,
+            emailDrafts: true,
           },
         },
       },
@@ -52,180 +118,82 @@ export async function POST(request: NextRequest, { params }: Params) {
       throw new ApiError(404, 'Campaign not found', 'CAMPAIGN_NOT_FOUND')
     }
 
-    // Run discovery engine (includes enrichment)
-    const result = await discoverLeads(id)
+    // Check for stale running job
+    if (campaign.discoveryStatus === 'RUNNING') {
+      const startedAt = campaign.discoveryStartedAt?.getTime() || 0
+      const isStale = Date.now() - startedAt > STALE_JOB_TIMEOUT_MS
 
-    // Auto-generate email drafts for leads with real emails
-    let draftsGenerated = 0
-    let draftsSkipped = 0
-
-    try {
-      // Build availability date string from campaign or booking dates
-      const formatDate = (d: Date | string | null) => {
-        if (!d) return null
-        return new Date(d).toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' })
-      }
-
-      const availStart = formatDate(campaign.booking?.startDate || campaign.startDate)
-      const availEnd = formatDate(campaign.booking?.endDate || campaign.endDate)
-      let availabilityDates = ''
-      if (availStart && availEnd) {
-        availabilityDates = `${availStart} through ${availEnd}`
-      } else if (availStart) {
-        availabilityDates = `around ${availStart}`
-      }
-
-      const baseUrl = process.env.NEXT_PUBLIC_BASE_URL || 'https://dekesharon.com'
-      const workshopLink = `${baseUrl}/workshops`
-      const servicesLink = `${baseUrl}/services`
-
-      // Find template
-      let templateSubject = 'Collaboration Opportunity with Deke Sharon'
-      let templateBody = `Hi {{firstName}},
-
-I'm Deke Sharon, and I'll be in the {{baseLocation}} area{{availabilityDates}} — I'd love to explore working with {{organization}}.
-
-I offer workshops, coaching, and masterclasses tailored to vocal groups of all levels. You can see the full list of what I offer here: {{workshopLink}}
-
-Would you be open to a quick conversation about what might be a good fit?
-
-Best,
-Deke Sharon
-{{servicesLink}}`
-
-      const defaultTemplate = await prisma.messageTemplate.findFirst({
-        where: { channel: 'EMAIL' },
-        orderBy: { createdAt: 'desc' },
-      })
-      if (defaultTemplate) {
-        templateSubject = defaultTemplate.subject || templateSubject
-        templateBody = defaultTemplate.body
-      }
-
-      // Get campaign leads that have real emails (not placeholder or needsEnrichment)
-      const campaignLeads = await prisma.campaignLead.findMany({
-        where: {
-          campaignId: id,
-        },
-        include: {
-          lead: true,
-        },
-      })
-
-      // Check which already have drafts
-      const existingDrafts = await prisma.emailDraft.findMany({
-        where: { campaignId: id },
-        select: { campaignLeadId: true },
-      })
-      const existingDraftIds = new Set(existingDrafts.map(d => d.campaignLeadId))
-
-      for (const cl of campaignLeads) {
-        // Skip if already has a draft
-        if (existingDraftIds.has(cl.id)) {
-          draftsSkipped++
-          continue
-        }
-
-        // Skip leads that need enrichment (no usable email)
-        if (cl.lead.needsEnrichment || cl.lead.email.includes('@placeholder.local')) {
-          draftsSkipped++
-          continue
-        }
-
-        const vars: Record<string, string> = {
-          firstName: cl.lead.firstName,
-          lastName: cl.lead.lastName,
-          organization: cl.lead.organization || '',
-          contactTitle: cl.lead.contactTitle || '',
-          editorialSummary: cl.lead.editorialSummary || '',
-          email: cl.lead.email,
-          baseLocation: campaign.baseLocation,
-          availabilityDates: availabilityDates ? ` ${availabilityDates}` : ' soon',
-          workshopLink,
-          servicesLink,
-        }
-
-        const renderedSubject = renderTemplate(templateSubject, vars)
-        const renderedBody = renderTemplate(templateBody, vars)
-
-        await prisma.emailDraft.create({
+      if (isStale) {
+        await prisma.campaign.update({
+          where: { id },
           data: {
-            campaignId: id,
-            campaignLeadId: cl.id,
-            leadId: cl.leadId,
-            subject: renderedSubject,
-            body: renderedBody,
-            status: 'DRAFT',
+            discoveryStatus: 'FAILED',
+            discoveryError: 'Discovery timed out (server may have restarted)',
           },
         })
-        draftsGenerated++
+
+        return NextResponse.json({
+          status: 'failed',
+          error: 'Discovery timed out (server may have restarted). Try again.',
+          campaignId: id,
+        })
       }
 
-      console.log(`[Discover] Auto-generated ${draftsGenerated} drafts, skipped ${draftsSkipped}`)
-    } catch (draftError) {
-      console.error('[Discover] Draft generation failed (discovery still succeeded):', draftError)
-    }
-
-    // Auto-advance campaign status to READY
-    if (campaign.status === 'DRAFT') {
-      await prisma.campaign.update({
-        where: { id },
-        data: { status: 'READY' },
+      const elapsedMs = Date.now() - startedAt
+      return NextResponse.json({
+        status: 'running',
+        campaignId: id,
+        startedAt: campaign.discoveryStartedAt,
+        elapsedMs,
       })
     }
 
-    const status = result.total === 0 ? 'no_results' : 'success'
+    if (campaign.discoveryStatus === 'COMPLETED') {
+      // Get source breakdown
+      const sourceBreakdown = await prisma.campaignLead.groupBy({
+        by: ['source'],
+        where: { campaignId: id },
+        _count: true,
+      })
 
-    return NextResponse.json(
-      {
-        message: result.total === 0
-          ? 'Discovery completed but found no leads — check diagnostics for details'
-          : 'Lead discovery and draft generation completed',
-        status,
-        campaignId: campaign.id,
+      const bySource: Record<string, number> = {}
+      for (const s of sourceBreakdown) {
+        bySource[s.source] = s._count
+      }
+
+      // Get draft counts
+      const draftCount = await prisma.emailDraft.count({
+        where: { campaignId: id },
+      })
+
+      return NextResponse.json({
+        status: 'completed',
+        campaignId: id,
         campaignName: campaign.name,
         discovered: {
-          total: result.total,
-          bySource: {
-            pastClients: result.bySource.PAST_CLIENT,
-            dormantLeads: result.bySource.DORMANT,
-            similarOrgs: result.bySource.SIMILAR_ORG,
-            aiResearch: result.bySource.AI_RESEARCH,
-          },
+          total: campaign._count.leads,
+          bySource,
         },
         drafts: {
-          generated: draftsGenerated,
-          skipped: draftsSkipped,
+          generated: draftCount,
         },
-        scoring: {
-          avgScore: result.avgScore,
-          scoreDistribution: result.scoreStats.distribution,
-          min: result.scoreStats.min,
-          max: result.scoreStats.max,
-          median: result.scoreStats.median,
-        },
-        deduplication: {
-          originalCount: result.deduplicationStats.original,
-          duplicatesRemoved: result.deduplicationStats.duplicatesRemoved,
-          deduplicationRate: result.deduplicationStats.deduplicationRate,
-        },
-        performance: {
-          duration: result.duration,
-          leadsPerSecond: result.duration > 0 ? Math.round((result.total / result.duration) * 1000) : 0,
-        },
-        warnings: result.warnings || [],
-        errors: result.errors || [],
-        diagnostics: (result.diagnostics || []).map(d => ({
-          source: d.source,
-          count: d.count,
-          durationMs: d.durationMs,
-          error: d.error || null,
-          details: d.details || null,
-        })),
-        newLeadsCount: result.total,
-      },
-      { status: 200 }
-    )
+      })
+    }
+
+    if (campaign.discoveryStatus === 'FAILED') {
+      return NextResponse.json({
+        status: 'failed',
+        campaignId: id,
+        error: campaign.discoveryError || 'Discovery failed (unknown error)',
+      })
+    }
+
+    // No discovery has been run yet
+    return NextResponse.json({
+      status: 'idle',
+      campaignId: id,
+      leadsCount: campaign._count.leads,
+    })
   } catch (error) {
     return handleApiError(error)
   }
