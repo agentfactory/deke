@@ -25,6 +25,7 @@ const navItems = [
   { href: "/dashboard/bookings", label: "BOOKINGS", icon: "Calendar" as const },
   { href: "/dashboard/campaigns", label: "CAMPAIGNS", icon: "Rocket" as const },
   { href: "/dashboard/contacts", label: "CONTACTS", icon: "Users" as const, badge: true },
+  { href: "/dashboard/outreach", label: "OUTREACH", icon: "Mail" as const },
   { href: "/dashboard/calendar", label: "CALENDAR", icon: "CalendarDays" as const },
 ];
 

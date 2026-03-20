@@ -1,132 +1,306 @@
-import Link from 'next/link'
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Plus, Mail, Clock, CheckCircle } from 'lucide-react'
-import { prisma } from '@/lib/db'
+'use client';
 
-async function getOutreachData() {
-  try {
-    const [totalSent, totalOpened, totalClicked, messageTemplates] = await Promise.all([
-      prisma.outreachLog.count({ where: { status: { in: ['SENT', 'DELIVERED', 'OPENED', 'CLICKED', 'RESPONDED'] } } }),
-      prisma.outreachLog.count({ where: { status: 'OPENED' } }),
-      prisma.outreachLog.count({ where: { status: 'CLICKED' } }),
-      prisma.messageTemplate.findMany({
-        take: 10,
-        orderBy: { createdAt: 'desc' }
-      })
-    ])
+import { useState, useEffect, useCallback } from 'react';
+import Link from 'next/link';
+import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
+import { Button } from '@/components/ui/button';
+import { Badge } from '@/components/ui/badge';
+import { Checkbox } from '@/components/ui/checkbox';
+import {
+  Mail,
+  Send,
+  Loader2,
+  AlertCircle,
+  CheckCircle2,
+  XCircle,
+  FileText,
+  Users,
+  MapPin,
+} from 'lucide-react';
 
-    const openRate = totalSent > 0 ? Math.round((totalOpened / totalSent) * 100) : 0
-    const clickRate = totalSent > 0 ? Math.round((totalClicked / totalSent) * 100) : 0
-
-    return {
-      stats: { totalSent, openRate, clickRate },
-      messageTemplates
-    }
-  } catch (error) {
-    console.error('Error fetching outreach data:', error)
-    return {
-      stats: { totalSent: 0, openRate: 0, clickRate: 0 },
-      messageTemplates: []
-    }
-  }
+interface EmailDraft {
+  id: string;
+  subject: string;
+  body: string;
+  status: string;
+  sentAt: string | null;
+  errorMessage: string | null;
+  createdAt: string;
+  lead: {
+    id: string;
+    firstName: string;
+    lastName: string;
+    email: string;
+    organization: string | null;
+  };
+  campaign: {
+    id: string;
+    name: string;
+    baseLocation: string;
+  };
 }
 
-export default async function OutreachPage() {
-  const { stats, messageTemplates } = await getOutreachData()
+type FilterTab = 'all' | 'DRAFT' | 'SENT' | 'FAILED';
+
+const STATUS_STYLES: Record<string, { bg: string; text: string; icon: React.ElementType }> = {
+  DRAFT: { bg: 'bg-amber-100', text: 'text-amber-800', icon: FileText },
+  APPROVED: { bg: 'bg-blue-100', text: 'text-blue-800', icon: FileText },
+  SENT: { bg: 'bg-emerald-100', text: 'text-emerald-800', icon: CheckCircle2 },
+  FAILED: { bg: 'bg-red-100', text: 'text-red-800', icon: XCircle },
+};
+
+export default function OutreachPage() {
+  const [drafts, setDrafts] = useState<EmailDraft[]>([]);
+  const [total, setTotal] = useState(0);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
+  const [activeTab, setActiveTab] = useState<FilterTab>('all');
+  const [selected, setSelected] = useState<Set<string>>(new Set());
+  const [isSending, setIsSending] = useState(false);
+  const [sendResult, setSendResult] = useState<{ sent: number; failed: number } | null>(null);
+
+  const fetchDrafts = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const statusParam = activeTab === 'all' ? '' : `&status=${activeTab}`;
+      const res = await fetch(`/api/email-drafts?limit=100${statusParam}`);
+      if (!res.ok) throw new Error('Failed to load email drafts');
+      const data = await res.json();
+      setDrafts(data.drafts);
+      setTotal(data.pagination.total);
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Unknown error');
+    } finally {
+      setLoading(false);
+    }
+  }, [activeTab]);
+
+  useEffect(() => {
+    fetchDrafts();
+  }, [fetchDrafts]);
+
+  // Selection helpers
+  const draftOnlyItems = drafts.filter(d => d.status === 'DRAFT' || d.status === 'APPROVED');
+  const allDraftSelected = draftOnlyItems.length > 0 && draftOnlyItems.every(d => selected.has(d.id));
+
+  const toggleSelect = (id: string) => {
+    setSelected(prev => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleSelectAll = () => {
+    if (allDraftSelected) {
+      setSelected(new Set());
+    } else {
+      setSelected(new Set(draftOnlyItems.map(d => d.id)));
+    }
+  };
+
+  const handleSendSelected = async () => {
+    if (selected.size === 0) return;
+    setIsSending(true);
+    setSendResult(null);
+    try {
+      const res = await fetch('/api/email-drafts/send', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ draftIds: Array.from(selected) }),
+      });
+      if (!res.ok) throw new Error('Failed to send emails');
+      const result = await res.json();
+      setSendResult(result);
+      setSelected(new Set());
+      await fetchDrafts();
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Send failed');
+    } finally {
+      setIsSending(false);
+    }
+  };
+
+  // Stats
+  const draftCount = drafts.filter(d => d.status === 'DRAFT' || d.status === 'APPROVED').length;
+  const sentCount = drafts.filter(d => d.status === 'SENT').length;
+  const failedCount = drafts.filter(d => d.status === 'FAILED').length;
+
+  const tabs: { key: FilterTab; label: string; count: number }[] = [
+    { key: 'all', label: 'All', count: total },
+    { key: 'DRAFT', label: 'Drafts', count: draftCount },
+    { key: 'SENT', label: 'Sent', count: sentCount },
+    { key: 'FAILED', label: 'Failed', count: failedCount },
+  ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-slate-50 via-violet-50/30 to-cyan-50/20 dark:from-slate-950 dark:via-violet-950/20 dark:to-cyan-950/10">
-      <div className="relative overflow-hidden bg-white dark:bg-slate-900 border-b border-slate-200 dark:border-slate-800">
-        <div className="absolute inset-0 bg-gradient-to-r from-violet-500/5 via-cyan-500/5 to-violet-500/5" />
-
-        <div className="relative max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-          <div className="flex items-start justify-between gap-4 mb-6">
-            <div>
-              <h1 className="text-3xl sm:text-4xl font-bold text-slate-900 dark:text-white tracking-tight">
-                Outreach & Automation
-              </h1>
-              <p className="mt-2 text-sm sm:text-base text-slate-600 dark:text-slate-400">
-                Manage email sequences and message templates
-              </p>
-            </div>
-
-            <Button className="bg-gradient-to-br from-violet-600 to-violet-700 hover:from-violet-700 hover:to-violet-800">
-              <Plus className="w-4 h-4 mr-2" />
-              New Template
-            </Button>
-          </div>
-
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Total Sent</CardTitle>
-                <Mail className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.totalSent}</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Open Rate</CardTitle>
-                <Clock className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.openRate}%</div>
-              </CardContent>
-            </Card>
-
-            <Card>
-              <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
-                <CardTitle className="text-sm font-medium">Click Rate</CardTitle>
-                <CheckCircle className="h-4 w-4 text-muted-foreground" />
-              </CardHeader>
-              <CardContent>
-                <div className="text-2xl font-bold">{stats.clickRate}%</div>
-              </CardContent>
-            </Card>
-          </div>
+    <div className="space-y-6">
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold">Email Outreach</h1>
+          <p className="text-sm text-muted-foreground mt-1">
+            Review and send AI-generated outreach emails across all campaigns
+          </p>
         </div>
+        {selected.size > 0 && (
+          <Button
+            onClick={handleSendSelected}
+            disabled={isSending}
+            className="bg-[#C05A3C] hover:bg-[#a84d33]"
+          >
+            {isSending ? (
+              <>
+                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                Sending {selected.size}...
+              </>
+            ) : (
+              <>
+                <Send className="mr-2 h-4 w-4" />
+                Send {selected.size} Selected
+              </>
+            )}
+          </Button>
+        )}
       </div>
 
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
-        <Card>
-          <CardHeader>
-            <CardTitle>Message Templates</CardTitle>
-            <p className="text-sm text-muted-foreground mt-1">
-              Pre-configured email and SMS templates for outreach
-            </p>
-          </CardHeader>
-          <CardContent>
-            <div className="space-y-3">
-              {messageTemplates.length === 0 ? (
-                <p className="text-sm text-muted-foreground text-center py-8">
-                  No message templates yet. Create your first template to get started.
-                </p>
-              ) : (
-                messageTemplates.map((template: { id: string; name: string; channel: string; serviceType: string | null }) => (
-                  <div
-                    key={template.id}
-                    className="flex items-center justify-between p-4 border rounded-lg hover:bg-muted/50 transition-colors"
-                  >
-                    <div>
-                      <h4 className="font-medium">{template.name}</h4>
-                      <p className="text-sm text-muted-foreground">
-                        {template.channel} • {template.serviceType || 'General'}
-                      </p>
-                    </div>
-                    <Badge variant="secondary">{template.channel}</Badge>
-                  </div>
-                ))
-              )}
-            </div>
-          </CardContent>
-        </Card>
+      {/* Send result banner */}
+      {sendResult && (
+        <div className="rounded-lg border border-emerald-200 bg-emerald-50 p-4 flex items-center gap-3">
+          <CheckCircle2 className="h-5 w-5 text-emerald-600 shrink-0" />
+          <p className="text-sm">
+            <span className="font-medium">{sendResult.sent} emails sent</span>
+            {sendResult.failed > 0 && (
+              <span className="text-red-600 ml-2">({sendResult.failed} failed)</span>
+            )}
+          </p>
+          <button
+            onClick={() => setSendResult(null)}
+            className="ml-auto text-xs text-muted-foreground hover:text-foreground"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
+      {/* Tabs */}
+      <div className="flex items-center gap-1 border-b">
+        {tabs.map(tab => (
+          <button
+            key={tab.key}
+            onClick={() => { setActiveTab(tab.key); setSelected(new Set()); }}
+            className={`px-4 py-2.5 text-sm font-medium border-b-2 transition-colors ${
+              activeTab === tab.key
+                ? 'border-[#C05A3C] text-[#C05A3C]'
+                : 'border-transparent text-muted-foreground hover:text-foreground'
+            }`}
+          >
+            {tab.label}
+            <span className="ml-1.5 text-xs opacity-60">({tab.count})</span>
+          </button>
+        ))}
       </div>
+
+      {/* Content */}
+      {loading ? (
+        <div className="flex items-center justify-center py-16">
+          <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+          <span className="ml-2 text-sm text-muted-foreground">Loading drafts...</span>
+        </div>
+      ) : error ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <AlertCircle className="mb-2 h-8 w-8 text-red-500" />
+          <p className="text-sm font-medium text-red-600">{error}</p>
+          <Button onClick={fetchDrafts} variant="outline" className="mt-3">
+            Try again
+          </Button>
+        </div>
+      ) : drafts.length === 0 ? (
+        <div className="flex flex-col items-center justify-center py-16 text-center">
+          <Mail className="mb-3 h-10 w-10 text-muted-foreground" />
+          <h3 className="font-semibold">No email drafts yet</h3>
+          <p className="text-sm text-muted-foreground mt-1 max-w-md">
+            Create a campaign from a booking to discover leads, then generate AI-powered outreach emails.
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {/* Select all row */}
+          {draftOnlyItems.length > 0 && (activeTab === 'all' || activeTab === 'DRAFT') && (
+            <div className="flex items-center gap-3 px-4 py-2 text-sm text-muted-foreground">
+              <Checkbox
+                checked={allDraftSelected}
+                onCheckedChange={toggleSelectAll}
+              />
+              <span>Select all drafts ({draftOnlyItems.length})</span>
+            </div>
+          )}
+
+          {/* Draft rows */}
+          {drafts.map(draft => {
+            const style = STATUS_STYLES[draft.status] || STATUS_STYLES.DRAFT;
+            const StatusIcon = style.icon;
+            const isSendable = draft.status === 'DRAFT' || draft.status === 'APPROVED';
+
+            return (
+              <div
+                key={draft.id}
+                className="flex items-center gap-3 rounded-lg border bg-white p-4 hover:bg-muted/30 transition-colors"
+              >
+                {/* Checkbox */}
+                {isSendable && (
+                  <Checkbox
+                    checked={selected.has(draft.id)}
+                    onCheckedChange={() => toggleSelect(draft.id)}
+                  />
+                )}
+                {!isSendable && <div className="w-4" />}
+
+                {/* Status icon */}
+                <StatusIcon className={`h-4 w-4 shrink-0 ${style.text}`} />
+
+                {/* Content */}
+                <div className="flex-1 min-w-0">
+                  <div className="flex items-center gap-2">
+                    <p className="font-medium text-sm truncate">
+                      {draft.lead.firstName} {draft.lead.lastName}
+                    </p>
+                    {draft.lead.organization && (
+                      <span className="text-xs text-muted-foreground truncate">
+                        ({draft.lead.organization})
+                      </span>
+                    )}
+                  </div>
+                  <p className="text-sm text-muted-foreground truncate mt-0.5">
+                    {draft.subject}
+                  </p>
+                </div>
+
+                {/* Campaign info */}
+                <div className="hidden sm:flex items-center gap-1.5 text-xs text-muted-foreground shrink-0">
+                  <MapPin className="h-3 w-3" />
+                  <span className="truncate max-w-[120px]">{draft.campaign.baseLocation}</span>
+                </div>
+
+                {/* Status badge */}
+                <Badge className={`shrink-0 ${style.bg} ${style.text} border-0`}>
+                  {draft.status}
+                </Badge>
+
+                {/* View in campaign link */}
+                <Link
+                  href={`/dashboard/campaigns/${draft.campaign.id}`}
+                  className="text-xs text-[#C05A3C] hover:underline shrink-0"
+                >
+                  View
+                </Link>
+              </div>
+            );
+          })}
+        </div>
+      )}
     </div>
-  )
+  );
 }

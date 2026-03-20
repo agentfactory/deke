@@ -11,6 +11,7 @@ import {
   List,
   Grid3X3,
 } from "lucide-react";
+import { QuickBookingModal } from "@/components/bookings/quick-booking-modal";
 import {
   format,
   startOfMonth,
@@ -193,6 +194,10 @@ export default function CalendarPage() {
   const goToNextMonth = () => setCurrentMonth(addMonths(currentMonth, 1));
   const goToToday = () => setCurrentMonth(new Date());
 
+  // Quick-booking modal state
+  const [modalOpen, setModalOpen] = useState(false);
+  const [modalDate, setModalDate] = useState<string | undefined>(undefined);
+
   // Click handlers
   const handleBookingClick = (bookingId: string) => {
     router.push(`/dashboard/bookings/${bookingId}`);
@@ -200,7 +205,8 @@ export default function CalendarPage() {
 
   const handleDayClick = (day: Date) => {
     const dateStr = format(day, "yyyy-MM-dd");
-    router.push(`/dashboard/bookings/new?date=${dateStr}`);
+    setModalDate(dateStr);
+    setModalOpen(true);
   };
 
   // Effective view: force list on mobile
@@ -542,6 +548,14 @@ export default function CalendarPage() {
           <GridView />
         )}
       </div>
+
+      {/* Quick-booking modal */}
+      <QuickBookingModal
+        open={modalOpen}
+        onOpenChange={setModalOpen}
+        defaultDate={modalDate}
+        onSuccess={fetchBookings}
+      />
     </div>
   );
 }
