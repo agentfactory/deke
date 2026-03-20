@@ -478,6 +478,11 @@ model Campaign {
   outreachLogs  OutreachLog[]
   emailDrafts   EmailDraft[]
 
+  // Background discovery job tracking
+  discoveryStatus    String?      // null, "RUNNING", "COMPLETED", "FAILED"
+  discoveryStartedAt DateTime?
+  discoveryError     String?
+
   // Prospect mode: target org types without requiring a booking
   targetOrgTypes  String?      // JSON array: ["CHOIR", "BARBERSHOP", "MUSIC_SCHOOL"]
 
