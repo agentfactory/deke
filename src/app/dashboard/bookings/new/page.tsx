@@ -9,7 +9,7 @@ import { Label } from '@/components/ui/label';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
-import { ArrowLeft, Loader2, Rocket, Save } from 'lucide-react';
+import { ArrowLeft, Globe, Loader2, Rocket, Save } from 'lucide-react';
 import { AvailabilityWindow } from '@/components/bookings/availability-window';
 
 const SERVICE_TYPES = [
@@ -54,6 +54,9 @@ function NewBookingForm() {
     availabilityBefore: 3,
     availabilityAfter: 3,
     campaignRadius: 100,
+    isPublic: false,
+    publicTitle: '',
+    publicDescription: '',
   });
 
   useEffect(() => {
@@ -63,7 +66,7 @@ function NewBookingForm() {
       .catch(() => setTrips([]));
   }, []);
 
-  const handleChange = (field: string, value: string | number) => {
+  const handleChange = (field: string, value: string | number | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -97,6 +100,9 @@ function NewBookingForm() {
         tripId: form.tripId || null,
         availabilityBefore: form.availabilityBefore,
         availabilityAfter: form.availabilityAfter,
+        isPublic: form.isPublic,
+        publicTitle: form.publicTitle || null,
+        publicDescription: form.publicDescription || null,
       };
 
       if (launch) {
@@ -117,7 +123,6 @@ function NewBookingForm() {
       const result = await response.json();
 
       if (result.campaign) {
-        // Campaign was created (either via auto-launch or auto-create)
         router.push(`/dashboard/campaigns/${result.campaign.id}`);
       } else {
         router.push(`/dashboard/bookings/${result.id}`);
@@ -320,6 +325,47 @@ function NewBookingForm() {
                     </div>
                   </div>
                 )}
+
+                {/* Public Event Section */}
+                <div className="space-y-4 pt-4 border-t">
+                  <div className="flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <h3 className="font-medium text-sm text-muted-foreground uppercase tracking-wide">Public Event</h3>
+                    </div>
+                    <Switch
+                      id="isPublic"
+                      checked={form.isPublic}
+                      onCheckedChange={(v) => handleChange('isPublic', v)}
+                    />
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Show this booking on the public events page at dekesharon.com/events
+                  </p>
+                  {form.isPublic && (
+                    <div className="space-y-4">
+                      <div>
+                        <Label htmlFor="publicTitle">Event Title</Label>
+                        <Input
+                          id="publicTitle"
+                          placeholder="A Cappella Workshop at UCLA"
+                          value={form.publicTitle}
+                          onChange={(e) => handleChange('publicTitle', e.target.value)}
+                        />
+                      </div>
+                      <div>
+                        <Label htmlFor="publicDescription">Event Description</Label>
+                        <Textarea
+                          id="publicDescription"
+                          placeholder="Join Deke Sharon for an immersive a cappella workshop..."
+                          rows={3}
+                          value={form.publicDescription}
+                          onChange={(e) => handleChange('publicDescription', e.target.value)}
+                        />
+                      </div>
+                    </div>
+                  )}
+                </div>
               </CardContent>
             </Card>
           </div>
@@ -427,7 +473,7 @@ function NewBookingForm() {
                   ) : (
                     <>
                       <Save className="mr-2 h-4 w-4" />
-                      Save Draft
+                      Save Booking
                     </>
                   )}
                 </Button>
