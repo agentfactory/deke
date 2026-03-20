@@ -175,7 +175,9 @@ model Booking {
   splitNotes        String?
 
   // Public visibility for events page
-  isPublic      Boolean  @default(false)
+  isPublic          Boolean  @default(false)
+  publicTitle       String?    // Public-facing event title, e.g. "A Cappella Workshop at UCLA"
+  publicDescription String?    // Short description for the /events page
 
   // Relations
   campaigns     Campaign[]

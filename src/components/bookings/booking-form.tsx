@@ -8,8 +8,18 @@ import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
-import { Loader2 } from 'lucide-react';
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogFooter,
+  DialogHeader,
+  DialogTitle,
+} from '@/components/ui/dialog';
+import { Label } from '@/components/ui/label';
+import { Loader2, Plus } from 'lucide-react';
 
 const SERVICE_TYPES = [
   'ARRANGEMENT',
@@ -52,6 +62,9 @@ const bookingFormSchema = z.object({
   internalNotes: z.string().optional(),
   clientNotes: z.string().optional(),
   tripId: z.string().optional(),
+  isPublic: z.boolean().optional(),
+  publicTitle: z.string().optional(),
+  publicDescription: z.string().optional(),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
@@ -87,6 +100,21 @@ export function BookingForm({
   const [leads, setLeads] = useState<Lead[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [loadingLeads, setLoadingLeads] = useState(true);
+  const [showCreateLead, setShowCreateLead] = useState(false);
+  const [creatingLead, setCreatingLead] = useState(false);
+  const [newLead, setNewLead] = useState({ firstName: '', lastName: '', email: '', organization: '' });
+
+  const fetchLeads = async () => {
+    try {
+      const res = await fetch('/api/leads');
+      if (res.ok) {
+        const data = await res.json();
+        setLeads(data);
+      }
+    } catch (error) {
+      console.error('Error fetching leads:', error);
+    }
+  };
 
   useEffect(() => {
     async function fetchData() {
@@ -131,8 +159,42 @@ export function BookingForm({
       internalNotes: initialValues?.internalNotes || '',
       clientNotes: initialValues?.clientNotes || '',
       tripId: initialValues?.tripId || '',
+      isPublic: initialValues?.isPublic || false,
+      publicTitle: initialValues?.publicTitle || '',
+      publicDescription: initialValues?.publicDescription || '',
     },
   });
+
+  const isPublic = form.watch('isPublic');
+
+  const handleCreateLead = async () => {
+    if (!newLead.firstName || !newLead.email) return;
+
+    setCreatingLead(true);
+    try {
+      const res = await fetch('/api/leads', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(newLead),
+      });
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message || 'Failed to create lead');
+      }
+
+      const created = await res.json();
+      await fetchLeads();
+      form.setValue('leadId', created.id);
+      setShowCreateLead(false);
+      setNewLead({ firstName: '', lastName: '', email: '', organization: '' });
+    } catch (error) {
+      console.error('Error creating lead:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create lead');
+    } finally {
+      setCreatingLead(false);
+    }
+  };
 
   return (
     <Form {...form}>
@@ -143,7 +205,19 @@ export function BookingForm({
           name="leadId"
           render={({ field }) => (
             <FormItem>
-              <FormLabel>Lead / Client</FormLabel>
+              <div className="flex items-center justify-between">
+                <FormLabel>Lead / Client</FormLabel>
+                <Button
+                  type="button"
+                  variant="ghost"
+                  size="sm"
+                  className="h-7 text-xs"
+                  onClick={() => setShowCreateLead(true)}
+                >
+                  <Plus className="h-3 w-3 mr-1" />
+                  New Lead
+                </Button>
+              </div>
               {loadingLeads ? (
                 <div className="flex items-center gap-2 text-sm text-muted-foreground">
                   <Loader2 className="h-4 w-4 animate-spin" />
@@ -151,7 +225,11 @@ export function BookingForm({
                 </div>
               ) : leads.length === 0 ? (
                 <div className="text-sm text-muted-foreground">
-                  No leads found. Create a lead first via the contact form or campaigns.
+                  No leads found.{' '}
+                  <button type="button" className="underline" onClick={() => setShowCreateLead(true)}>
+                    Create a new lead
+                  </button>{' '}
+                  to get started.
                 </div>
               ) : (
                 <Select onValueChange={field.onChange} value={field.value}>
@@ -417,12 +495,147 @@ export function BookingForm({
           )}
         />
 
+        {/* Public Event Settings */}
+        <div className="rounded-lg border p-4 space-y-4">
+          <FormField
+            control={form.control}
+            name="isPublic"
+            render={({ field }) => (
+              <FormItem className="flex items-center justify-between">
+                <div>
+                  <FormLabel>Show on Public Events Page</FormLabel>
+                  <FormDescription>
+                    Display this booking on the public /events page
+                  </FormDescription>
+                </div>
+                <FormControl>
+                  <Switch
+                    checked={field.value}
+                    onCheckedChange={field.onChange}
+                  />
+                </FormControl>
+              </FormItem>
+            )}
+          />
+
+          {isPublic && (
+            <>
+              <FormField
+                control={form.control}
+                name="publicTitle"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Title</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., A Cappella Workshop at UCLA" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Public-facing title shown on the events page
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="publicDescription"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Event Description</FormLabel>
+                    <FormControl>
+                      <Textarea
+                        placeholder="Brief description for the public events page"
+                        className="resize-none"
+                        rows={2}
+                        {...field}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+            </>
+          )}
+        </div>
+
         {/* Submit */}
         <Button type="submit" disabled={isLoading || loadingLeads} className="w-full">
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {submitLabel}
         </Button>
       </form>
+
+      {/* Quick Create Lead Dialog */}
+      <Dialog open={showCreateLead} onOpenChange={setShowCreateLead}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Create New Lead</DialogTitle>
+            <DialogDescription>
+              Add a new lead to associate with this booking.
+            </DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 py-2">
+            <div className="grid grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="newLeadFirstName">First Name *</Label>
+                <Input
+                  id="newLeadFirstName"
+                  value={newLead.firstName}
+                  onChange={(e) => setNewLead(prev => ({ ...prev, firstName: e.target.value }))}
+                  placeholder="First name"
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="newLeadLastName">Last Name</Label>
+                <Input
+                  id="newLeadLastName"
+                  value={newLead.lastName}
+                  onChange={(e) => setNewLead(prev => ({ ...prev, lastName: e.target.value }))}
+                  placeholder="Last name"
+                />
+              </div>
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newLeadEmail">Email *</Label>
+              <Input
+                id="newLeadEmail"
+                type="email"
+                value={newLead.email}
+                onChange={(e) => setNewLead(prev => ({ ...prev, email: e.target.value }))}
+                placeholder="email@example.com"
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="newLeadOrg">Organization</Label>
+              <Input
+                id="newLeadOrg"
+                value={newLead.organization}
+                onChange={(e) => setNewLead(prev => ({ ...prev, organization: e.target.value }))}
+                placeholder="Organization name"
+              />
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setShowCreateLead(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={handleCreateLead}
+              disabled={creatingLead || !newLead.firstName || !newLead.email}
+            >
+              {creatingLead ? (
+                <>
+                  <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  Creating...
+                </>
+              ) : (
+                'Create Lead'
+              )}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </Form>
   );
 }

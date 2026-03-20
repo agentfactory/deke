@@ -24,6 +24,8 @@ export async function GET() {
         startDate: true,
         endDate: true,
         location: true,
+        publicTitle: true,
+        publicDescription: true,
         lead: {
           select: {
             organization: true,
@@ -45,6 +47,8 @@ export async function GET() {
       startDate: booking.startDate,
       endDate: booking.endDate,
       location: booking.location,
+      publicTitle: booking.publicTitle ?? null,
+      publicDescription: booking.publicDescription ?? null,
       organization: booking.lead?.organization ?? null,
     }))
 

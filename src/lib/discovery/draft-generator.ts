@@ -7,6 +7,7 @@
 
 import { prisma } from '@/lib/db'
 import { renderTemplate } from '@/lib/outreach/template-renderer'
+import { buildDefaultSubject } from '@/lib/outreach/default-subject'
 
 export interface DraftGenerationResult {
   generated: number
@@ -34,6 +35,7 @@ export async function generateDraftsForCampaign(campaignId: string): Promise<Dra
         select: {
           startDate: true,
           endDate: true,
+          serviceType: true,
         },
       },
     },
@@ -63,7 +65,7 @@ export async function generateDraftsForCampaign(campaignId: string): Promise<Dra
   const servicesLink = `${baseUrl}/services`
 
   // Find template
-  let templateSubject = 'Collaboration Opportunity with Deke Sharon'
+  let templateSubject = buildDefaultSubject(campaign.baseLocation, campaign.booking?.serviceType)
   let templateBody = `Hi {{firstName}},
 
 I'm Deke Sharon, and I'll be in the {{baseLocation}} area{{availabilityDates}} — I'd love to explore working with {{organization}}.
