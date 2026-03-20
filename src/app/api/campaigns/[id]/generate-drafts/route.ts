@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
 import { renderTemplate } from '@/lib/outreach/template-renderer'
+import { buildDefaultSubject } from '@/lib/outreach/default-subject'
 import { generateDraftsSchema } from '@/lib/validations/email-draft'
 
 export async function POST(
@@ -16,13 +17,14 @@ export async function POST(
     // Verify campaign exists
     const campaign = await prisma.campaign.findUnique({
       where: { id: campaignId },
+      include: { booking: { select: { serviceType: true } } },
     })
     if (!campaign) {
       throw new ApiError(404, 'Campaign not found', 'NOT_FOUND')
     }
 
     // Fetch template
-    let templateSubject = 'Collaboration Opportunity with Deke Sharon'
+    let templateSubject = buildDefaultSubject(campaign.baseLocation, campaign.booking?.serviceType)
     let templateBody = 'Hi {{firstName}},\n\nI\'m reaching out because I\'ll be in the {{baseLocation}} area soon and thought there might be an opportunity to work together.\n\nWould you be open to a conversation?\n\nBest,\nDeke Sharon'
 
     if (templateId) {

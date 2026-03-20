@@ -53,6 +53,8 @@ interface PublicEvent {
   startDate: Date | null;
   endDate: Date | null;
   location: string | null;
+  publicTitle: string | null;
+  publicDescription: string | null;
   organization: string | null;
 }
 
@@ -77,6 +79,8 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
         startDate: true,
         endDate: true,
         location: true,
+        publicTitle: true,
+        publicDescription: true,
         lead: {
           select: {
             organization: true,
@@ -96,6 +100,8 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
       startDate: b.startDate,
       endDate: b.endDate,
       location: b.location,
+      publicTitle: b.publicTitle ?? null,
+      publicDescription: b.publicDescription ?? null,
       organization: b.lead?.organization ?? null,
     }));
   } catch (error) {
@@ -260,6 +266,20 @@ function EventCard({
               {serviceLabel(event.serviceType)}
             </span>
           </div>
+
+          {/* Event title */}
+          {event.publicTitle && (
+            <h3 className="text-base font-semibold text-[#1a1a1a] mb-1">
+              {event.publicTitle}
+            </h3>
+          )}
+
+          {/* Event description */}
+          {event.publicDescription && (
+            <p className="text-sm text-[#666] mb-2">
+              {event.publicDescription}
+            </p>
+          )}
 
           {/* Location */}
           {event.location && (

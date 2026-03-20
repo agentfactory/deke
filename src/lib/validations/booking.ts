@@ -48,6 +48,9 @@ export const createBookingSchema = z.object({
   clientNotes: z.string().optional().nullable(),
   availabilityBefore: z.number().int().min(0).max(30).optional().nullable(),
   availabilityAfter: z.number().int().min(0).max(30).optional().nullable(),
+  isPublic: z.boolean().optional(),
+  publicTitle: z.string().max(200).optional().nullable(),
+  publicDescription: z.string().max(1000).optional().nullable(),
 })
 
 // Query filters for listing bookings
@@ -77,6 +80,8 @@ export const updateBookingSchema = z.object({
   availabilityBefore: z.number().int().min(0).max(30).optional().nullable(),
   availabilityAfter: z.number().int().min(0).max(30).optional().nullable(),
   isPublic: z.boolean().optional(),
+  publicTitle: z.string().max(200).optional().nullable(),
+  publicDescription: z.string().max(1000).optional().nullable(),
 })
 
 // Type exports

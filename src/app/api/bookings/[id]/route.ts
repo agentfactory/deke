@@ -165,6 +165,9 @@ export async function PATCH(
         paymentStatus: validatedData.paymentStatus,
         internalNotes: validatedData.internalNotes,
         clientNotes: validatedData.clientNotes,
+        isPublic: validatedData.isPublic,
+        publicTitle: validatedData.publicTitle,
+        publicDescription: validatedData.publicDescription,
       },
       include: {
         lead: {

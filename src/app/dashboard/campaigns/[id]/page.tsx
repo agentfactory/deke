@@ -19,6 +19,7 @@ import {
   Edit,
   Loader2,
   AlertTriangle,
+  CheckCircle,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -750,6 +751,46 @@ export default function CampaignDetailPage({
 
         <TabsContent value="leads">
           <div className="space-y-4">
+            {/* Contacts Summary */}
+            {campaign.leads.length > 0 && (() => {
+              const active = campaign.leads.filter(l => l.status !== 'REMOVED')
+              const removed = campaign.leads.filter(l => l.status === 'REMOVED')
+              const withEmail = active.filter(l => l.lead.emailVerified || (!l.lead.needsEnrichment && !l.lead.email?.includes?.('@placeholder')))
+              const bySource: Record<string, number> = {}
+              for (const l of active) {
+                bySource[l.source] = (bySource[l.source] || 0) + 1
+              }
+              const sourceLabels: Record<string, string> = {
+                PAST_CLIENT: 'Past Clients',
+                DORMANT: 'Dormant',
+                SIMILAR_ORG: 'Similar Orgs',
+                AI_RESEARCH: 'AI Research',
+                MANUAL_IMPORT: 'Manual',
+              }
+              return (
+                <div className="flex flex-wrap items-center gap-3 rounded-lg border bg-muted/30 px-4 py-3 text-sm">
+                  <span className="font-medium flex items-center gap-1.5">
+                    <Users className="h-4 w-4" />
+                    {active.length} contacts
+                  </span>
+                  <span className="text-muted-foreground">|</span>
+                  <span className="flex items-center gap-1 text-emerald-600">
+                    <CheckCircle className="h-3.5 w-3.5" />
+                    {withEmail.length} emailable
+                  </span>
+                  {Object.entries(bySource).map(([source, count]) => (
+                    <Badge key={source} variant="outline" className="text-xs">
+                      {sourceLabels[source] || source}: {count}
+                    </Badge>
+                  ))}
+                  {removed.length > 0 && (
+                    <span className="text-muted-foreground text-xs">
+                      ({removed.length} removed)
+                    </span>
+                  )}
+                </div>
+              )
+            })()}
             <BulkActionsToolbar
               selectedCount={selectedLeads.length}
               selectedLeadIds={selectedLeads.map(l => l.id)}
