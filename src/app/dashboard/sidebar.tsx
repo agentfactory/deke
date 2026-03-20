@@ -8,7 +8,9 @@ import {
   Rocket,
   Users,
   CalendarDays,
+  LogOut,
 } from "lucide-react";
+import { signOut } from "next-auth/react";
 
 const iconMap = {
   LayoutDashboard,
@@ -28,9 +30,11 @@ type NavItem = {
 export function DashboardSidebar({
   navItems,
   newRequestCount,
+  userName,
 }: {
   navItems: NavItem[];
   newRequestCount: number;
+  userName?: string;
 }) {
   const pathname = usePathname();
 
@@ -110,14 +114,24 @@ export function DashboardSidebar({
           </ul>
         </nav>
 
-        {/* Footer version */}
-        <div className="px-7 py-5">
-          <span
-            className="text-[11px] tracking-[1px] text-[#444446]"
+        {/* Footer - user info & sign out */}
+        <div className="border-t border-[#222224] px-7 py-5">
+          {userName && (
+            <p
+              className="mb-2 truncate text-[11px] tracking-[1px] text-[#777779]"
+              style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
+            >
+              {userName}
+            </p>
+          )}
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex items-center gap-2 text-[11px] tracking-[1px] text-[#444446] transition-colors hover:text-[#C05A3C]"
             style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
           >
-            v2.0
-          </span>
+            <LogOut className="h-3.5 w-3.5" />
+            SIGN OUT
+          </button>
         </div>
       </aside>
 

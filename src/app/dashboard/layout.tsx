@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { SessionProvider } from "next-auth/react";
 import { DashboardSidebar } from "./sidebar";
 
 async function getNewGroupRequestCount(): Promise<number> {
@@ -33,17 +35,23 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const newRequestCount = await getNewGroupRequestCount();
+  const [session, newRequestCount] = await Promise.all([
+    auth(),
+    getNewGroupRequestCount(),
+  ]);
+  const userName = session?.user?.name || session?.user?.email || "Admin";
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8]">
-      {/* Desktop sidebar */}
-      <DashboardSidebar navItems={navItems} newRequestCount={newRequestCount} />
+    <SessionProvider session={session}>
+      <div className="min-h-screen bg-[#FAFAF8]">
+        {/* Desktop sidebar */}
+        <DashboardSidebar navItems={navItems} newRequestCount={newRequestCount} userName={userName} />
 
-      {/* Main content */}
-      <main className="lg:pl-[260px] pb-20 lg:pb-0">
-        <div className="mx-auto max-w-7xl p-6 md:p-8">{children}</div>
-      </main>
-    </div>
+        {/* Main content */}
+        <main className="lg:pl-[260px] pb-20 lg:pb-0">
+          <div className="mx-auto max-w-7xl p-6 md:p-8">{children}</div>
+        </main>
+      </div>
+    </SessionProvider>
   );
 }
