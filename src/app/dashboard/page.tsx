@@ -2,13 +2,15 @@ import Link from "next/link"
 import { prisma } from "@/lib/db"
 import {
   Calendar,
-  Rocket,
   Users,
   TrendingUp,
   ArrowRight,
   CheckCircle2,
   MapPin,
   Clock,
+  DollarSign,
+  AlertCircle,
+  CalendarDays,
 } from "lucide-react"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
@@ -49,18 +51,41 @@ function formatServiceType(type: string): string {
     .replace(/\b\w/g, (c) => c.toUpperCase())
 }
 
-function getStatusColor(status: string): string {
+function formatCurrency(value: number): string {
+  return new Intl.NumberFormat("en-US", {
+    style: "currency",
+    currency: "USD",
+    maximumFractionDigits: 0,
+  }).format(value)
+}
+
+function getPaymentStatusBadge(status: string) {
   switch (status) {
-    case "ACTIVE":
-      return "bg-emerald-100 text-emerald-800 border-emerald-200"
-    case "DRAFT":
-      return "bg-stone-100 text-stone-700 border-stone-200"
-    case "PAUSED":
-      return "bg-amber-100 text-amber-800 border-amber-200"
-    case "COMPLETED":
-      return "bg-sky-100 text-sky-800 border-sky-200"
-    case "APPROVED":
-      return "bg-indigo-100 text-indigo-800 border-indigo-200"
+    case "UNPAID":
+      return "bg-red-50 text-red-700 border-red-200"
+    case "DEPOSIT_PAID":
+      return "bg-amber-50 text-amber-700 border-amber-200"
+    case "PAID_IN_FULL":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200"
+    case "OVERDUE":
+      return "bg-red-100 text-red-800 border-red-300"
+    case "REFUNDED":
+      return "bg-stone-100 text-stone-600 border-stone-200"
+    default:
+      return "bg-stone-100 text-stone-600 border-stone-200"
+  }
+}
+
+function getEngagementStatusBadge(status: string) {
+  switch (status) {
+    case "PREP":
+      return "bg-blue-50 text-blue-700 border-blue-200"
+    case "READY":
+      return "bg-emerald-50 text-emerald-700 border-emerald-200"
+    case "DELIVERED":
+      return "bg-sky-50 text-sky-700 border-sky-200"
+    case "FOLLOW_UP":
+      return "bg-amber-50 text-amber-700 border-amber-200"
     default:
       return "bg-stone-100 text-stone-600 border-stone-200"
   }
@@ -73,20 +98,17 @@ async function getDashboardData() {
 
   try {
     const [
-      activeBookings,
-      upcomingBookings,
-      activeCampaigns,
-      totalContacts,
-      bookingsNeedingCampaigns,
-      recentCampaigns,
+      upcomingBookingsCount,
+      revenuePipelineResult,
+      outstandingBalanceResult,
+      activeLeadsCount,
+      nextUpBookings,
+      needsPrepBookings,
+      paymentDueBookings,
+      noCampaignBookings,
       recentContacts,
     ] = await Promise.all([
-      // Active Bookings count
-      prisma.booking.count({
-        where: { status: { in: ["CONFIRMED", "IN_PROGRESS"] } },
-      }),
-
-      // Upcoming This Month
+      // KPI 1: Upcoming Bookings (next 30 days)
       prisma.booking.count({
         where: {
           status: { in: ["CONFIRMED", "IN_PROGRESS", "PENDING"] },
@@ -94,15 +116,82 @@ async function getDashboardData() {
         },
       }),
 
-      // Active Campaigns
-      prisma.campaign.count({
-        where: { status: "ACTIVE" },
+      // KPI 2: Revenue Pipeline — sum of amount for confirmed/in-progress
+      prisma.booking.aggregate({
+        _sum: { amount: true },
+        where: {
+          status: { in: ["CONFIRMED", "IN_PROGRESS"] },
+        },
       }),
 
-      // Total Contacts
-      prisma.lead.count(),
+      // KPI 3: Outstanding Balance
+      prisma.booking.aggregate({
+        _sum: { balanceDue: true },
+        where: {
+          paymentStatus: { notIn: ["PAID_IN_FULL", "REFUNDED"] },
+          balanceDue: { gt: 0 },
+        },
+      }),
 
-      // Bookings needing campaigns
+      // KPI 4: Active Leads
+      prisma.lead.count({
+        where: {
+          status: {
+            in: ["NEW", "CONTACTED", "QUALIFIED", "PROPOSAL_SENT", "NEGOTIATING"],
+          },
+        },
+      }),
+
+      // Next Up: next 5 upcoming bookings
+      prisma.booking.findMany({
+        where: {
+          status: { in: ["CONFIRMED", "IN_PROGRESS", "PENDING"] },
+          startDate: { gte: now },
+        },
+        include: {
+          lead: {
+            select: {
+              firstName: true,
+              lastName: true,
+            },
+          },
+        },
+        orderBy: { startDate: "asc" },
+        take: 5,
+      }),
+
+      // Action Items: Needs Prep
+      prisma.booking.findMany({
+        where: {
+          startDate: { gte: now, lte: thirtyDaysFromNow },
+          OR: [
+            { engagementStatus: null },
+            { engagementStatus: "PREP" },
+          ],
+        },
+        include: {
+          lead: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+        orderBy: { startDate: "asc" },
+      }),
+
+      // Action Items: Payment Due
+      prisma.booking.findMany({
+        where: {
+          paymentStatus: { in: ["UNPAID", "OVERDUE"] },
+          amount: { gt: 0 },
+        },
+        include: {
+          lead: {
+            select: { firstName: true, lastName: true },
+          },
+        },
+        orderBy: { startDate: "asc" },
+      }),
+
+      // Action Items: No Campaign
       prisma.booking.findMany({
         where: {
           status: { in: ["CONFIRMED", "IN_PROGRESS"] },
@@ -119,17 +208,9 @@ async function getDashboardData() {
           },
         },
         orderBy: { startDate: "asc" },
-        take: 5,
       }),
 
-      // Recent campaigns
-      prisma.campaign.findMany({
-        take: 5,
-        orderBy: { createdAt: "desc" },
-        include: { _count: { select: { leads: true } } },
-      }),
-
-      // Recent contacts
+      // Recent Contacts
       prisma.lead.findMany({
         take: 5,
         orderBy: { createdAt: "desc" },
@@ -146,23 +227,27 @@ async function getDashboardData() {
     ])
 
     return {
-      activeBookings,
-      upcomingBookings,
-      activeCampaigns,
-      totalContacts,
-      bookingsNeedingCampaigns,
-      recentCampaigns,
+      upcomingBookingsCount,
+      revenuePipeline: revenuePipelineResult._sum.amount ?? 0,
+      outstandingBalance: outstandingBalanceResult._sum.balanceDue ?? 0,
+      activeLeadsCount,
+      nextUpBookings,
+      needsPrepBookings,
+      paymentDueBookings,
+      noCampaignBookings,
       recentContacts,
     }
   } catch (error) {
     console.error("Error fetching dashboard data:", error)
     return {
-      activeBookings: 0,
-      upcomingBookings: 0,
-      activeCampaigns: 0,
-      totalContacts: 0,
-      bookingsNeedingCampaigns: [],
-      recentCampaigns: [],
+      upcomingBookingsCount: 0,
+      revenuePipeline: 0,
+      outstandingBalance: 0,
+      activeLeadsCount: 0,
+      nextUpBookings: [],
+      needsPrepBookings: [],
+      paymentDueBookings: [],
+      noCampaignBookings: [],
       recentContacts: [],
     }
   }
@@ -170,37 +255,39 @@ async function getDashboardData() {
 
 export default async function DashboardPage() {
   const {
-    activeBookings,
-    upcomingBookings,
-    activeCampaigns,
-    totalContacts,
-    bookingsNeedingCampaigns,
-    recentCampaigns,
+    upcomingBookingsCount,
+    revenuePipeline,
+    outstandingBalance,
+    activeLeadsCount,
+    nextUpBookings,
+    needsPrepBookings,
+    paymentDueBookings,
+    noCampaignBookings,
     recentContacts,
   } = await getDashboardData()
 
   const stats = [
     {
-      label: "Active Bookings",
-      value: activeBookings,
+      label: "Upcoming Bookings",
+      value: upcomingBookingsCount.toString(),
       icon: Calendar,
       href: "/dashboard/bookings",
     },
     {
-      label: "Upcoming (30 days)",
-      value: upcomingBookings,
-      icon: Clock,
+      label: "Revenue Pipeline",
+      value: formatCurrency(revenuePipeline),
+      icon: TrendingUp,
       href: "/dashboard/bookings",
     },
     {
-      label: "Active Campaigns",
-      value: activeCampaigns,
-      icon: TrendingUp,
-      href: "/dashboard/campaigns",
+      label: "Outstanding Balance",
+      value: formatCurrency(outstandingBalance),
+      icon: DollarSign,
+      href: "/dashboard/expenses",
     },
     {
-      label: "Contacts",
-      value: totalContacts,
+      label: "Active Leads",
+      value: activeLeadsCount.toString(),
       icon: Users,
       href: "/dashboard/contacts",
     },
@@ -219,7 +306,7 @@ export default async function DashboardPage() {
         <p className="mt-1 text-sm text-[#666666]">{formatDate(new Date())}</p>
       </div>
 
-      {/* Quick Stats Row */}
+      {/* Row 1: KPI Cards */}
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-4">
         {stats.map((stat) => {
           const Icon = stat.icon
@@ -245,17 +332,17 @@ export default async function DashboardPage() {
         })}
       </div>
 
-      {/* Bookings Needing Campaigns */}
+      {/* Row 2: Next Up */}
       <Card className="border-[#E8E4DD] bg-white">
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <Rocket className="h-5 w-5 text-[#C05A3C]" />
+              <CalendarDays className="h-5 w-5 text-[#C05A3C]" />
               <CardTitle
                 className="text-lg font-bold text-[#1a1a1a]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Opportunities to Discover
+                Next Up
               </CardTitle>
             </div>
             <Link href="/dashboard/bookings">
@@ -271,9 +358,9 @@ export default async function DashboardPage() {
           </div>
         </CardHeader>
         <CardContent>
-          {bookingsNeedingCampaigns.length > 0 ? (
+          {nextUpBookings.length > 0 ? (
             <div className="space-y-3">
-              {bookingsNeedingCampaigns.map((booking) => (
+              {nextUpBookings.map((booking) => (
                 <div
                   key={booking.id}
                   className="flex items-center justify-between rounded-lg border border-[#E8E4DD] px-4 py-3 transition-colors hover:bg-[#FAFAF8]"
@@ -284,12 +371,9 @@ export default async function DashboardPage() {
                         <span className="text-sm font-semibold text-[#1a1a1a]">
                           {formatServiceType(booking.serviceType)}
                         </span>
-                        <span className="text-sm text-[#999999]">--</span>
+                        <span className="text-sm text-[#999999]">&mdash;</span>
                         <span className="truncate text-sm text-[#666666]">
                           {booking.lead.firstName} {booking.lead.lastName}
-                          {booking.lead.organization
-                            ? ` (${booking.lead.organization})`
-                            : ""}
                         </span>
                       </div>
                       <div className="mt-1 flex items-center gap-3 text-xs text-[#999999]">
@@ -306,105 +390,197 @@ export default async function DashboardPage() {
                       </div>
                     </div>
                   </div>
-                  <Link href={`/dashboard/bookings/${booking.id}`}>
-                    <Button
-                      size="sm"
-                      className="ml-4 shrink-0 bg-[#C05A3C] text-white hover:bg-[#A84B30]"
+                  <div className="ml-4 flex shrink-0 items-center gap-2">
+                    <Badge
+                      variant="outline"
+                      className={`text-[10px] font-medium ${getPaymentStatusBadge(booking.paymentStatus)}`}
                     >
-                      Find Nearby Leads
-                    </Button>
-                  </Link>
+                      {booking.paymentStatus.replace(/_/g, " ")}
+                    </Badge>
+                    {booking.engagementStatus && (
+                      <Badge
+                        variant="outline"
+                        className={`text-[10px] font-medium ${getEngagementStatusBadge(booking.engagementStatus)}`}
+                      >
+                        {booking.engagementStatus.replace(/_/g, " ")}
+                      </Badge>
+                    )}
+                    <Link href={`/dashboard/bookings/${booking.id}`}>
+                      <Button
+                        variant="ghost"
+                        size="sm"
+                        className="text-xs text-[#888888] hover:text-[#C05A3C]"
+                      >
+                        View
+                      </Button>
+                    </Link>
+                  </div>
                 </div>
               ))}
             </div>
           ) : (
             <div className="flex items-center gap-3 rounded-lg border border-dashed border-[#D4D0C8] px-4 py-6">
-              <CheckCircle2 className="h-5 w-5 text-emerald-500" />
-              <p className="text-sm text-[#666666]">
-                All bookings have campaigns running. Nice work.
-              </p>
+              <Calendar className="h-5 w-5 text-[#999999]" />
+              <p className="text-sm text-[#666666]">No upcoming bookings.</p>
             </div>
           )}
         </CardContent>
       </Card>
 
-      {/* Bottom Two Columns */}
+      {/* Row 3: Action Items + Recent Activity */}
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-        {/* Recent Campaigns */}
+        {/* Action Items */}
         <Card className="border-[#E8E4DD] bg-white">
           <CardHeader className="pb-3">
-            <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <AlertCircle className="h-5 w-5 text-[#C05A3C]" />
               <CardTitle
                 className="text-base font-bold text-[#1a1a1a]"
                 style={{ fontFamily: "'Space Grotesk', sans-serif" }}
               >
-                Recent Campaigns
+                Action Items
               </CardTitle>
-              <Link href="/dashboard/campaigns">
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  className="text-xs text-[#888888] hover:text-[#C05A3C]"
-                >
-                  View All
-                  <ArrowRight className="ml-1 h-3 w-3" />
-                </Button>
-              </Link>
             </div>
           </CardHeader>
-          <CardContent>
-            {recentCampaigns.length > 0 ? (
-              <div className="space-y-2">
-                {recentCampaigns.map((campaign) => (
-                  <Link
-                    key={campaign.id}
-                    href={`/dashboard/campaigns/${campaign.id}`}
-                    className="block"
-                  >
-                    <div className="flex items-center justify-between rounded-lg px-3 py-2.5 transition-colors hover:bg-[#FAFAF8]">
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium text-[#1a1a1a]">
-                          {campaign.name}
-                        </p>
-                        <div className="mt-0.5 flex items-center gap-2 text-xs text-[#999999]">
-                          <span className="flex items-center gap-1">
-                            <MapPin className="h-3 w-3" />
-                            {campaign.baseLocation}
-                          </span>
-                          <span>
-                            {campaign._count.leads}{" "}
-                            {campaign._count.leads === 1 ? "lead" : "leads"}
-                          </span>
-                        </div>
-                      </div>
-                      <Badge
-                        variant="outline"
-                        className={`ml-3 shrink-0 text-[10px] font-medium ${getStatusColor(campaign.status)}`}
-                      >
-                        {campaign.status}
-                      </Badge>
-                    </div>
-                  </Link>
-                ))}
+          <CardContent className="space-y-5">
+            {/* Needs Prep */}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm font-medium text-[#1a1a1a]">
+                  Needs Prep
+                </span>
+                <Badge
+                  variant="outline"
+                  className="border-[#E8E4DD] text-[10px] font-medium text-[#666666]"
+                >
+                  {needsPrepBookings.length}
+                </Badge>
               </div>
-            ) : (
-              <p className="py-4 text-center text-sm text-[#999999]">
-                No campaigns yet.
-              </p>
-            )}
+              {needsPrepBookings.length > 0 ? (
+                <div className="space-y-1.5">
+                  {needsPrepBookings.slice(0, 3).map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#FAFAF8]"
+                    >
+                      <span className="text-[#666666]">
+                        <span className="font-medium text-[#1a1a1a]">
+                          {formatServiceType(booking.serviceType)}
+                        </span>
+                        {" — "}
+                        {booking.lead.firstName} {booking.lead.lastName}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs text-[#999999]">All prepped</span>
+                </div>
+              )}
+            </div>
+
+            {/* Payment Due */}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm font-medium text-[#1a1a1a]">
+                  Payment Due
+                </span>
+                <Badge
+                  variant="outline"
+                  className="border-[#E8E4DD] text-[10px] font-medium text-[#666666]"
+                >
+                  {paymentDueBookings.length}
+                </Badge>
+              </div>
+              {paymentDueBookings.length > 0 ? (
+                <div className="space-y-1.5">
+                  {paymentDueBookings.slice(0, 3).map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#FAFAF8]"
+                    >
+                      <span className="text-[#666666]">
+                        {booking.lead.firstName} {booking.lead.lastName}
+                      </span>
+                      <span className="font-medium text-[#1a1a1a]">
+                        {formatCurrency(booking.amount ?? 0)}
+                      </span>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs text-[#999999]">All paid up</span>
+                </div>
+              )}
+            </div>
+
+            {/* No Campaign */}
+            <div>
+              <div className="mb-2 flex items-center gap-2">
+                <span className="text-sm font-medium text-[#1a1a1a]">
+                  No Campaign
+                </span>
+                <Badge
+                  variant="outline"
+                  className="border-[#E8E4DD] text-[10px] font-medium text-[#666666]"
+                >
+                  {noCampaignBookings.length}
+                </Badge>
+              </div>
+              {noCampaignBookings.length > 0 ? (
+                <div className="space-y-1.5">
+                  {noCampaignBookings.slice(0, 3).map((booking) => (
+                    <div
+                      key={booking.id}
+                      className="flex items-center justify-between rounded-md px-3 py-2 text-sm transition-colors hover:bg-[#FAFAF8]"
+                    >
+                      <span className="text-[#666666]">
+                        <span className="font-medium text-[#1a1a1a]">
+                          {formatServiceType(booking.serviceType)}
+                        </span>
+                        {" — "}
+                        {booking.lead.firstName} {booking.lead.lastName}
+                      </span>
+                      <Link href={`/dashboard/bookings/${booking.id}`}>
+                        <Button
+                          size="sm"
+                          className="h-7 bg-[#C05A3C] text-xs text-white hover:bg-[#A84B30]"
+                        >
+                          Find Nearby Leads
+                        </Button>
+                      </Link>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="flex items-center gap-2 px-3 py-2">
+                  <CheckCircle2 className="h-4 w-4 text-emerald-500" />
+                  <span className="text-xs text-[#999999]">
+                    All bookings have campaigns
+                  </span>
+                </div>
+              )}
+            </div>
           </CardContent>
         </Card>
 
-        {/* Recent Contacts */}
+        {/* Recent Activity */}
         <Card className="border-[#E8E4DD] bg-white">
           <CardHeader className="pb-3">
             <div className="flex items-center justify-between">
-              <CardTitle
-                className="text-base font-bold text-[#1a1a1a]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                Recent Contacts
-              </CardTitle>
+              <div className="flex items-center gap-2">
+                <Clock className="h-5 w-5 text-[#C05A3C]" />
+                <CardTitle
+                  className="text-base font-bold text-[#1a1a1a]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  Recent Activity
+                </CardTitle>
+              </div>
               <Link href="/dashboard/contacts">
                 <Button
                   variant="ghost"
@@ -429,19 +605,13 @@ export default async function DashboardPage() {
                       <p className="truncate text-sm font-medium text-[#1a1a1a]">
                         {contact.firstName} {contact.lastName}
                       </p>
-                      <div className="mt-0.5 flex items-center gap-2 text-xs text-[#999999]">
-                        <span className="truncate">{contact.email}</span>
-                        {contact.organization && (
-                          <>
-                            <span className="shrink-0">--</span>
-                            <span className="truncate">
-                              {contact.organization}
-                            </span>
-                          </>
-                        )}
-                      </div>
+                      {contact.organization && (
+                        <p className="mt-0.5 truncate text-xs text-[#999999]">
+                          {contact.organization}
+                        </p>
+                      )}
                     </div>
-                    <div className="ml-3 shrink-0 text-right">
+                    <div className="ml-3 flex shrink-0 items-center gap-2">
                       {contact.source && (
                         <Badge
                           variant="outline"
@@ -450,9 +620,9 @@ export default async function DashboardPage() {
                           {contact.source}
                         </Badge>
                       )}
-                      <p className="mt-0.5 text-[10px] text-[#BBBBBB]">
+                      <span className="text-[10px] text-[#BBBBBB]">
                         {formatShortDate(contact.createdAt)}
-                      </p>
+                      </span>
                     </div>
                   </div>
                 ))}

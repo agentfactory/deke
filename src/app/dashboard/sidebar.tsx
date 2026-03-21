@@ -8,7 +8,8 @@ import {
   Rocket,
   Users,
   CalendarDays,
-  Mail,
+  Briefcase,
+  DollarSign,
 } from "lucide-react";
 
 const iconMap = {
@@ -17,7 +18,8 @@ const iconMap = {
   Rocket,
   Users,
   CalendarDays,
-  Mail,
+  Briefcase,
+  DollarSign,
 } as const;
 
 type NavItem = {

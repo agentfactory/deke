@@ -17,6 +17,15 @@ const REQUEST_STATUS_STYLES: Record<string, string> = {
   CLOSED: 'bg-gray-100 text-gray-800 border-gray-200',
 }
 
+const PIPELINE_BADGE_STYLES: Record<string, string> = {
+  NEW: 'bg-blue-50 text-blue-700 border-blue-200',
+  CONTACTED: 'bg-indigo-50 text-indigo-700 border-indigo-200',
+  QUALIFIED: 'bg-purple-50 text-purple-700 border-purple-200',
+  PROPOSAL_SENT: 'bg-amber-50 text-amber-700 border-amber-200',
+  NEGOTIATING: 'bg-orange-50 text-orange-700 border-orange-200',
+  WON: 'bg-green-50 text-green-700 border-green-200',
+}
+
 function formatDate(date: Date): string {
   return new Intl.DateTimeFormat('en-US', {
     month: 'short', day: 'numeric', year: 'numeric',
@@ -27,6 +36,7 @@ export default async function ContactsPage() {
   let leads: Awaited<ReturnType<typeof fetchLeads>> = []
   let subscribers: Awaited<ReturnType<typeof fetchSubscribers>> = []
   let groupRequests: Awaited<ReturnType<typeof fetchGroupRequests>> = []
+  let pipelineCounts: Record<string, number> = {}
 
   try {
     ;[leads, subscribers, groupRequests] = await Promise.all([
@@ -34,6 +44,13 @@ export default async function ContactsPage() {
       fetchSubscribers(),
       fetchGroupRequests(),
     ])
+
+    // Pipeline counts by status
+    const grouped = await prisma.lead.groupBy({
+      by: ['status'],
+      _count: true,
+    })
+    pipelineCounts = Object.fromEntries(grouped.map(g => [g.status, g._count]))
   } catch (error) {
     console.error('Error fetching contacts:', error)
   }
@@ -45,36 +62,69 @@ export default async function ContactsPage() {
     lastContactedAt: l.lastContactedAt?.toISOString() ?? null,
   }))
 
+  const pipelineStatuses = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL_SENT', 'NEGOTIATING', 'WON'] as const
+
   return (
-    <div className="bg-white dark:bg-stone-950 min-h-screen">
+    <div>
       <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Header */}
         <div className="mb-6">
-          <h1 className="text-2xl sm:text-3xl font-bold text-stone-900 dark:text-white tracking-tight">
-            Contacts
+          <h1
+            className="text-2xl sm:text-3xl font-bold text-[#1a1a1a] tracking-tight"
+            style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+          >
+            Contacts &amp; CRM
           </h1>
-          <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-stone-500 dark:text-stone-400">
+          <div className="mt-2 flex flex-wrap items-center gap-4 text-sm text-[#666666]">
             <span className="inline-flex items-center gap-1.5">
-              <Users className="h-4 w-4" aria-hidden="true" />
+              <Users className="h-4 w-4 text-[#C05A3C]" aria-hidden="true" />
               {leads.length} leads
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <Mail className="h-4 w-4" aria-hidden="true" />
+              <Mail className="h-4 w-4 text-[#C05A3C]" aria-hidden="true" />
               {subscribers.length} subscribers
             </span>
             <span className="inline-flex items-center gap-1.5">
-              <UserPlus className="h-4 w-4" aria-hidden="true" />
+              <UserPlus className="h-4 w-4 text-[#C05A3C]" aria-hidden="true" />
               {groupRequests.length} pending requests
             </span>
           </div>
         </div>
 
+        {/* Pipeline Summary Bar */}
+        <div className="mb-6 flex flex-wrap items-center gap-2">
+          {pipelineStatuses.map((status) => (
+            <span
+              key={status}
+              className={`inline-flex items-center gap-1.5 text-xs font-medium px-2.5 py-1 rounded-full border ${PIPELINE_BADGE_STYLES[status] || 'bg-gray-50 text-gray-700 border-gray-200'}`}
+            >
+              {status.replace(/_/g, ' ')}:
+              <span className="font-bold">{pipelineCounts[status] || 0}</span>
+            </span>
+          ))}
+        </div>
+
         {/* Tabs */}
         <Tabs defaultValue="leads" className="w-full">
-          <TabsList>
-            <TabsTrigger value="leads">All Leads</TabsTrigger>
-            <TabsTrigger value="subscribers">Subscribers</TabsTrigger>
-            <TabsTrigger value="requests">Group Requests</TabsTrigger>
+          <TabsList className="border-b border-[#E8E4DD] bg-transparent">
+            <TabsTrigger
+              value="leads"
+              className="data-[state=active]:text-[#C05A3C] data-[state=active]:border-b-2 data-[state=active]:border-[#C05A3C] rounded-none"
+            >
+              All Leads
+            </TabsTrigger>
+            <TabsTrigger
+              value="subscribers"
+              className="data-[state=active]:text-[#C05A3C] data-[state=active]:border-b-2 data-[state=active]:border-[#C05A3C] rounded-none"
+            >
+              Subscribers
+            </TabsTrigger>
+            <TabsTrigger
+              value="requests"
+              className="data-[state=active]:text-[#C05A3C] data-[state=active]:border-b-2 data-[state=active]:border-[#C05A3C] rounded-none"
+            >
+              Group Requests
+            </TabsTrigger>
           </TabsList>
 
           {/* All Leads Tab - now uses client component */}
@@ -86,38 +136,38 @@ export default async function ContactsPage() {
           <TabsContent value="subscribers" className="mt-4">
             {subscribers.length === 0 ? (
               <EmptyState
-                icon={<Mail className="h-10 w-10 text-stone-300" aria-hidden="true" />}
+                icon={<Mail className="h-10 w-10 text-[#999999]" aria-hidden="true" />}
                 message="No email subscribers yet."
               />
             ) : (
-              <div className="rounded-lg border border-stone-200 dark:border-stone-800 overflow-x-auto">
+              <div className="rounded-lg border border-[#E8E4DD] overflow-x-auto bg-white">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-stone-50 dark:bg-stone-900">
-                      <TableHead className="font-semibold">Name</TableHead>
-                      <TableHead className="font-semibold">Email</TableHead>
-                      <TableHead className="font-semibold">Location</TableHead>
-                      <TableHead className="font-semibold">Group Name</TableHead>
-                      <TableHead className="font-semibold text-center">Newsletter</TableHead>
-                      <TableHead className="font-semibold">Date</TableHead>
+                    <TableRow className="bg-[#FAFAF8]">
+                      <TableHead className="font-semibold text-[#1a1a1a]">Name</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Email</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Location</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Group Name</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a] text-center">Newsletter</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Date</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {subscribers.map((sub) => (
                       <TableRow
                         key={sub.id}
-                        className="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors"
+                        className="hover:bg-[#FAFAF8] transition-colors"
                       >
-                        <TableCell className="font-medium text-stone-900 dark:text-white">
+                        <TableCell className="font-medium text-[#1a1a1a]">
                           {sub.firstName}
                         </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400 max-w-[200px] truncate">
+                        <TableCell className="text-[#666666] max-w-[200px] truncate">
                           {sub.email}
                         </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400">
+                        <TableCell className="text-[#666666]">
                           {sub.location || '\u2014'}
                         </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400">
+                        <TableCell className="text-[#666666]">
                           {sub.groupName || '\u2014'}
                         </TableCell>
                         <TableCell className="text-center">
@@ -126,12 +176,12 @@ export default async function ContactsPage() {
                               Opted in
                             </Badge>
                           ) : (
-                            <Badge variant="outline" className="text-xs text-stone-400">
+                            <Badge variant="outline" className="text-xs text-[#999999]">
                               No
                             </Badge>
                           )}
                         </TableCell>
-                        <TableCell className="text-stone-500 dark:text-stone-400 text-sm whitespace-nowrap">
+                        <TableCell className="text-[#999999] text-sm whitespace-nowrap">
                           {formatDate(sub.createdAt)}
                         </TableCell>
                       </TableRow>
@@ -146,35 +196,35 @@ export default async function ContactsPage() {
           <TabsContent value="requests" className="mt-4">
             {groupRequests.length === 0 ? (
               <EmptyState
-                icon={<UserPlus className="h-10 w-10 text-stone-300" aria-hidden="true" />}
+                icon={<UserPlus className="h-10 w-10 text-[#999999]" aria-hidden="true" />}
                 message="No pending group requests."
               />
             ) : (
-              <div className="rounded-lg border border-stone-200 dark:border-stone-800 overflow-x-auto">
+              <div className="rounded-lg border border-[#E8E4DD] overflow-x-auto bg-white">
                 <Table>
                   <TableHeader>
-                    <TableRow className="bg-stone-50 dark:bg-stone-900">
-                      <TableHead className="font-semibold">Name</TableHead>
-                      <TableHead className="font-semibold">Email</TableHead>
-                      <TableHead className="font-semibold">Location</TableHead>
-                      <TableHead className="font-semibold">Experience</TableHead>
-                      <TableHead className="font-semibold">Genres</TableHead>
-                      <TableHead className="font-semibold">Status</TableHead>
+                    <TableRow className="bg-[#FAFAF8]">
+                      <TableHead className="font-semibold text-[#1a1a1a]">Name</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Email</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Location</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Experience</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Genres</TableHead>
+                      <TableHead className="font-semibold text-[#1a1a1a]">Status</TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>
                     {groupRequests.map((req) => (
                       <TableRow
                         key={req.id}
-                        className="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors"
+                        className="hover:bg-[#FAFAF8] transition-colors"
                       >
-                        <TableCell className="font-medium text-stone-900 dark:text-white">
+                        <TableCell className="font-medium text-[#1a1a1a]">
                           {req.name}
                         </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400 max-w-[200px] truncate">
+                        <TableCell className="text-[#666666] max-w-[200px] truncate">
                           {req.email}
                         </TableCell>
-                        <TableCell className="text-stone-600 dark:text-stone-400">
+                        <TableCell className="text-[#666666]">
                           {req.location}
                         </TableCell>
                         <TableCell>
@@ -191,7 +241,7 @@ export default async function ContactsPage() {
                                 </Badge>
                               ))
                             ) : (
-                              <span className="text-stone-400">{'\u2014'}</span>
+                              <span className="text-[#999999]">{'\u2014'}</span>
                             )}
                             {req.genres.length > 3 && (
                               <Badge variant="outline" className="text-xs">
@@ -225,7 +275,7 @@ function EmptyState({ icon, message }: { icon: React.ReactNode; message: string 
   return (
     <div className="flex flex-col items-center justify-center py-16 text-center">
       {icon}
-      <p className="mt-3 text-sm text-stone-500 dark:text-stone-400">{message}</p>
+      <p className="mt-3 text-sm text-[#999999]">{message}</p>
     </div>
   )
 }
