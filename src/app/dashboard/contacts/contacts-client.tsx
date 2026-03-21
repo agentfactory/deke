@@ -479,7 +479,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
           <p className="mt-3 text-sm text-[#666666]">No leads match your filters.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-[#E8E4DD]">
+        <div className="rounded-lg border border-[#E8E4DD] overflow-x-auto bg-white">
           <Table>
             <TableHeader>
               <TableRow className="bg-[#FAFAF8]">
@@ -491,11 +491,15 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                     className="rounded border-[#E8E4DD]"
                   />
                 </TableHead>
-                <TableHead className="font-semibold">Contact</TableHead>
-                <TableHead className="font-semibold">Status</TableHead>
-                <TableHead className="font-semibold text-center">Score</TableHead>
-                <TableHead className="font-semibold hidden sm:table-cell">Date</TableHead>
-                <TableHead className="font-semibold w-10" />
+                <TableHead className="font-semibold text-[#1a1a1a]">Name</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a]">Email</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] hidden lg:table-cell">Organization</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a]">Status</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] text-center">Score</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] hidden md:table-cell">Source</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] hidden md:table-cell">Last Contacted</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] text-center hidden sm:table-cell">Bookings</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -504,7 +508,6 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                   key={lead.id}
                   className="hover:bg-[#FAFAF8] transition-colors cursor-pointer"
                   onClick={(e) => {
-                    // Don't open sheet if clicking checkbox or actions
                     const target = e.target as HTMLElement
                     if (target.closest('input[type="checkbox"]') || target.closest('[data-slot="dropdown-menu"]') || target.closest('button')) return
                     openDetail(lead)
@@ -518,44 +521,56 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                       className="rounded border-[#E8E4DD]"
                     />
                   </TableCell>
-                  {/* Contact: name + email stacked, org as subtitle */}
+                  {/* Name */}
                   <TableCell>
-                    <div className="min-w-0">
-                      <div className="font-medium text-[#1a1a1a] truncate">
-                        {lead.firstName} {lead.lastName}
-                      </div>
-                      <div className="text-sm text-[#666666] truncate">
-                        {lead.email}
-                      </div>
-                      {lead.organization && (
-                        <div className="text-xs text-[#999999] truncate flex items-center gap-1 mt-0.5">
-                          <Building2 className="h-3 w-3 shrink-0" />
-                          {lead.organization}
-                        </div>
-                      )}
-                    </div>
+                    <span className="font-medium text-[#1a1a1a] whitespace-nowrap">
+                      {lead.firstName} {lead.lastName}
+                    </span>
                   </TableCell>
-                  {/* Status: colored badge */}
+                  {/* Email */}
+                  <TableCell className="text-[#666666] max-w-[200px] truncate">
+                    {lead.email}
+                  </TableCell>
+                  {/* Organization */}
+                  <TableCell className="text-[#666666] hidden lg:table-cell">
+                    {lead.organization || '\u2014'}
+                  </TableCell>
+                  {/* Status */}
                   <TableCell>
                     <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_TEXT_COLORS[lead.status] || 'text-gray-600 bg-gray-100'}`}>
                       <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_COLORS[lead.status] || 'bg-gray-400'}`} />
                       {formatStatusLabel(lead.status)}
                     </span>
                   </TableCell>
-                  {/* Score: number + mini bar */}
+                  {/* Score */}
                   <TableCell className="text-center">
-                    <div className="inline-flex flex-col items-center gap-0.5">
-                      <span className="text-sm font-medium text-[#1a1a1a]">{lead.score}</span>
-                      <div className="w-8 h-1 rounded-full bg-[#E8E4DD] overflow-hidden">
-                        <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(lead.score, 100)}%` }} />
-                      </div>
-                    </div>
+                    <span className={`text-sm font-semibold ${lead.score >= 70 ? 'text-green-700' : lead.score >= 40 ? 'text-[#1a1a1a]' : 'text-[#999999]'}`}>
+                      {lead.score}
+                    </span>
                   </TableCell>
-                  {/* Date */}
-                  <TableCell className="text-[#666666] text-sm whitespace-nowrap hidden sm:table-cell">
-                    {formatDate(lead.createdAt)}
+                  {/* Source */}
+                  <TableCell className="hidden md:table-cell">
+                    {lead.source ? (
+                      <Badge variant="outline" className="text-xs capitalize border-[#E8E4DD] text-[#666666]">
+                        {lead.source.replace(/_/g, ' ')}
+                      </Badge>
+                    ) : (
+                      <span className="text-[#999999]">{'\u2014'}</span>
+                    )}
                   </TableCell>
-                  {/* Actions ellipsis */}
+                  {/* Last Contacted */}
+                  <TableCell className="text-sm whitespace-nowrap hidden md:table-cell">
+                    {lead.lastContactedAt ? (
+                      <span className="text-[#666666]">{formatDate(lead.lastContactedAt)}</span>
+                    ) : (
+                      <span className="text-[#999999]">Never</span>
+                    )}
+                  </TableCell>
+                  {/* Bookings */}
+                  <TableCell className="text-center hidden sm:table-cell">
+                    <span className="text-sm text-[#1a1a1a]">{lead._count.bookings}</span>
+                  </TableCell>
+                  {/* Actions */}
                   <TableCell onClick={e => e.stopPropagation()}>
                     <DropdownMenu>
                       <DropdownMenuTrigger asChild>
