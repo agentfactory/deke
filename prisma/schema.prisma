@@ -17,6 +17,22 @@ datasource db {
 //   DIRECT_URL: Direct session mode (port 5432, no pooling)
 
 // ============================================
+// ADMIN USERS & AUTH
+// ============================================
+
+model User {
+  id             String   @id @default(cuid())
+  email          String   @unique
+  hashedPassword String
+  name           String?
+  role           String   @default("admin")
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+
+  @@index([email])
+}
+
+// ============================================
 // LEADS & CONTACTS
 // ============================================
 
