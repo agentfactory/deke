@@ -25,11 +25,13 @@ function createPrismaClient(): PrismaClient {
   }
 
   // Create connection pool with error handling
+  // Supabase requires SSL for external connections
   const pool = new Pool({
     connectionString,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    ssl: { rejectUnauthorized: false },
   })
 
   pool.on('error', (err) => {

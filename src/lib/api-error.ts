@@ -94,7 +94,7 @@ export function handleApiError(error: unknown) {
   }
 
   return NextResponse.json(
-    { error: 'Internal server error' },
+    { error: 'Internal server error', detail: errMsg },
     { status: 500 }
   )
 }
