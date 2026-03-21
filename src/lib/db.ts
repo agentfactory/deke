@@ -8,8 +8,8 @@ const globalForPrisma = globalThis as unknown as {
 
 // Prisma 7 runtime configuration with adapter
 // Note: This is separate from prisma.config.ts (used by CLI)
-// Use pooled DATABASE_URL for application queries (Supabase transaction mode)
-const connectionString = process.env.DATABASE_URL
+// Use DATABASE_URL for pooled connections, fall back to DIRECT_URL
+const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL
 
 if (!connectionString) {
   console.error('[DB] DATABASE_URL environment variable is not set. All database operations will fail.')
@@ -25,11 +25,13 @@ function createPrismaClient(): PrismaClient {
   }
 
   // Create connection pool with error handling
+  // Supabase requires SSL for external connections
   const pool = new Pool({
     connectionString,
     max: 10,
     idleTimeoutMillis: 30000,
     connectionTimeoutMillis: 10000,
+    ssl: { rejectUnauthorized: false },
   })
 
   pool.on('error', (err) => {
