@@ -23,9 +23,10 @@ async function getNewGroupRequestCount(): Promise<number> {
 const navItems = [
   { href: "/dashboard", label: "COMMAND CENTER", icon: "LayoutDashboard" as const },
   { href: "/dashboard/bookings", label: "BOOKINGS", icon: "Calendar" as const },
-  { href: "/dashboard/campaigns", label: "CAMPAIGNS", icon: "Rocket" as const },
+  { href: "/dashboard/engagements", label: "ENGAGEMENTS", icon: "Briefcase" as const },
+  { href: "/dashboard/expenses", label: "EXPENSES", icon: "DollarSign" as const },
   { href: "/dashboard/contacts", label: "CONTACTS", icon: "Users" as const, badge: true },
-  { href: "/dashboard/outreach", label: "OUTREACH", icon: "Mail" as const },
+  { href: "/dashboard/campaigns", label: "LEAD GEN", icon: "Rocket" as const },
   { href: "/dashboard/calendar", label: "CALENDAR", icon: "CalendarDays" as const },
 ];
 

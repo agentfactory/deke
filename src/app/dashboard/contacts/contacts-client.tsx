@@ -37,28 +37,28 @@ import {
 // --- Types & Constants ---
 
 const STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL_SENT', 'NEGOTIATING', 'WON', 'LOST', 'DORMANT'] as const
-const SOURCES = ['website', 'website_booking_form', 'website_chat', 'referral', 'social', 'event', 'campaign', 'other'] as const
+const SOURCES = ['website', 'website_booking_form', 'website_chat', 'referral', 'social', 'event', 'campaign', 'manual', 'other'] as const
 
 const STATUS_COLORS: Record<string, string> = {
   NEW: 'bg-blue-500',
-  CONTACTED: 'bg-yellow-500',
-  QUALIFIED: 'bg-green-500',
-  PROPOSAL_SENT: 'bg-purple-500',
+  CONTACTED: 'bg-indigo-500',
+  QUALIFIED: 'bg-purple-500',
+  PROPOSAL_SENT: 'bg-amber-500',
   NEGOTIATING: 'bg-orange-500',
-  WON: 'bg-emerald-500',
+  WON: 'bg-green-500',
   LOST: 'bg-red-500',
   DORMANT: 'bg-gray-400',
 }
 
 const STATUS_TEXT_COLORS: Record<string, string> = {
-  NEW: 'text-blue-700 dark:text-blue-300 bg-blue-50 dark:bg-blue-950',
-  CONTACTED: 'text-yellow-700 dark:text-yellow-300 bg-yellow-50 dark:bg-yellow-950',
-  QUALIFIED: 'text-green-700 dark:text-green-300 bg-green-50 dark:bg-green-950',
-  PROPOSAL_SENT: 'text-purple-700 dark:text-purple-300 bg-purple-50 dark:bg-purple-950',
-  NEGOTIATING: 'text-orange-700 dark:text-orange-300 bg-orange-50 dark:bg-orange-950',
-  WON: 'text-emerald-700 dark:text-emerald-300 bg-emerald-50 dark:bg-emerald-950',
-  LOST: 'text-red-700 dark:text-red-300 bg-red-50 dark:bg-red-950',
-  DORMANT: 'text-gray-600 dark:text-gray-400 bg-gray-100 dark:bg-gray-900',
+  NEW: 'text-blue-700 bg-blue-50 border border-blue-200',
+  CONTACTED: 'text-indigo-700 bg-indigo-50 border border-indigo-200',
+  QUALIFIED: 'text-purple-700 bg-purple-50 border border-purple-200',
+  PROPOSAL_SENT: 'text-amber-700 bg-amber-50 border border-amber-200',
+  NEGOTIATING: 'text-orange-700 bg-orange-50 border border-orange-200',
+  WON: 'text-green-700 bg-green-50 border border-green-200',
+  LOST: 'text-red-700 bg-red-50 border border-red-200',
+  DORMANT: 'text-gray-600 bg-gray-100 border border-gray-200',
 }
 
 const PAGE_SIZE = 25
@@ -371,7 +371,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
       {/* Toolbar */}
       <div className="flex flex-wrap items-center gap-2">
         <div className="relative flex-1 min-w-[200px] max-w-sm">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-stone-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999999]" />
           <Input
             placeholder="Search name, email, org..."
             value={searchQuery}
@@ -476,7 +476,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Search className="h-10 w-10 text-stone-300" />
-          <p className="mt-3 text-sm text-stone-500">No leads match your filters.</p>
+          <p className="mt-3 text-sm text-[#666666]">No leads match your filters.</p>
         </div>
       ) : (
         <div className="rounded-lg border border-stone-200 dark:border-stone-800">
@@ -524,11 +524,11 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                       <div className="font-medium text-stone-900 dark:text-white truncate">
                         {lead.firstName} {lead.lastName}
                       </div>
-                      <div className="text-sm text-stone-500 dark:text-stone-400 truncate">
+                      <div className="text-sm text-[#666666] dark:text-[#999999] truncate">
                         {lead.email}
                       </div>
                       {lead.organization && (
-                        <div className="text-xs text-stone-400 dark:text-stone-500 truncate flex items-center gap-1 mt-0.5">
+                        <div className="text-xs text-[#999999] dark:text-[#666666] truncate flex items-center gap-1 mt-0.5">
                           <Building2 className="h-3 w-3 shrink-0" />
                           {lead.organization}
                         </div>
@@ -552,7 +552,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                     </div>
                   </TableCell>
                   {/* Date */}
-                  <TableCell className="text-stone-500 dark:text-stone-400 text-sm whitespace-nowrap hidden sm:table-cell">
+                  <TableCell className="text-[#666666] dark:text-[#999999] text-sm whitespace-nowrap hidden sm:table-cell">
                     {formatDate(lead.createdAt)}
                   </TableCell>
                   {/* Actions ellipsis */}
@@ -612,7 +612,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
       {/* Pagination */}
       {filtered.length > PAGE_SIZE && (
         <div className="flex items-center justify-between px-2">
-          <span className="text-sm text-stone-500">
+          <span className="text-sm text-[#666666]">
             Showing {(currentPage - 1) * PAGE_SIZE + 1}-{Math.min(currentPage * PAGE_SIZE, filtered.length)} of {filtered.length}
           </span>
           <div className="flex items-center gap-2">
@@ -691,7 +691,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                         {detailLead.phone}
                       </a>
                     ) : (
-                      <span className="text-stone-400 text-sm">{'\u2014'}</span>
+                      <span className="text-[#999999] text-sm">{'\u2014'}</span>
                     )}
                   </DetailRow>
                   <DetailRow icon={<Building2 className="h-4 w-4" />} label="Organization">
@@ -707,7 +707,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                         {detailLead.source.replace(/_/g, ' ')}
                       </Badge>
                     ) : (
-                      <span className="text-stone-400 text-sm">{'\u2014'}</span>
+                      <span className="text-[#999999] text-sm">{'\u2014'}</span>
                     )}
                   </DetailRow>
                   <DetailRow icon={<ArrowUpDown className="h-4 w-4" />} label="Score">
@@ -736,7 +736,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
 
                 {/* Status change */}
                 <div>
-                  <label className="text-xs text-stone-500 mb-1.5 block">Quick Status Change</label>
+                  <label className="text-xs text-[#666666] mb-1.5 block">Quick Status Change</label>
                   <Select value={detailLead.status} onValueChange={v => changeStatus(detailLead.id, v)}>
                     <SelectTrigger className="w-full">
                       <SelectValue />
@@ -932,7 +932,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
 function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-3 py-2.5">
-      <div className="flex items-center gap-2 text-stone-500 dark:text-stone-400">
+      <div className="flex items-center gap-2 text-[#666666] dark:text-[#999999]">
         {icon}
         <span className="text-xs font-medium">{label}</span>
       </div>
