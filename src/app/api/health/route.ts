@@ -45,12 +45,15 @@ export async function GET() {
     }
 
   } catch (error) {
+    const errorMessage = error instanceof Error ? error.message : 'Database not yet available'
+    console.error('[HEALTH] Database check failed:', errorMessage)
+
     // Return 200 with "starting" status so Railway healthcheck passes
     // while the database is still warming up
     health.status = 'starting'
     health.checks.database = {
       status: 'starting',
-      error: error instanceof Error ? error.message : 'Database not yet available'
+      error: errorMessage,
     }
   }
 

@@ -72,6 +72,27 @@ export function handleApiError(error: unknown) {
     )
   }
 
+  // Detect Prisma / database connection errors for better diagnostics
+  const errMsg = error instanceof Error ? error.message : String(error)
+  const isDatabaseError = errMsg.includes('prisma') ||
+    errMsg.includes('database') ||
+    errMsg.includes('connection') ||
+    errMsg.includes('ECONNREFUSED') ||
+    errMsg.includes('P1001') ||
+    errMsg.includes('P1002') ||
+    errMsg.includes('P2') ||
+    errMsg.includes('DATABASE_URL') ||
+    (error instanceof Error && error.name === 'PrismaClientInitializationError') ||
+    (error instanceof Error && error.name === 'PrismaClientKnownRequestError')
+
+  if (isDatabaseError) {
+    console.error('Database error detected:', errMsg)
+    return NextResponse.json(
+      { error: 'Database connection error. Please check your DATABASE_URL configuration.', code: 'DATABASE_ERROR' },
+      { status: 503 }
+    )
+  }
+
   return NextResponse.json(
     { error: 'Internal server error' },
     { status: 500 }
