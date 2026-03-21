@@ -96,7 +96,7 @@ model Trip {
 model Inquiry {
   id            String      @id @default(cuid())
   leadId        String
-  lead          Lead        @relation(fields: [leadId], references: [id])
+  lead          Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   serviceType   String      // ARRANGEMENT, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
   status        String      @default("PENDING") // PENDING, QUOTED, ACCEPTED, DECLINED, EXPIRED
 
@@ -270,7 +270,7 @@ model BookingParticipant {
 model Order {
   id              String      @id @default(cuid())
   leadId          String
-  lead            Lead        @relation(fields: [leadId], references: [id])
+  lead            Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
   orderNumber     String      @unique
   status          String      @default("PENDING") // PENDING, IN_PROGRESS, REVIEW, REVISION, COMPLETED, DELIVERED, CANCELLED
 
@@ -311,7 +311,7 @@ model Order {
 model ChatSession {
   id          String    @id @default(cuid())
   leadId      String?
-  lead        Lead?     @relation(fields: [leadId], references: [id])
+  lead        Lead?     @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   // Session metadata
   sessionId   String    @unique  // For anonymous tracking
@@ -509,7 +509,7 @@ model CampaignLead {
   id            String              @id @default(cuid())
   campaign      Campaign            @relation(fields: [campaignId], references: [id], onDelete: Cascade)
   campaignId    String
-  lead          Lead                @relation(fields: [leadId], references: [id])
+  lead          Lead                @relation(fields: [leadId], references: [id], onDelete: Cascade)
   leadId        String
   score         Int                 @default(50) // 0-100
   distance      Float?              // miles from campaign base location (null if no coordinates)
@@ -583,7 +583,7 @@ model EmailDraft {
   campaignLeadId  String        @unique
   campaignLead    CampaignLead  @relation(fields: [campaignLeadId], references: [id], onDelete: Cascade)
   leadId          String
-  lead            Lead          @relation(fields: [leadId], references: [id])
+  lead            Lead          @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   subject         String
   body            String        // Pre-rendered HTML from template
