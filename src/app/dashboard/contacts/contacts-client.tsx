@@ -434,8 +434,8 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
 
       {/* Bulk actions bar */}
       {selectedIds.size > 0 && (
-        <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 dark:bg-blue-950 rounded-lg border border-blue-200 dark:border-blue-800">
-          <span className="text-sm font-medium text-blue-700 dark:text-blue-300">
+        <div className="flex items-center gap-3 px-4 py-2 bg-blue-50 rounded-lg border border-blue-200">
+          <span className="text-sm font-medium text-blue-700">
             {selectedIds.size} selected
           </span>
 
@@ -475,20 +475,20 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
       {/* Compact Table */}
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
-          <Search className="h-10 w-10 text-stone-300" />
+          <Search className="h-10 w-10 text-[#999999]" />
           <p className="mt-3 text-sm text-[#666666]">No leads match your filters.</p>
         </div>
       ) : (
-        <div className="rounded-lg border border-stone-200 dark:border-stone-800">
+        <div className="rounded-lg border border-[#E8E4DD]">
           <Table>
             <TableHeader>
-              <TableRow className="bg-stone-50 dark:bg-stone-900">
+              <TableRow className="bg-[#FAFAF8]">
                 <TableHead className="w-10">
                   <input
                     type="checkbox"
                     checked={paginated.length > 0 && selectedIds.size === paginated.length}
                     onChange={toggleSelectAll}
-                    className="rounded border-stone-300"
+                    className="rounded border-[#E8E4DD]"
                   />
                 </TableHead>
                 <TableHead className="font-semibold">Contact</TableHead>
@@ -502,7 +502,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
               {paginated.map(lead => (
                 <TableRow
                   key={lead.id}
-                  className="hover:bg-stone-50 dark:hover:bg-stone-900/50 transition-colors cursor-pointer"
+                  className="hover:bg-[#FAFAF8] transition-colors cursor-pointer"
                   onClick={(e) => {
                     // Don't open sheet if clicking checkbox or actions
                     const target = e.target as HTMLElement
@@ -515,20 +515,20 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                       type="checkbox"
                       checked={selectedIds.has(lead.id)}
                       onChange={() => toggleSelect(lead.id)}
-                      className="rounded border-stone-300"
+                      className="rounded border-[#E8E4DD]"
                     />
                   </TableCell>
                   {/* Contact: name + email stacked, org as subtitle */}
                   <TableCell>
                     <div className="min-w-0">
-                      <div className="font-medium text-stone-900 dark:text-white truncate">
+                      <div className="font-medium text-[#1a1a1a] truncate">
                         {lead.firstName} {lead.lastName}
                       </div>
-                      <div className="text-sm text-[#666666] dark:text-[#999999] truncate">
+                      <div className="text-sm text-[#666666] truncate">
                         {lead.email}
                       </div>
                       {lead.organization && (
-                        <div className="text-xs text-[#999999] dark:text-[#666666] truncate flex items-center gap-1 mt-0.5">
+                        <div className="text-xs text-[#999999] truncate flex items-center gap-1 mt-0.5">
                           <Building2 className="h-3 w-3 shrink-0" />
                           {lead.organization}
                         </div>
@@ -545,14 +545,14 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                   {/* Score: number + mini bar */}
                   <TableCell className="text-center">
                     <div className="inline-flex flex-col items-center gap-0.5">
-                      <span className="text-sm font-medium text-stone-900 dark:text-white">{lead.score}</span>
-                      <div className="w-8 h-1 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
+                      <span className="text-sm font-medium text-[#1a1a1a]">{lead.score}</span>
+                      <div className="w-8 h-1 rounded-full bg-[#E8E4DD] overflow-hidden">
                         <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(lead.score, 100)}%` }} />
                       </div>
                     </div>
                   </TableCell>
                   {/* Date */}
-                  <TableCell className="text-[#666666] dark:text-[#999999] text-sm whitespace-nowrap hidden sm:table-cell">
+                  <TableCell className="text-[#666666] text-sm whitespace-nowrap hidden sm:table-cell">
                     {formatDate(lead.createdAt)}
                   </TableCell>
                   {/* Actions ellipsis */}
@@ -623,7 +623,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
             >
               <ChevronLeft className="h-4 w-4" /> Prev
             </Button>
-            <span className="text-sm text-stone-600">
+            <span className="text-sm text-[#666666]">
               {currentPage} / {totalPages}
             </span>
             <Button
@@ -679,15 +679,15 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
 
               {/* Contact info */}
               <div className="px-4 space-y-4">
-                <div className="rounded-lg border border-stone-200 dark:border-stone-800 divide-y divide-stone-200 dark:divide-stone-800">
+                <div className="rounded-lg border border-[#E8E4DD] divide-y divide-[#E8E4DD]">
                   <DetailRow icon={<Mail className="h-4 w-4" />} label="Email">
-                    <a href={`mailto:${detailLead.email}`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+                    <a href={`mailto:${detailLead.email}`} className="text-blue-600 hover:underline text-sm">
                       {detailLead.email}
                     </a>
                   </DetailRow>
                   <DetailRow icon={<Phone className="h-4 w-4" />} label="Phone">
                     {detailLead.phone ? (
-                      <a href={`tel:${detailLead.phone}`} className="text-blue-600 dark:text-blue-400 hover:underline text-sm">
+                      <a href={`tel:${detailLead.phone}`} className="text-blue-600 hover:underline text-sm">
                         {detailLead.phone}
                       </a>
                     ) : (
@@ -700,7 +700,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                 </div>
 
                 {/* Details */}
-                <div className="rounded-lg border border-stone-200 dark:border-stone-800 divide-y divide-stone-200 dark:divide-stone-800">
+                <div className="rounded-lg border border-[#E8E4DD] divide-y divide-[#E8E4DD]">
                   <DetailRow icon={<Target className="h-4 w-4" />} label="Source">
                     {detailLead.source ? (
                       <Badge variant="outline" className="text-xs capitalize">
@@ -713,7 +713,7 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
                   <DetailRow icon={<ArrowUpDown className="h-4 w-4" />} label="Score">
                     <div className="flex items-center gap-2">
                       <span className="text-sm font-medium">{detailLead.score}</span>
-                      <div className="w-16 h-1.5 rounded-full bg-stone-200 dark:bg-stone-700 overflow-hidden">
+                      <div className="w-16 h-1.5 rounded-full bg-[#E8E4DD] overflow-hidden">
                         <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(detailLead.score, 100)}%` }} />
                       </div>
                     </div>
@@ -932,11 +932,11 @@ export default function ContactsClient({ initialLeads }: { initialLeads: Lead[] 
 function DetailRow({ icon, label, children }: { icon: React.ReactNode; label: string; children: React.ReactNode }) {
   return (
     <div className="flex items-center justify-between px-3 py-2.5">
-      <div className="flex items-center gap-2 text-[#666666] dark:text-[#999999]">
+      <div className="flex items-center gap-2 text-[#666666]">
         {icon}
         <span className="text-xs font-medium">{label}</span>
       </div>
-      <div className="text-stone-900 dark:text-white">
+      <div className="text-[#1a1a1a]">
         {children}
       </div>
     </div>
