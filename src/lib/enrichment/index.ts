@@ -7,6 +7,7 @@
  */
 
 import { scrapeWebsite, type ScrapedEmail } from './website-scraper'
+import { isValidContactName, stripTitlePrefix } from './name-validator'
 
 export interface EnrichmentResult {
   email: string | null
@@ -68,18 +69,25 @@ export async function enrichOrganization(
       return baseResult
     }
 
-    // Parse name from the scraped email context
+    // Parse name from the scraped email context (with validation)
     let firstName = 'Contact'
     let lastName = `at ${orgName}`
+    let inferredTitle: string | null = null
 
     if (bestEmail.name) {
-      const nameParts = bestEmail.name.split(' ')
-      if (nameParts.length >= 2) {
-        firstName = nameParts[0]
-        lastName = nameParts.slice(1).join(' ')
-      } else if (nameParts.length === 1) {
-        firstName = nameParts[0]
+      const { name: cleanName, title: strippedTitle } = stripTitlePrefix(bestEmail.name)
+      inferredTitle = strippedTitle
+
+      if (isValidContactName(cleanName)) {
+        const nameParts = cleanName.split(' ')
+        if (nameParts.length >= 2) {
+          firstName = nameParts[0]
+          lastName = nameParts.slice(1).join(' ')
+        } else if (nameParts.length === 1) {
+          firstName = nameParts[0]
+        }
       }
+      // else: keep default "Contact" / "at {orgName}"
     }
 
     const titleInfo = bestEmail.title ? ` (${bestEmail.title})` : ''
@@ -89,7 +97,7 @@ export async function enrichOrganization(
       email: bestEmail.email,
       firstName,
       lastName,
-      contactTitle: bestEmail.title || null,
+      contactTitle: bestEmail.title || inferredTitle || null,
       emailType: bestEmail.type,
       emailVerified: true,
       needsEnrichment: false,

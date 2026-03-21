@@ -9,6 +9,8 @@
  * Music-org-specific patterns: staff pages, "Music Director:" labels, board lists.
  */
 
+import { isValidContactName, stripTitlePrefix } from './name-validator'
+
 export interface ScrapedEmail {
   email: string
   name: string | null
@@ -116,7 +118,18 @@ function extractNameNearEmail(text: string, emailIndex: number): { name: string 
     names.push(match[1]?.trim() || match[0].trim())
   }
 
-  const name = names.length > 0 ? names[names.length - 1] : null
+  let name = names.length > 0 ? names[names.length - 1] : null
+
+  // Validate and clean the extracted name
+  if (name) {
+    const stripped = stripTitlePrefix(name)
+    const inferredTitle = stripped.title || title
+    if (!isValidContactName(stripped.name)) {
+      return { name: null, title: inferredTitle }
+    }
+    return { name: stripped.name, title: inferredTitle }
+  }
+
   return { name, title }
 }
 
@@ -171,12 +184,22 @@ function extractTitleEmailPairs(text: string): ScrapedEmail[] {
         const normalizedTitle = tMatch[0].trim().replace(/\b\w/g, c => c.toUpperCase())
         const emailType = classifyEmail(email)
 
+        // Validate and clean name candidates
+        let validName: string | null = null
+        for (const candidate of names) {
+          const stripped = stripTitlePrefix(candidate)
+          if (isValidContactName(stripped.name)) {
+            validName = stripped.name
+            break
+          }
+        }
+
         foundEmails.add(email)
         results.push({
           email,
-          name: names.length > 0 ? names[0] : null,
+          name: validName,
           title: normalizedTitle,
-          type: names.length > 0 || emailType === 'personal' ? 'personal' : emailType,
+          type: validName || emailType === 'personal' ? 'personal' : emailType,
         })
       }
     }

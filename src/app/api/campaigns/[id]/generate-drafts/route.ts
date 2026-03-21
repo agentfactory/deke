@@ -98,8 +98,14 @@ export async function POST(
         continue
       }
 
+      // Use org-based greeting when no real person name is available
+      let greeting = cl.lead.firstName
+      if (cl.lead.firstName === 'Contact' && cl.lead.lastName?.startsWith('at ')) {
+        greeting = cl.lead.organization ? `${cl.lead.organization} team` : 'there'
+      }
+
       const vars = {
-        firstName: cl.lead.firstName,
+        firstName: greeting,
         lastName: cl.lead.lastName,
         organization: cl.lead.organization || '',
         email: cl.lead.email,
