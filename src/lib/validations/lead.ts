@@ -17,10 +17,13 @@ export const leadSourceSchema = z.enum([
   'website',
   'website_booking_form',
   'website_chat',
+  'find-group-form',
   'referral',
   'social',
   'event',
   'campaign',
+  'manual',
+  'direct_booking',
   'other'
 ])
 
@@ -31,7 +34,7 @@ export const createLeadSchema = z.object({
   lastName: z.string().min(1, 'Last name is required'),
   phone: z.string().optional().nullable(),
   organization: z.string().optional().nullable(),
-  source: leadSourceSchema.optional().nullable(),
+  source: z.string().optional().nullable(),
   status: leadStatusSchema.optional().nullable(),
   score: z.number().min(0).max(100).optional().nullable(),
   latitude: z.number().min(-90).max(90).optional().nullable(),
@@ -41,7 +44,7 @@ export const createLeadSchema = z.object({
 // Query filters for listing leads
 export const leadFiltersSchema = z.object({
   status: leadStatusSchema.optional(),
-  source: leadSourceSchema.optional(),
+  source: z.string().optional(),
   email: z.string().optional(),
   organization: z.string().optional(),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).optional(),
@@ -54,7 +57,7 @@ export const updateLeadSchema = z.object({
   lastName: z.string().min(1).optional(),
   phone: z.string().optional().nullable(),
   organization: z.string().optional().nullable(),
-  source: leadSourceSchema.optional(),
+  source: z.string().optional(),
   status: leadStatusSchema.optional(),
   score: z.number().min(0).max(100).optional().nullable(),
   latitude: z.number().min(-90).max(90).optional().nullable(),
