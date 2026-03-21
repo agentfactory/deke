@@ -176,15 +176,9 @@ export async function DELETE(
           select: {
             id: true,
             serviceType: true,
+            status: true,
           }
         },
-        orders: {
-          select: {
-            id: true,
-            songTitle: true,
-            orderNumber: true,
-          }
-        }
       }
     })
 
@@ -192,23 +186,17 @@ export async function DELETE(
       throw new ApiError(404, 'Lead not found', 'LEAD_NOT_FOUND')
     }
 
-    // Check if bookings or orders exist - prevent deletion
-    const hasBookings = lead.bookings && lead.bookings.length > 0
-    const hasOrders = lead.orders && lead.orders.length > 0
-
-    if (hasBookings || hasOrders) {
-      const issues = []
-      if (hasBookings) issues.push(`${lead.bookings.length} booking(s)`)
-      if (hasOrders) issues.push(`${lead.orders.length} order(s)`)
-
+    // Prevent deletion if bookings exist (bookings are too important to cascade-delete)
+    if (lead.bookings && lead.bookings.length > 0) {
       throw new ApiError(
         409,
-        `Cannot delete lead with existing ${issues.join(' and ')}. Please delete those first or reassign them to another lead.`,
-        'LEAD_HAS_DEPENDENCIES'
+        `Cannot delete lead with ${lead.bookings.length} existing booking(s). Please delete or reassign bookings first.`,
+        'LEAD_HAS_BOOKINGS'
       )
     }
 
-    // Delete lead (cascade delete for inquiries and chatSessions handled by schema)
+    // Delete lead - related inquiries, chat sessions, orders, campaign leads,
+    // and email drafts are cascade-deleted via schema relations
     await prisma.lead.delete({
       where: { id }
     })
