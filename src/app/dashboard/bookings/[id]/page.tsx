@@ -5,7 +5,10 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { BookingStatusBadge } from '@/components/bookings/booking-status-badge';
-import { ArrowLeft, Edit, Trash2, Loader2, Rocket, Target, Mail, Users, Globe } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Loader2, Rocket, Target, Mail, Users, Globe, MapPin } from 'lucide-react';
+import { Input } from '@/components/ui/input';
+import { Label } from '@/components/ui/label';
+import { Textarea } from '@/components/ui/textarea';
 import { Switch } from '@/components/ui/switch';
 import { format } from 'date-fns';
 import Link from 'next/link';
@@ -34,6 +37,8 @@ interface Booking {
   internalNotes: string | null;
   clientNotes: string | null;
   isPublic: boolean;
+  publicTitle: string | null;
+  publicDescription: string | null;
   lead: {
     id: string;
     firstName: string;
@@ -132,7 +137,6 @@ export default function BookingDetailPage({
     try {
       setIsLaunchingCampaign(true);
 
-      // Use the quick-launch-style logic: create campaign via API
       const response = await fetch(`/api/bookings/${booking.id}/campaign`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -143,8 +147,8 @@ export default function BookingDetailPage({
         throw new Error(data.error || 'Failed to create campaign');
       }
 
-      const result = await response.json();
-      router.push(`/dashboard/campaigns/${result.campaign.id}`);
+      // Stay on this page — refresh to show the new campaign inline
+      await fetchBooking();
     } catch (err) {
       console.error('Error creating campaign:', err);
       alert(
@@ -152,6 +156,29 @@ export default function BookingDetailPage({
       );
     } finally {
       setIsLaunchingCampaign(false);
+    }
+  };
+
+  // Toggle public visibility with optional auto-generated title
+  const handlePublicToggle = async (checked: boolean) => {
+    if (!booking) return;
+    const autoTitle = checked && !booking.isPublic
+      ? `${booking.serviceType.replace('_', ' ')}${booking.location ? ` in ${booking.location}` : ''}`
+      : undefined;
+    try {
+      const response = await fetch(`/api/bookings/${booking.id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          isPublic: checked,
+          ...(autoTitle ? { publicTitle: autoTitle } : {}),
+        }),
+      });
+      if (response.ok) {
+        await fetchBooking();
+      }
+    } catch (err) {
+      console.error('Failed to update visibility:', err);
     }
   };
 
@@ -215,6 +242,44 @@ export default function BookingDetailPage({
           </Button>
         </div>
       </div>
+
+      {/* Lead Discovery Banner — shown when booking is confirmed, has location, no campaigns */}
+      {booking.status === 'CONFIRMED' && booking.location && booking.campaigns.length === 0 && (
+        <Card className="border-2 border-[#C05A3C]/30 bg-[#C05A3C]/5">
+          <CardContent className="py-5">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#C05A3C]/10">
+                  <MapPin className="h-5 w-5 text-[#C05A3C]" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm">Heading to {booking.location}?</p>
+                  <p className="text-xs text-muted-foreground">
+                    Find nearby leads and generate personalized outreach emails
+                  </p>
+                </div>
+              </div>
+              <Button
+                onClick={handleLaunchCampaign}
+                disabled={isLaunchingCampaign}
+                className="bg-[#C05A3C] hover:bg-[#a84d33] shrink-0"
+              >
+                {isLaunchingCampaign ? (
+                  <>
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    Discovering...
+                  </>
+                ) : (
+                  <>
+                    <Rocket className="mr-2 h-4 w-4" />
+                    Find Leads Nearby
+                  </>
+                )}
+              </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Two-column layout */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -389,32 +454,56 @@ export default function BookingDetailPage({
                 Public Visibility
               </CardTitle>
             </CardHeader>
-            <CardContent>
+            <CardContent className="space-y-4">
               <div className="flex items-center justify-between">
                 <div>
                   <p className="text-sm font-medium">Show on Events Page</p>
                   <p className="text-xs text-muted-foreground">
-                    Display this booking on the public /events page
+                    Display on dekesharon.com/events
                   </p>
                 </div>
                 <Switch
                   checked={booking.isPublic}
-                  onCheckedChange={async (checked) => {
-                    try {
-                      const response = await fetch(`/api/bookings/${booking.id}`, {
-                        method: 'PATCH',
-                        headers: { 'Content-Type': 'application/json' },
-                        body: JSON.stringify({ isPublic: checked }),
-                      });
-                      if (response.ok) {
-                        fetchBooking();
-                      }
-                    } catch (err) {
-                      console.error('Failed to update visibility:', err);
-                    }
-                  }}
+                  onCheckedChange={handlePublicToggle}
                 />
               </div>
+              {booking.isPublic && (
+                <div className="space-y-3 pt-2 border-t">
+                  <div>
+                    <Label htmlFor="publicTitle" className="text-xs">Event Title</Label>
+                    <Input
+                      id="publicTitle"
+                      placeholder="A Cappella Workshop at UCLA"
+                      defaultValue={booking.publicTitle || ''}
+                      onBlur={async (e) => {
+                        await fetch(`/api/bookings/${booking.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ publicTitle: e.target.value }),
+                        });
+                      }}
+                      className="h-8 text-sm"
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="publicDescription" className="text-xs">Description</Label>
+                    <Textarea
+                      id="publicDescription"
+                      placeholder="Short description for the events page..."
+                      defaultValue={booking.publicDescription || ''}
+                      onBlur={async (e) => {
+                        await fetch(`/api/bookings/${booking.id}`, {
+                          method: 'PATCH',
+                          headers: { 'Content-Type': 'application/json' },
+                          body: JSON.stringify({ publicDescription: e.target.value }),
+                        });
+                      }}
+                      rows={2}
+                      className="text-sm"
+                    />
+                  </div>
+                </div>
+              )}
             </CardContent>
           </Card>
 

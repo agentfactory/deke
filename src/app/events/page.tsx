@@ -1,8 +1,9 @@
 import { Metadata } from "next";
 import Link from "next/link";
-import { MapPin, Music, ArrowRight, Mic2 } from "lucide-react";
+import { MapPin, Music, ArrowRight, Mic2, Calendar, Download } from "lucide-react";
 import { format, isPast } from "date-fns";
 import { prisma } from "@/lib/db";
+import { generateGoogleCalendarUrl } from "@/lib/utils/ical";
 
 export const metadata: Metadata = {
   title: "Upcoming Events",
@@ -136,6 +137,13 @@ export default async function EventsPage() {
           <p className="mx-auto mt-4 max-w-lg text-lg text-[#999]">
             See where Deke is performing, coaching, and teaching next
           </p>
+          <a
+            href="/api/events/feed"
+            className="mt-6 inline-flex items-center gap-2 rounded-full border border-[#C9A96E]/30 px-5 py-2 text-sm text-[#C9A96E] transition-colors hover:bg-[#C9A96E]/10"
+          >
+            <Calendar className="h-4 w-4" />
+            Subscribe to Calendar
+          </a>
         </div>
 
         {/* Decorative bottom edge */}
@@ -307,6 +315,35 @@ function EventCard({
             <p className="mt-2 text-xs text-[#999]">
               {format(event.startDate, "EEEE, MMMM d, yyyy")}
             </p>
+          )}
+
+          {/* Calendar buttons */}
+          {event.startDate && (
+            <div className={`mt-3 flex gap-2 ${isLeft ? "sm:justify-end" : ""}`}>
+              <a
+                href={generateGoogleCalendarUrl({
+                  title: event.publicTitle || serviceLabel(event.serviceType),
+                  description: event.publicDescription,
+                  location: event.location,
+                  startDate: event.startDate,
+                  endDate: event.endDate,
+                })}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="inline-flex items-center gap-1 rounded-md border border-[#e5e2dc] px-2.5 py-1 text-[11px] font-medium text-[#666] transition-colors hover:border-[#C05A3C] hover:text-[#C05A3C]"
+              >
+                <Calendar className="h-3 w-3" />
+                Google Cal
+              </a>
+              <a
+                href={`/api/events/${event.id}/ical`}
+                download
+                className="inline-flex items-center gap-1 rounded-md border border-[#e5e2dc] px-2.5 py-1 text-[11px] font-medium text-[#666] transition-colors hover:border-[#C05A3C] hover:text-[#C05A3C]"
+              >
+                <Download className="h-3 w-3" />
+                .ics
+              </a>
+            </div>
           )}
         </div>
       </div>
