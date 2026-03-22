@@ -162,10 +162,10 @@ export async function POST(request: NextRequest) {
     const [resendResult, cfResult] = await Promise.allSettled([
       sendBookingNotification({
         bookingId: booking.id,
-        contactName: `${booking.contact.firstName} ${booking.contact.lastName}`,
-        contactEmail: booking.contact.email,
-        contactPhone: booking.contact.phone,
-        organization: booking.contact.organization,
+        contactName: booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact',
+        contactEmail: booking.contact?.email ?? '',
+        contactPhone: booking.contact?.phone ?? null,
+        organization: booking.contact?.organization ?? null,
         serviceType: booking.serviceType,
         startDate: booking.startDate,
         location: null,

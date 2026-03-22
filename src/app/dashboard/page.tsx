@@ -314,7 +314,7 @@ export default async function DashboardPage() {
                           {formatServiceType(booking.serviceType)}{" "}
                           {formatShortDate(booking.startDate)}
                           {" \u2014 "}
-                          {booking.contact.firstName} {booking.contact.lastName}
+                          {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                         </>
                       }
                       href={`/dashboard/bookings/${booking.id}`}
@@ -333,7 +333,7 @@ export default async function DashboardPage() {
                       icon={<DollarSign className="h-4 w-4 text-[#999999]" />}
                       description={
                         <>
-                          {booking.contact.firstName} {booking.contact.lastName}
+                          {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                           {" \u2014 "}
                           {formatCurrency(booking.balanceDue ?? booking.amount ?? 0)}{" "}
                           outstanding
@@ -358,7 +358,7 @@ export default async function DashboardPage() {
                           {formatServiceType(booking.serviceType)}{" "}
                           {formatShortDate(booking.startDate)}
                           {" \u2014 "}
-                          {booking.contact.firstName} {booking.contact.lastName}
+                          {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                           {booking.location ? ` (${booking.location})` : ""}
                         </>
                       }
@@ -422,7 +422,7 @@ export default async function DashboardPage() {
                       {formatServiceType(booking.serviceType)}
                     </span>
                     <span className="min-w-0 flex-1 truncate text-[#666666]">
-                      {booking.contact.firstName} {booking.contact.lastName}
+                      {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                     </span>
                     {booking.location && (
                       <span className="hidden items-center gap-1 text-xs text-[#999999] sm:flex">

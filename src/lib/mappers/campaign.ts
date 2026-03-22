@@ -29,7 +29,7 @@ export function mapCampaignToComponent(
     createdAt: campaign.createdAt.toISOString(),
     booking: campaign.booking ? {
       id: campaign.booking.id,
-      clientName: `${campaign.booking.contact.firstName} ${campaign.booking.contact.lastName}`,
+      clientName: campaign.booking.contact ? `${campaign.booking.contact.firstName} ${campaign.booking.contact.lastName}` : 'Unknown Contact',
       serviceType: campaign.booking.serviceType,
     } : null,
   };

@@ -162,9 +162,9 @@ export async function POST(request: NextRequest) {
     // Send booking notification emails (async - don't block response)
     sendBookingNotification({
       bookingId: booking.id,
-      contactName: `${booking.contact.firstName} ${booking.contact.lastName}`,
-      contactEmail: booking.contact.email,
-      organization: booking.contact.organization,
+      contactName: booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact',
+      contactEmail: booking.contact?.email ?? '',
+      organization: booking.contact?.organization ?? null,
       serviceType: booking.serviceType,
       startDate: booking.startDate,
       endDate: booking.endDate,

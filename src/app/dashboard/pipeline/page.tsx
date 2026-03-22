@@ -81,7 +81,7 @@ async function getPipelineData() {
     })),
     recentBookings: recentBookings.map(b => ({
       id: b.id,
-      name: `${b.contact.firstName} ${b.contact.lastName}`,
+      name: `${b.contact?.firstName ?? 'Unknown'} ${b.contact?.lastName ?? ''}`,
       serviceType: b.serviceType,
       status: b.status,
       amount: b.amount,

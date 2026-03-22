@@ -158,10 +158,10 @@ function EngagementCard({ booking }: { booking: SerializedBooking }) {
         {/* Client */}
         <div>
           <p className="text-sm font-medium text-[#1a1a1a]">
-            {booking.contact.firstName} {booking.contact.lastName}
+            {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
           </p>
-          {booking.contact.organization && (
-            <p className="text-xs text-[#666666]">{booking.contact.organization}</p>
+          {booking.contact?.organization && (
+            <p className="text-xs text-[#666666]">{booking.contact?.organization}</p>
           )}
         </div>
 
@@ -411,11 +411,11 @@ export function EngagementsClient({ bookings }: EngagementsClientProps) {
                   {/* Client */}
                   <div>
                     <p className="text-sm text-[#1a1a1a]">
-                      {booking.contact.firstName} {booking.contact.lastName}
+                      {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                     </p>
-                    {booking.contact.organization && (
+                    {booking.contact?.organization && (
                       <p className="text-xs text-[#666666] truncate">
-                        {booking.contact.organization}
+                        {booking.contact?.organization}
                       </p>
                     )}
                   </div>

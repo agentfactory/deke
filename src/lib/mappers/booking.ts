@@ -56,10 +56,10 @@ export function mapBookingToComponent(
     clientNotes: booking.clientNotes,
 
     // Flatten contact info
-    contactName: `${booking.contact.firstName} ${booking.contact.lastName}`,
-    contactEmail: booking.contact.email,
-    contactPhone: booking.contact.phone,
-    contactOrganization: booking.contact.organization,
+    contactName: booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact',
+    contactEmail: booking.contact?.email ?? '',
+    contactPhone: booking.contact?.phone ?? null,
+    contactOrganization: booking.contact?.organization ?? null,
 
     // Counts
     campaignCount: booking.campaigns.length,

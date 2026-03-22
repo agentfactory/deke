@@ -65,7 +65,7 @@ export async function POST(
     const campaignEnd = new Date(endDate)
     campaignEnd.setDate(campaignEnd.getDate() + availAfter)
 
-    const campaignName = `${booking.serviceType} - ${booking.contact.firstName} ${booking.contact.lastName} - ${booking.location} (${new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
+    const campaignName = `${booking.serviceType} - ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''} - ${booking.location} (${new Date(startDate).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })})`
 
     // Create campaign
     const campaign = await prisma.campaign.create({

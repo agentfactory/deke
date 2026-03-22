@@ -217,7 +217,7 @@ export default function BookingDetailPage({
           </Button>
           <div>
             <h1 className="text-3xl font-bold">
-              {booking.contact.firstName} {booking.contact.lastName} - {booking.serviceType.replace('_', ' ')}
+              {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''} - {booking.serviceType.replace('_', ' ')}
             </h1>
             <p className="text-muted-foreground">Booking Details</p>
           </div>
@@ -398,25 +398,26 @@ export default function BookingDetailPage({
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Name</p>
                 <p className="text-base">
-                  {booking.contact.firstName} {booking.contact.lastName}
+                  {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                 </p>
               </div>
               <div>
                 <p className="text-sm font-medium text-muted-foreground">Email</p>
-                <p className="text-base">{booking.contact.email}</p>
+                <p className="text-base">{booking.contact?.email ?? ''}</p>
               </div>
-              {booking.contact.phone && (
+              {booking.contact?.phone && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Phone</p>
-                  <p className="text-base">{booking.contact.phone}</p>
+                  <p className="text-base">{booking.contact?.phone}</p>
                 </div>
               )}
-              {booking.contact.organization && (
+              {booking.contact?.organization && (
                 <div>
                   <p className="text-sm font-medium text-muted-foreground">Organization</p>
-                  <p className="text-base">{booking.contact.organization}</p>
+                  <p className="text-base">{booking.contact?.organization}</p>
                 </div>
               )}
+              {booking.contact && (
               <div className="pt-2">
                 <Link href={`/dashboard/leads/${booking.contact.id}`}>
                   <Button variant="outline" size="sm" className="w-full">
@@ -424,6 +425,7 @@ export default function BookingDetailPage({
                   </Button>
                 </Link>
               </div>
+              )}
             </CardContent>
           </Card>
 

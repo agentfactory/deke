@@ -46,7 +46,7 @@ export function mapBookingToTripBooking(booking: PrismaBooking & {
   return {
     id: booking.id,
     tripId: booking.tripId || '',
-    venueName: booking.contact.organization || `${booking.contact.firstName} ${booking.contact.lastName}`,
+    venueName: booking.contact?.organization || (booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact'),
     date: booking.startDate?.toISOString() || '',
     time: booking.startDate?.toLocaleTimeString() || '',
     duration: booking.endDate && booking.startDate
