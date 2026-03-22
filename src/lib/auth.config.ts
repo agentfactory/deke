@@ -3,6 +3,7 @@ import type { NextAuthConfig } from "next-auth"
 // Edge-safe auth config (NO Node.js modules like bcrypt or prisma)
 // Used by middleware for JWT token verification only
 export const authConfig: NextAuthConfig = {
+  trustHost: true, // Trust the host header (Railway proxy)
   providers: [], // Providers with DB/bcrypt access are added in auth.ts
   session: {
     strategy: "jwt",

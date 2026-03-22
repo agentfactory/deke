@@ -10,7 +10,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import { Menu, ArrowRight } from "lucide-react";
+import { Menu, ArrowRight, LogIn } from "lucide-react";
 
 const navItems = [
   { label: "Arrangements", href: "/arrangements" },
@@ -71,6 +71,13 @@ export function Header() {
 
         {/* Desktop CTA */}
         <div className="hidden lg:flex items-center gap-3">
+          <Link
+            href="/login"
+            className="text-muted-foreground/50 hover:text-muted-foreground transition-colors p-2"
+            title="Admin Login"
+          >
+            <LogIn className="h-4 w-4" />
+          </Link>
           <Button variant="ghost" size="sm" asChild>
             <Link href="/contact">Contact</Link>
           </Button>
@@ -134,11 +141,19 @@ export function Header() {
                 </Button>
               </div>
 
-              {/* Tagline */}
-              <div className="mt-auto pt-8">
+              {/* Tagline + Admin */}
+              <div className="mt-auto pt-8 flex items-center justify-between">
                 <p className="text-xs text-muted-foreground">
                   The Father of Contemporary A Cappella
                 </p>
+                <Link
+                  href="/login"
+                  className="text-muted-foreground/40 hover:text-muted-foreground transition-colors p-1"
+                  onClick={() => setIsOpen(false)}
+                  title="Admin Login"
+                >
+                  <LogIn className="h-3.5 w-3.5" />
+                </Link>
               </div>
             </div>
           </SheetContent>
