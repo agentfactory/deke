@@ -51,6 +51,7 @@ export const createBookingSchema = z.object({
   isPublic: z.boolean().optional(),
   publicTitle: z.string().max(200).optional().nullable(),
   publicDescription: z.string().max(1000).optional().nullable(),
+  organization: z.string().max(200).optional().nullable(),
 })
 
 // Query filters for listing bookings
@@ -83,6 +84,7 @@ export const updateBookingSchema = z.object({
   isPublic: z.boolean().optional(),
   publicTitle: z.string().max(200).optional().nullable(),
   publicDescription: z.string().max(1000).optional().nullable(),
+  organization: z.string().max(200).optional().nullable(),
 })
 
 // Type exports

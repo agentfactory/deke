@@ -169,6 +169,7 @@ export async function PATCH(
         isPublic: validatedData.isPublic,
         publicTitle: validatedData.publicTitle,
         publicDescription: validatedData.publicDescription,
+        organization: validatedData.organization,
       },
       include: {
         lead: {

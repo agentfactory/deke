@@ -21,9 +21,7 @@ export async function GET() {
         location: true,
         publicTitle: true,
         publicDescription: true,
-        lead: {
-          select: { organization: true },
-        },
+        organization: true,
       },
       orderBy: { startDate: 'asc' },
       take: 100,
@@ -33,7 +31,7 @@ export async function GET() {
       .filter(b => b.startDate !== null)
       .map(b => ({
         title: b.publicTitle || `${b.serviceType.replace('_', ' ')}${b.location ? ` in ${b.location}` : ''}`,
-        description: b.publicDescription || `Deke Sharon - ${b.serviceType.replace('_', ' ')}${b.lead?.organization ? ` with ${b.lead.organization}` : ''}`,
+        description: b.publicDescription || `Deke Sharon - ${b.serviceType.replace('_', ' ')}${b.organization ? ` with ${b.organization}` : ''}`,
         location: b.location,
         startDate: b.startDate!,
         endDate: b.endDate,

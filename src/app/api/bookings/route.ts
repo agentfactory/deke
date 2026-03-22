@@ -86,6 +86,7 @@ export async function POST(request: NextRequest) {
         isPublic: validatedData.isPublic ?? false,
         publicTitle: validatedData.publicTitle ?? null,
         publicDescription: validatedData.publicDescription ?? null,
+        organization: validatedData.organization ?? null,
       },
       include: {
         lead: {
