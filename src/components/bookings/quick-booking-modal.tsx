@@ -7,7 +7,9 @@ import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { DatePicker } from '@/components/ui/date-picker';
-import { Loader2, Save, CheckCircle2 } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { Textarea } from '@/components/ui/textarea';
+import { Loader2, Save, CheckCircle2, Globe } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -54,6 +56,9 @@ export function QuickBookingModal({
     endDate: defaultDate ? addDays(new Date(`${defaultDate}T09:00:00`), 1).toISOString() : '',
     location: '',
     amount: '',
+    isPublic: false,
+    publicTitle: '',
+    publicDescription: '',
   });
 
   // Reset form when modal opens with a new date
@@ -68,6 +73,9 @@ export function QuickBookingModal({
         endDate: defaultDate ? addDays(new Date(`${defaultDate}T09:00:00`), 1).toISOString() : '',
         location: '',
         amount: '',
+        isPublic: false,
+        publicTitle: '',
+        publicDescription: '',
       });
       setError(null);
       setSuccess(false);
@@ -75,7 +83,7 @@ export function QuickBookingModal({
     onOpenChange(isOpen);
   };
 
-  const handleChange = (field: string, value: string) => {
+  const handleChange = (field: string, value: string | boolean) => {
     setForm(prev => ({ ...prev, [field]: value }));
   };
 
@@ -104,6 +112,9 @@ export function QuickBookingModal({
           endDate: form.endDate || null,
           location: form.location || null,
           amount: form.amount ? parseFloat(form.amount) : null,
+          isPublic: form.isPublic,
+          publicTitle: form.publicTitle || null,
+          publicDescription: form.publicDescription || null,
         }),
       });
 
@@ -254,6 +265,43 @@ export function QuickBookingModal({
                   onChange={(e) => handleChange('amount', e.target.value)}
                 />
               </div>
+            </div>
+
+            {/* Public Event Toggle */}
+            <div className="space-y-3 rounded-lg border p-3">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Globe className="h-4 w-4 text-muted-foreground" />
+                  <Label className="text-sm font-medium">Public Event</Label>
+                </div>
+                <Switch
+                  checked={form.isPublic}
+                  onCheckedChange={(v) => handleChange('isPublic', v)}
+                />
+              </div>
+              {form.isPublic && (
+                <div className="space-y-3">
+                  <div>
+                    <Label htmlFor="qb-public-title">Event Title</Label>
+                    <Input
+                      id="qb-public-title"
+                      placeholder="A Cappella Workshop at UCLA"
+                      value={form.publicTitle}
+                      onChange={(e) => handleChange('publicTitle', e.target.value)}
+                    />
+                  </div>
+                  <div>
+                    <Label htmlFor="qb-public-desc">Event Description</Label>
+                    <Textarea
+                      id="qb-public-desc"
+                      placeholder="Brief description for the public events page..."
+                      rows={2}
+                      value={form.publicDescription}
+                      onChange={(e) => handleChange('publicDescription', e.target.value)}
+                    />
+                  </div>
+                </div>
+              )}
             </div>
 
             <Button type="submit" className="w-full" disabled={isLoading}>
