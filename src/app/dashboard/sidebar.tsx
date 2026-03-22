@@ -199,7 +199,7 @@ export function DashboardSidebar({
             </p>
           )}
           <button
-            onClick={() => signOut({ callbackUrl: "/login" })}
+            onClick={() => signOut({ callbackUrl: `${window.location.origin}/login` })}
             className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[#777779] transition-colors hover:bg-[#1a1a1c] hover:text-[#CCCCCC]"
             style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
           >
