@@ -1,4 +1,6 @@
 import { prisma } from "@/lib/db";
+import { auth } from "@/lib/auth";
+import { SessionProvider } from "next-auth/react";
 import { DashboardSidebar } from "./sidebar";
 
 async function getNewGroupRequestCount(): Promise<number> {
@@ -51,10 +53,13 @@ export default async function DashboardLayout({
 }: {
   children: React.ReactNode;
 }) {
-  const [newRequestCount, pendingInquiryCount] = await Promise.all([
+  const [session, newRequestCount, pendingInquiryCount] = await Promise.all([
+    auth(),
     getNewGroupRequestCount(),
     getPendingInquiryCount(),
   ]);
+
+  const userName = session?.user?.name || session?.user?.email || "Admin";
 
   const badgeCounts = {
     leads: newRequestCount,
@@ -62,16 +67,19 @@ export default async function DashboardLayout({
   };
 
   return (
-    <div className="min-h-screen bg-[#FAFAF8]">
-      <DashboardSidebar
-        primaryNav={primaryNav}
-        insightNav={insightNav}
-        badgeCounts={badgeCounts}
-      />
+    <SessionProvider session={session}>
+      <div className="min-h-screen bg-[#FAFAF8]">
+        <DashboardSidebar
+          primaryNav={primaryNav}
+          insightNav={insightNav}
+          badgeCounts={badgeCounts}
+          userName={userName}
+        />
 
-      <main className="lg:pl-[260px] pb-20 lg:pb-0">
-        <div className="mx-auto max-w-7xl p-6 md:p-8">{children}</div>
-      </main>
-    </div>
+        <main className="lg:pl-[260px] pb-20 lg:pb-0">
+          <div className="mx-auto max-w-7xl p-6 md:p-8">{children}</div>
+        </main>
+      </div>
+    </SessionProvider>
   );
 }

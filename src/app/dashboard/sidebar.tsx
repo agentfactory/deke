@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState } from "react";
+import { signOut } from "next-auth/react";
 import {
   Zap,
   Calendar,
@@ -14,6 +15,7 @@ import {
   Plane,
   GitBranch,
   BarChart3,
+  LogOut,
 } from "lucide-react";
 
 const iconMap = {
@@ -82,10 +84,12 @@ export function DashboardSidebar({
   primaryNav,
   insightNav,
   badgeCounts,
+  userName,
 }: {
   primaryNav: NavItem[];
   insightNav: NavItem[];
   badgeCounts: BadgeCounts;
+  userName?: string;
 }) {
   const pathname = usePathname();
 
@@ -181,15 +185,27 @@ export function DashboardSidebar({
           </div>
         </div>
 
-        {/* Spacer + footer */}
+        {/* Spacer */}
         <div className="flex-1" />
-        <div className="px-7 py-5">
-          <span
-            className="text-[11px] tracking-[1px] text-[#444446]"
+
+        {/* Footer: user info + sign out */}
+        <div className="border-t border-[#222224] px-4 py-4">
+          {userName && (
+            <p
+              className="mb-2 truncate px-3 text-[11px] tracking-[1px] text-[#888]"
+              style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
+            >
+              {userName}
+            </p>
+          )}
+          <button
+            onClick={() => signOut({ callbackUrl: "/login" })}
+            className="flex w-full items-center gap-3 rounded-md px-3 py-2 text-[#777779] transition-colors hover:bg-[#1a1a1c] hover:text-[#CCCCCC]"
             style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
           >
-            v2.0
-          </span>
+            <LogOut className="h-[18px] w-[18px] shrink-0" strokeWidth={1.8} />
+            <span className="text-[12px] font-medium tracking-[1.5px]">SIGN OUT</span>
+          </button>
         </div>
       </aside>
 
