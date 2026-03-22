@@ -200,6 +200,7 @@ model Booking {
   isPublic          Boolean  @default(false)
   publicTitle       String?    // Public-facing event title, e.g. "A Cappella Workshop at UCLA"
   publicDescription String?    // Short description for the /events page
+  organization      String?    // Per-booking organization/venue name (independent of lead)
 
   // Relations
   campaigns     Campaign[]

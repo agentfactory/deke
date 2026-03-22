@@ -67,6 +67,7 @@ const bookingFormSchema = z.object({
   isPublic: z.boolean().optional(),
   publicTitle: z.string().optional(),
   publicDescription: z.string().optional(),
+  organization: z.string().optional(),
 });
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
@@ -164,6 +165,7 @@ export function BookingForm({
       isPublic: initialValues?.isPublic || false,
       publicTitle: initialValues?.publicTitle || '',
       publicDescription: initialValues?.publicDescription || '',
+      organization: initialValues?.organization || '',
     },
   });
 
@@ -559,6 +561,23 @@ export function BookingForm({
                     </FormControl>
                     <FormDescription>
                       Public-facing title shown on the events page
+                    </FormDescription>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
+
+              <FormField
+                control={form.control}
+                name="organization"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>Organization / Venue</FormLabel>
+                    <FormControl>
+                      <Input placeholder="e.g., Salem High School" {...field} />
+                    </FormControl>
+                    <FormDescription>
+                      Hosting organization shown on the events page
                     </FormDescription>
                     <FormMessage />
                   </FormItem>

@@ -58,14 +58,15 @@ export async function POST(request: NextRequest) {
         },
       });
     } else {
-      // Update lead info if provided
+      // Only update lead fields that are currently empty to avoid
+      // overwriting data that other bookings may depend on
       lead = await prisma.lead.update({
         where: { id: lead.id },
         data: {
-          firstName: client.firstName,
-          lastName: client.lastName,
-          organization: client.organization || lead.organization,
-          phone: client.phone || lead.phone,
+          firstName: lead.firstName || client.firstName,
+          lastName: lead.lastName || client.lastName,
+          organization: lead.organization || client.organization || null,
+          phone: lead.phone || client.phone || null,
         },
       });
     }
@@ -97,6 +98,7 @@ export async function POST(request: NextRequest) {
         isPublic: isPublic ?? false,
         publicTitle: publicTitle || null,
         publicDescription: publicDescription || null,
+        organization: client.organization || null,
       },
       include: {
         lead: {

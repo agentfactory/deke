@@ -23,9 +23,7 @@ export async function GET(
       location: true,
       publicTitle: true,
       publicDescription: true,
-      lead: {
-        select: { organization: true },
-      },
+      organization: true,
     },
   })
 
@@ -34,7 +32,7 @@ export async function GET(
   }
 
   const title = booking.publicTitle || `${booking.serviceType.replace('_', ' ')}${booking.location ? ` in ${booking.location}` : ''}`
-  const description = booking.publicDescription || `Deke Sharon - ${booking.serviceType.replace('_', ' ')}${booking.lead?.organization ? ` with ${booking.lead.organization}` : ''}`
+  const description = booking.publicDescription || `Deke Sharon - ${booking.serviceType.replace('_', ' ')}${booking.organization ? ` with ${booking.organization}` : ''}`
 
   const ics = generateICalEvent({
     title,

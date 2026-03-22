@@ -28,12 +28,7 @@ export async function GET() {
         location: true,
         publicTitle: true,
         publicDescription: true,
-        lead: {
-          select: {
-            organization: true,
-            // Do NOT expose email, phone, or name for privacy
-          },
-        },
+        organization: true,
       },
       orderBy: {
         startDate: 'asc',
@@ -51,7 +46,7 @@ export async function GET() {
       location: booking.location,
       publicTitle: booking.publicTitle ?? null,
       publicDescription: booking.publicDescription ?? null,
-      organization: booking.lead?.organization ?? null,
+      organization: booking.organization ?? null,
     }))
 
     return NextResponse.json(events)

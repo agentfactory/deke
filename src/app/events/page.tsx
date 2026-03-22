@@ -85,11 +85,7 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
         location: true,
         publicTitle: true,
         publicDescription: true,
-        lead: {
-          select: {
-            organization: true,
-          },
-        },
+        organization: true,
       },
       orderBy: {
         startDate: "asc",
@@ -106,7 +102,7 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
       location: b.location,
       publicTitle: b.publicTitle ?? null,
       publicDescription: b.publicDescription ?? null,
-      organization: b.lead?.organization ?? null,
+      organization: b.organization ?? null,
     }));
   } catch (error) {
     console.error("Error fetching public events:", error);
