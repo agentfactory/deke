@@ -62,9 +62,6 @@ importers:
       '@radix-ui/react-tabs':
         specifier: ^1.1.13
         version: 1.1.13(@types/react-dom@19.2.3(@types/react@19.2.14))(@types/react@19.2.14)(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
-      '@tailwindcss/oxide-win32-x64-msvc':
-        specifier: ^4.2.2
-        version: 4.2.2
       '@tanstack/react-table':
         specifier: ^8.21.3
         version: 8.21.3(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
@@ -90,9 +87,6 @@ importers:
         specifier: ^12.27.1
         version: 12.35.1(react-dom@19.2.3(react@19.2.3))(react@19.2.3)
       lightningcss:
-        specifier: ^1.30.2
-        version: 1.31.1
-      lightningcss-win32-x64-msvc:
         specifier: ^1.30.2
         version: 1.31.1
       lucide-react:
@@ -1748,12 +1742,6 @@ packages:
 
   '@tailwindcss/oxide-win32-x64-msvc@4.2.1':
     resolution: {integrity: sha512-rbO34G5sMWWyrN/idLeVxAZgAKWrn5LiR3/I90Q9MkA67s6T1oB0xtTe+0heoBvHSpbU9Mk7i6uwJnpo4u21XQ==}
-    engines: {node: '>= 20'}
-    cpu: [x64]
-    os: [win32]
-
-  '@tailwindcss/oxide-win32-x64-msvc@4.2.2':
-    resolution: {integrity: sha512-1T/37VvI7WyH66b+vqHj/cLwnCxt7Qt3WFu5Q8hk65aOvlwAhs7rAp1VkulBJw/N4tMirXjVnylTR72uI0HGcA==}
     engines: {node: '>= 20'}
     cpu: [x64]
     os: [win32]
@@ -5497,8 +5485,6 @@ snapshots:
   '@tailwindcss/oxide-win32-x64-msvc@4.2.1':
     optional: true
 
-  '@tailwindcss/oxide-win32-x64-msvc@4.2.2': {}
-
   '@tailwindcss/oxide@4.2.1':
     optionalDependencies:
       '@tailwindcss/oxide-android-arm64': 4.2.1
@@ -6957,7 +6943,8 @@ snapshots:
   lightningcss-win32-arm64-msvc@1.31.1:
     optional: true
 
-  lightningcss-win32-x64-msvc@1.31.1: {}
+  lightningcss-win32-x64-msvc@1.31.1:
+    optional: true
 
   lightningcss@1.31.1:
     dependencies:
