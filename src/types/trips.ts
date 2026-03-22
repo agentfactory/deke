@@ -9,8 +9,6 @@ export interface Trip {
   status: 'upcoming' | 'in-progress' | 'completed' | 'cancelled'
   bookingsCount: number
   totalRevenue: number
-  totalExpenses: number
-  netProfit: number
 }
 
 export interface TripBooking {
@@ -24,5 +22,4 @@ export interface TripBooking {
   status: 'confirmed' | 'pending' | 'cancelled' | 'completed'
   type: 'workshop' | 'coaching' | 'masterclass' | 'speaking' | 'other'
   notes: string
-  participantsCount: number
 }

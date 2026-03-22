@@ -1,7 +1,7 @@
 'use client'
 
 import type { Trip, TripBooking } from '@/types/trips'
-import { Calendar, MapPin, DollarSign, TrendingUp, MoreVertical, Plus, Eye } from 'lucide-react'
+import { Calendar, MapPin, MoreVertical, Plus, Eye } from 'lucide-react'
 import { useState } from 'react'
 import Link from 'next/link'
 
@@ -18,11 +18,6 @@ export function TripCard({ trip, bookings, index }: TripCardProps) {
   const startDate = new Date(trip.startDate)
   const endDate = new Date(trip.endDate)
   const dateRange = `${startDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} - ${endDate.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
-
-  // Calculate profit percentage
-  const profitMargin = trip.totalRevenue > 0
-    ? ((trip.netProfit / trip.totalRevenue) * 100).toFixed(0)
-    : 0
 
   // Status styling
   const statusConfig = {
@@ -122,8 +117,8 @@ export function TripCard({ trip, bookings, index }: TripCardProps) {
           </div>
         </div>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-2 gap-3 mb-5">
+        {/* Metrics */}
+        <div className="flex items-center justify-between text-sm mb-5 pb-5 border-b border-slate-200 dark:border-slate-800">
           <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
               Bookings
@@ -135,36 +130,11 @@ export function TripCard({ trip, bookings, index }: TripCardProps) {
 
           <div className="bg-gradient-to-br from-slate-50 to-white dark:from-slate-800 dark:to-slate-900 p-3 rounded-xl border border-slate-200 dark:border-slate-800">
             <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-1">
-              Margin
+              Revenue
             </p>
-            <p className="text-xl font-bold bg-gradient-to-br from-violet-600 to-cyan-600 bg-clip-text text-transparent">
-              {profitMargin}%
-            </p>
-          </div>
-        </div>
-
-        {/* Financial Summary */}
-        <div className="space-y-2 mb-5 pb-5 border-b border-slate-200 dark:border-slate-800">
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Revenue</span>
-            <span className="font-semibold text-slate-900 dark:text-white">
+            <p className="text-xl font-bold text-slate-900 dark:text-white">
               ${trip.totalRevenue.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm">
-            <span className="text-slate-600 dark:text-slate-400">Expenses</span>
-            <span className="font-semibold text-slate-900 dark:text-white">
-              ${trip.totalExpenses.toLocaleString()}
-            </span>
-          </div>
-          <div className="flex items-center justify-between text-sm pt-2 border-t border-slate-200 dark:border-slate-800">
-            <span className="font-medium text-slate-900 dark:text-white flex items-center gap-1.5">
-              <TrendingUp className="w-4 h-4 text-violet-500" />
-              Net Profit
-            </span>
-            <span className="text-lg font-bold bg-gradient-to-br from-violet-600 to-cyan-600 bg-clip-text text-transparent">
-              ${trip.netProfit.toLocaleString()}
-            </span>
+            </p>
           </div>
         </div>
 
@@ -200,12 +170,6 @@ export function TripCard({ trip, bookings, index }: TripCardProps) {
             <Plus className="w-4 h-4" />
           </Link>
 
-          <button
-            className="px-3 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 rounded-xl transition-colors flex items-center gap-1.5"
-            aria-label="Add expense"
-          >
-            <DollarSign className="w-4 h-4" />
-          </button>
         </div>
       </div>
 

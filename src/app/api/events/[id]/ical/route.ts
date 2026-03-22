@@ -31,7 +31,7 @@ export async function GET(
     return NextResponse.json({ error: 'Event not found' }, { status: 404 })
   }
 
-  const title = booking.publicTitle || `${booking.serviceType.replace('_', ' ')}${booking.location ? ` in ${booking.location}` : ''}`
+  const title = `Deke Sharon: ${booking.publicTitle || `${booking.serviceType.replace('_', ' ')}${booking.location ? ` in ${booking.location}` : ''}`}`
   const description = booking.publicDescription || `Deke Sharon - ${booking.serviceType.replace('_', ' ')}${booking.organization ? ` with ${booking.organization}` : ''}`
 
   const ics = generateICalEvent({

@@ -50,44 +50,6 @@ export async function GET(
             }
           }
         },
-        travelExpenses: {
-          select: {
-            id: true,
-            flightCarrier: true,
-            flightNumber: true,
-            departureAirport: true,
-            arrivalAirport: true,
-            departureTime: true,
-            arrivalTime: true,
-            flightCost: true,
-            hotelName: true,
-            hotelAddress: true,
-            checkInDate: true,
-            checkOutDate: true,
-            confirmationNumber: true,
-            hotelCost: true,
-            groundTransport: true,
-            groundTransportDetails: true,
-            groundTransportCost: true,
-            paymentResponsibility: true,
-            clientPayPercent: true,
-            dekePayPercent: true,
-          }
-        },
-        participants: {
-          select: {
-            id: true,
-            organizationName: true,
-            contactName: true,
-            contactEmail: true,
-            contactPhone: true,
-            groupSize: true,
-            splitPercent: true,
-            amountDue: true,
-            travelShareDue: true,
-            paymentStatus: true,
-          }
-        }
       }
     })
 
@@ -232,7 +194,6 @@ export async function DELETE(
       }
     }
 
-    // Delete booking (cascade delete for travelExpenses and participants handled by schema)
     await prisma.booking.delete({
       where: { id }
     })

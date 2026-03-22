@@ -30,7 +30,7 @@ export async function GET() {
     const events = bookings
       .filter(b => b.startDate !== null)
       .map(b => ({
-        title: b.publicTitle || `${b.serviceType.replace('_', ' ')}${b.location ? ` in ${b.location}` : ''}`,
+        title: `Deke Sharon: ${b.publicTitle || `${b.serviceType.replace('_', ' ')}${b.location ? ` in ${b.location}` : ''}`}`,
         description: b.publicDescription || `Deke Sharon - ${b.serviceType.replace('_', ' ')}${b.organization ? ` with ${b.organization}` : ''}`,
         location: b.location,
         startDate: b.startDate!,

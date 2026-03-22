@@ -44,7 +44,6 @@ const insightNav = [
   { href: "/dashboard/analytics", label: "Analytics", icon: "BarChart3" as const },
   { href: "/dashboard/pipeline", label: "Pipeline", icon: "GitBranch" as const },
   { href: "/dashboard/orders", label: "Orders", icon: "Package" as const },
-  { href: "/dashboard/expenses", label: "Expenses", icon: "DollarSign" as const },
   { href: "/dashboard/trips", label: "Trips", icon: "Plane" as const },
   { href: "/dashboard/engagements", label: "Engagements", icon: "Briefcase" as const },
 ];

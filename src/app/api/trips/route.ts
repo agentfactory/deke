@@ -60,8 +60,6 @@ export async function GET() {
                 organization: true,
               },
             },
-            travelExpenses: true,
-            participants: true,
           },
         },
       },
