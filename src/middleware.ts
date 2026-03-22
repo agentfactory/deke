@@ -1,8 +1,6 @@
-import NextAuth from "next-auth"
-import { authConfig } from "@/lib/auth.config"
 import { NextResponse } from "next/server"
-
-const { auth } = NextAuth(authConfig)
+import type { NextRequest } from "next/server"
+import { getToken } from "next-auth/jwt"
 
 // Public API routes that do NOT require authentication
 const PUBLIC_API_ROUTES = [
@@ -23,9 +21,12 @@ function isPublicApiRoute(pathname: string): boolean {
   )
 }
 
-export default auth((req) => {
+export async function middleware(req: NextRequest) {
   const { pathname } = req.nextUrl
-  const isLoggedIn = !!req.auth
+
+  // Check JWT token directly (edge-compatible, no bcrypt/prisma)
+  const token = await getToken({ req, secret: process.env.AUTH_SECRET })
+  const isLoggedIn = !!token
 
   // Protect /dashboard/* routes
   if (pathname.startsWith("/dashboard")) {
@@ -44,7 +45,7 @@ export default auth((req) => {
   }
 
   return NextResponse.next()
-})
+}
 
 export const config = {
   matcher: ["/dashboard/:path*", "/api/:path*"],
