@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Trash2, Loader2, Mail, Phone, Building2, MapPin, Calendar, Star } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Loader2, Mail, Phone, Building2, MapPin, Calendar, Star, Plus, Package, MessageSquare } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -215,6 +215,21 @@ export default function LeadProfilePage({
           </div>
         </div>
         <div className="flex items-center gap-2">
+          <Link href={`/dashboard/bookings/new?leadId=${lead.id}`}>
+            <Button variant="outline" size="sm">
+              <Calendar className="h-4 w-4 mr-1" /> New Booking
+            </Button>
+          </Link>
+          <Link href={`/dashboard/orders?leadId=${lead.id}`}>
+            <Button variant="outline" size="sm">
+              <Package className="h-4 w-4 mr-1" /> New Order
+            </Button>
+          </Link>
+          <Link href={`/dashboard/inquiries?leadId=${lead.id}`}>
+            <Button variant="outline" size="sm">
+              <MessageSquare className="h-4 w-4 mr-1" /> New Inquiry
+            </Button>
+          </Link>
           <Button
             variant="destructive"
             size="icon"
@@ -335,23 +350,27 @@ export default function LeadProfilePage({
               <CardContent>
                 <div className="space-y-3">
                   {lead.orders.map((order) => (
-                    <div key={order.id} className="p-3 rounded-lg border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{order.songTitle}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {order.orderNumber} • {order.packageTier}
-                            {order.songArtist && ` • ${order.songArtist}`}
-                          </p>
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline">{order.status}</Badge>
-                          <p className="text-sm font-medium mt-1">
-                            ${order.totalAmount.toLocaleString()}
-                          </p>
+                    <Link key={order.id} href="/dashboard/orders">
+                      <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{order.songTitle || 'Untitled'}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {order.orderNumber} {order.packageTier && `• ${order.packageTier}`}
+                              {order.songArtist && ` • ${order.songArtist}`}
+                            </p>
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline">{order.status}</Badge>
+                            {order.totalAmount != null && (
+                              <p className="text-sm font-medium mt-1">
+                                ${order.totalAmount.toLocaleString()}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </CardContent>
@@ -367,29 +386,31 @@ export default function LeadProfilePage({
               <CardContent>
                 <div className="space-y-3">
                   {lead.inquiries.map((inquiry) => (
-                    <div key={inquiry.id} className="p-3 rounded-lg border">
-                      <div className="flex items-center justify-between">
-                        <div>
-                          <p className="font-medium">{inquiry.serviceType.replace('_', ' ')}</p>
-                          <p className="text-sm text-muted-foreground">
-                            {format(new Date(inquiry.createdAt), 'PPP')}
-                          </p>
-                          {inquiry.message && (
-                            <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
-                              {inquiry.message}
+                    <Link key={inquiry.id} href="/dashboard/inquiries">
+                      <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
+                        <div className="flex items-center justify-between">
+                          <div>
+                            <p className="font-medium">{inquiry.serviceType.replace('_', ' ')}</p>
+                            <p className="text-sm text-muted-foreground">
+                              {format(new Date(inquiry.createdAt), 'PPP')}
                             </p>
-                          )}
-                        </div>
-                        <div className="text-right">
-                          <Badge variant="outline">{inquiry.status}</Badge>
-                          {inquiry.quotedAmount && (
-                            <p className="text-sm font-medium mt-1">
-                              ${inquiry.quotedAmount.toLocaleString()}
-                            </p>
-                          )}
+                            {inquiry.message && (
+                              <p className="text-sm text-muted-foreground mt-1 line-clamp-2">
+                                {inquiry.message}
+                              </p>
+                            )}
+                          </div>
+                          <div className="text-right">
+                            <Badge variant="outline">{inquiry.status}</Badge>
+                            {inquiry.quotedAmount && (
+                              <p className="text-sm font-medium mt-1">
+                                ${inquiry.quotedAmount.toLocaleString()}
+                              </p>
+                            )}
+                          </div>
                         </div>
                       </div>
-                    </div>
+                    </Link>
                   ))}
                 </div>
               </CardContent>

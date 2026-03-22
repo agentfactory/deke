@@ -10,6 +10,11 @@ import {
   CalendarDays,
   Briefcase,
   DollarSign,
+  MessageSquare,
+  Package,
+  Plane,
+  GitBranch,
+  BarChart3,
 } from "lucide-react";
 
 const iconMap = {
@@ -20,21 +25,28 @@ const iconMap = {
   CalendarDays,
   Briefcase,
   DollarSign,
+  MessageSquare,
+  Package,
+  Plane,
+  GitBranch,
+  BarChart3,
 } as const;
+
+type BadgeCounts = Record<string, number>;
 
 type NavItem = {
   href: string;
   label: string;
   icon: keyof typeof iconMap;
-  badge?: boolean;
+  badgeKey?: string;
 };
 
 export function DashboardSidebar({
   navItems,
-  newRequestCount,
+  badgeCounts,
 }: {
   navItems: NavItem[];
-  newRequestCount: number;
+  badgeCounts: BadgeCounts;
 }) {
   const pathname = usePathname();
 
@@ -70,6 +82,7 @@ export function DashboardSidebar({
             {navItems.map((item) => {
               const Icon = iconMap[item.icon];
               const active = isActive(item.href);
+              const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
 
               return (
                 <li key={item.href}>
@@ -102,9 +115,9 @@ export function DashboardSidebar({
                       {item.label}
                     </span>
 
-                    {item.badge && newRequestCount > 0 && (
+                    {badgeCount > 0 && (
                       <span className="ml-auto flex h-5 min-w-[20px] items-center justify-center rounded-full bg-[#C05A3C] px-1.5 text-[10px] font-semibold text-white">
-                        {newRequestCount > 99 ? "99+" : newRequestCount}
+                        {badgeCount > 99 ? "99+" : badgeCount}
                       </span>
                     )}
                   </Link>
@@ -131,6 +144,7 @@ export function DashboardSidebar({
           {navItems.map((item) => {
             const Icon = iconMap[item.icon];
             const active = isActive(item.href);
+            const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
 
             return (
               <li key={item.href}>
@@ -161,9 +175,9 @@ export function DashboardSidebar({
                     <span className="absolute -top-0.5 left-1/2 h-[3px] w-5 -translate-x-1/2 rounded-full bg-[#C05A3C]" />
                   )}
 
-                  {item.badge && newRequestCount > 0 && (
+                  {badgeCount > 0 && (
                     <span className="absolute -right-0.5 top-0 flex h-4 min-w-[16px] items-center justify-center rounded-full bg-[#C05A3C] px-1 text-[9px] font-semibold text-white">
-                      {newRequestCount > 99 ? "99+" : newRequestCount}
+                      {badgeCount > 99 ? "99+" : badgeCount}
                     </span>
                   )}
                 </Link>
