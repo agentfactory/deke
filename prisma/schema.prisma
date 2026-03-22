@@ -177,8 +177,8 @@ model Inquiry {
 
 model Booking {
   id            String        @id @default(cuid())
-  contactId     String
-  contact       Contact       @relation(fields: [contactId], references: [id])
+  contactId     String?       // Temporarily optional during migration, will be made required after data migration
+  contact       Contact?      @relation(fields: [contactId], references: [id])
   inquiryId     String?       @unique
   inquiry       Inquiry?      @relation(fields: [inquiryId], references: [id])
 

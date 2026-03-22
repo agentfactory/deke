@@ -1,135 +1,125 @@
 /**
  * Data Migration: Convert booked leads to contacts
  *
- * IMPORTANT: This must run AFTER `prisma db push` applies the new schema.
- * The new schema adds the Contact model and changes Booking.leadId to Booking.contactId.
+ * Two-phase migration for Railway deploy:
  *
- * Since prisma db push is destructive for the leadId→contactId rename, we need to:
- * 1. First run the SQL migration (step 1) to copy leadId data before schema push
- * 2. Then run prisma db push to apply the new schema
- * 3. Then run this script (step 2) to create contact records and update bookings
+ * Phase 1 (--save-mapping): Runs BEFORE prisma db push
+ *   - Saves booking→lead mappings to a temp table before leadId column is dropped
  *
- * Run with:
- *   npx tsx prisma/migrate-leads-to-contacts.ts
+ * Phase 2 (--apply-mapping): Runs AFTER prisma db push
+ *   - Creates Contact records from leads that had bookings
+ *   - Updates bookings with new contactId using saved mappings
+ *   - Marks leads as CONVERTED
+ *   - Cleans up temp table
+ *
+ * Build command order:
+ *   prisma generate → save-mapping → db push → apply-mapping → next build
  */
 
 import { PrismaClient } from '@prisma/client'
 
 const prisma = new PrismaClient()
 
-async function main() {
-  console.log('=== Lead-to-Contact Data Migration ===\n')
+async function saveMapping() {
+  console.log('=== Phase 1: Save booking→lead mappings before schema push ===\n')
 
-  // Step 1: Find leads that should be converted
-  // We identify leads that have bookings by checking if any booking's contactId
-  // matches a known pattern, OR we use raw SQL to check historical data
+  try {
+    // Check if leadId column still exists on Booking
+    const columns = await prisma.$queryRaw<Array<{ column_name: string }>>`
+      SELECT column_name FROM information_schema.columns
+      WHERE table_name = 'Booking' AND column_name = 'leadId'
+    `
 
-  // First, let's see if there are any bookings with empty contactId (needs migration)
-  const bookingsNeedingMigration = await prisma.$queryRaw<Array<{ count: bigint }>>`
-    SELECT COUNT(*) as count FROM "Booking" WHERE "contactId" IS NULL OR "contactId" = ''
-  `
-
-  const needsMigration = Number(bookingsNeedingMigration[0]?.count || 0)
-
-  if (needsMigration === 0) {
-    // Check if there are bookings at all
-    const totalBookings = await prisma.booking.count()
-    if (totalBookings === 0) {
-      console.log('No bookings found. Nothing to migrate.')
+    if (columns.length === 0) {
+      console.log('leadId column already removed from Booking table. Skipping save-mapping.')
       return
     }
 
-    // All bookings already have contactId — verify contacts exist
-    console.log(`All ${totalBookings} bookings already have contactId assigned.`)
-    console.log('Verifying contacts exist...\n')
+    // Create temp table to store mappings (drop if exists from previous failed run)
+    await prisma.$executeRawUnsafe(`
+      DROP TABLE IF EXISTS "_booking_lead_migration";
+      CREATE TABLE "_booking_lead_migration" (
+        "bookingId" TEXT NOT NULL,
+        "leadId" TEXT NOT NULL,
+        PRIMARY KEY ("bookingId")
+      )
+    `)
 
-    // Find unique contactIds from bookings and verify they exist
-    const bookings = await prisma.booking.findMany({
-      select: { contactId: true },
-      distinct: ['contactId'],
+    // Save all booking→lead mappings
+    const saved = await prisma.$executeRaw`
+      INSERT INTO "_booking_lead_migration" ("bookingId", "leadId")
+      SELECT "id", "leadId" FROM "Booking" WHERE "leadId" IS NOT NULL
+      ON CONFLICT ("bookingId") DO NOTHING
+    `
+
+    console.log(`Saved ${saved} booking→lead mappings to temp table.`)
+  } catch (error) {
+    // If the table or column doesn't exist, that's fine - migration may have already run
+    console.log('Note: Could not save mappings (may already be migrated):', (error as Error).message)
+  }
+}
+
+async function applyMapping() {
+  console.log('=== Phase 2: Create contacts and apply mappings after schema push ===\n')
+
+  // Check if temp table exists
+  const tableExists = await prisma.$queryRaw<Array<{ exists: boolean }>>`
+    SELECT EXISTS (
+      SELECT FROM information_schema.tables
+      WHERE table_name = '_booking_lead_migration'
+    ) as exists
+  `
+
+  if (!tableExists[0]?.exists) {
+    console.log('No migration temp table found. Checking if bookings need contacts...\n')
+
+    // Check if there are bookings without contactId
+    const orphanedBookings = await prisma.booking.count({
+      where: { contactId: null }
     })
 
-    for (const b of bookings) {
-      const contact = await prisma.contact.findUnique({ where: { id: b.contactId } })
-      if (!contact) {
-        console.log(`  WARNING: Booking references contact ${b.contactId} which doesn't exist!`)
-      }
+    if (orphanedBookings === 0) {
+      console.log('All bookings have contactId assigned. Nothing to do.')
+      return
     }
 
-    console.log('Verification complete.')
+    console.log(`WARNING: ${orphanedBookings} bookings have no contactId and no migration data available.`)
+    console.log('These bookings may need manual attention.')
     return
   }
 
-  console.log(`Found ${needsMigration} bookings needing migration.\n`)
-  console.log('ERROR: Bookings with NULL contactId detected.')
-  console.log('This means the schema was pushed before data was migrated.')
-  console.log('')
-  console.log('To fix this, you need to run the pre-migration SQL first:')
-  console.log('  npx tsx prisma/migrate-leads-to-contacts.ts --pre-push')
-  console.log('')
-  console.log('Then re-run prisma db push, then run this script again.')
-}
-
-async function prePush() {
-  console.log('=== Pre-Push Migration: Create contacts from leads with bookings ===\n')
-
-  // This runs BEFORE prisma db push, while the old schema (with leadId on Booking) is still active
-  // We use raw SQL to work with the current schema
-
-  // Find all unique leadIds from bookings
-  const bookingLeads = await prisma.$queryRaw<Array<{ leadId: string }>>`
-    SELECT DISTINCT "leadId" FROM "Booking" WHERE "leadId" IS NOT NULL
+  // Get all mappings from temp table
+  const mappings = await prisma.$queryRaw<Array<{ bookingId: string; leadId: string }>>`
+    SELECT "bookingId", "leadId" FROM "_booking_lead_migration"
   `
 
-  console.log(`Found ${bookingLeads.length} leads with bookings to convert.\n`)
+  console.log(`Found ${mappings.length} booking→lead mappings to process.\n`)
 
-  let created = 0
-  let skipped = 0
+  if (mappings.length === 0) {
+    // Clean up temp table
+    await prisma.$executeRawUnsafe('DROP TABLE IF EXISTS "_booking_lead_migration"')
+    console.log('No mappings to process. Cleaned up temp table.')
+    return
+  }
 
-  for (const { leadId } of bookingLeads) {
-    // Get the lead data
+  // Get unique leadIds
+  const uniqueLeadIds = [...new Set(mappings.map(m => m.leadId))]
+  let contactsCreated = 0
+  let bookingsUpdated = 0
+
+  for (const leadId of uniqueLeadIds) {
+    // Get the lead
     const lead = await prisma.lead.findUnique({ where: { id: leadId } })
     if (!lead) {
-      console.log(`  SKIP: Lead ${leadId} not found`)
-      skipped++
+      console.log(`  SKIP: Lead ${leadId} not found in database`)
       continue
     }
 
-    // Check if contact already exists for this lead
-    const existingContact = await prisma.contact.findFirst({
-      where: { leadId: lead.id }
-    })
+    // Find or create contact
+    let contact = await prisma.contact.findUnique({ where: { email: lead.email } })
 
-    if (existingContact) {
-      // Update bookings to point to existing contact
-      await prisma.$executeRaw`
-        UPDATE "Booking" SET "contactId" = ${existingContact.id} WHERE "leadId" = ${leadId}
-      `
-      console.log(`  SKIP: ${lead.firstName} ${lead.lastName} - contact exists, updated bookings`)
-      skipped++
-      continue
-    }
-
-    // Check if contact with same email exists
-    const contactByEmail = await prisma.contact.findUnique({
-      where: { email: lead.email }
-    })
-
-    let contactId: string
-
-    if (contactByEmail) {
-      contactId = contactByEmail.id
-      // Link it to this lead if not already linked
-      if (!contactByEmail.leadId) {
-        await prisma.contact.update({
-          where: { id: contactByEmail.id },
-          data: { leadId: lead.id }
-        })
-      }
-      console.log(`  LINK: ${lead.firstName} ${lead.lastName} → existing contact ${contactId}`)
-    } else {
-      // Create new contact
-      const contact = await prisma.contact.create({
+    if (!contact) {
+      contact = await prisma.contact.create({
         data: {
           firstName: lead.firstName,
           lastName: lead.lastName,
@@ -147,37 +137,59 @@ async function prePush() {
           leadId: lead.id,
         }
       })
-      contactId = contact.id
-      console.log(`  CREATE: ${lead.firstName} ${lead.lastName} → Contact ${contactId}`)
-      created++
+      contactsCreated++
+      console.log(`  CREATE: ${lead.firstName} ${lead.lastName} (${lead.email}) → Contact ${contact.id}`)
+    } else {
+      // Link to lead if not already
+      if (!contact.leadId) {
+        await prisma.contact.update({
+          where: { id: contact.id },
+          data: { leadId: lead.id }
+        })
+      }
+      console.log(`  EXIST: ${lead.firstName} ${lead.lastName} (${lead.email}) → Contact ${contact.id}`)
     }
 
-    // Update bookings to point to new contact
-    await prisma.$executeRaw`
-      UPDATE "Booking" SET "contactId" = ${contactId} WHERE "leadId" = ${leadId}
-    `
+    // Update all bookings for this lead
+    const leadBookingIds = mappings.filter(m => m.leadId === leadId).map(m => m.bookingId)
+    const updated = await prisma.booking.updateMany({
+      where: { id: { in: leadBookingIds } },
+      data: { contactId: contact.id }
+    })
+    bookingsUpdated += updated.count
 
     // Mark lead as converted
-    await prisma.lead.update({
-      where: { id: lead.id },
-      data: {
-        status: 'CONVERTED',
-        convertedAt: new Date(),
-      }
-    })
+    if (lead.status !== 'CONVERTED') {
+      await prisma.lead.update({
+        where: { id: lead.id },
+        data: { status: 'CONVERTED', convertedAt: new Date() }
+      })
+    }
   }
 
-  console.log(`\nPre-push migration complete: ${created} contacts created, ${skipped} skipped.`)
-  console.log('\nNext steps:')
-  console.log('  1. Run `npx prisma db push` to apply the schema changes')
-  console.log('  2. Verify the deployment is working')
+  // Clean up temp table
+  await prisma.$executeRawUnsafe('DROP TABLE IF EXISTS "_booking_lead_migration"')
+
+  console.log(`\nMigration complete: ${contactsCreated} contacts created, ${bookingsUpdated} bookings updated.`)
+  console.log('Temp table cleaned up.')
 }
 
 // Parse args
 const args = process.argv.slice(2)
-const isPrePush = args.includes('--pre-push')
+const mode = args[0]
 
-const runner = isPrePush ? prePush : main
+let runner: () => Promise<void>
+
+if (mode === '--save-mapping') {
+  runner = saveMapping
+} else if (mode === '--apply-mapping') {
+  runner = applyMapping
+} else {
+  console.log('Usage:')
+  console.log('  npx tsx prisma/migrate-leads-to-contacts.ts --save-mapping   (before db push)')
+  console.log('  npx tsx prisma/migrate-leads-to-contacts.ts --apply-mapping  (after db push)')
+  process.exit(0)
+}
 
 runner()
   .catch((e) => {
