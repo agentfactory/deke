@@ -25,15 +25,5 @@ export const authConfig: NextAuthConfig = {
       }
       return session
     },
-    authorized({ auth, request: { nextUrl } }) {
-      const isLoggedIn = !!auth?.user
-      const isOnDashboard = nextUrl.pathname.startsWith("/dashboard")
-
-      if (isOnDashboard) {
-        return isLoggedIn // Redirect to login if not authenticated
-      }
-
-      return true
-    },
   },
 }
