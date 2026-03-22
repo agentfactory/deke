@@ -10,6 +10,8 @@ import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { ArrowLeft, Globe, Loader2, Save } from 'lucide-react';
+import { DatePicker } from '@/components/ui/date-picker';
+import { parseISO, addDays } from 'date-fns';
 
 const SERVICE_TYPES = [
   { value: 'WORKSHOP', label: 'Workshop' },
@@ -221,22 +223,32 @@ function NewBookingForm() {
               </div>
 
               <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <Label htmlFor="startDate">Start Date</Label>
-                  <Input
-                    id="startDate"
-                    type="datetime-local"
-                    value={form.startDate}
-                    onChange={(e) => handleChange('startDate', e.target.value)}
+                <div className="space-y-2">
+                  <Label>Start Date</Label>
+                  <DatePicker
+                    value={form.startDate ? parseISO(form.startDate) : null}
+                    onChange={(date) => {
+                      const iso = date ? date.toISOString() : '';
+                      handleChange('startDate', iso);
+                      // Auto-fill end date to start + 1 day if empty or before start
+                      if (date) {
+                        const currentEnd = form.endDate;
+                        if (!currentEnd || (currentEnd && parseISO(currentEnd) <= date)) {
+                          handleChange('endDate', addDays(date, 1).toISOString());
+                        }
+                      }
+                    }}
+                    enableTime
+                    placeholder="Select start date"
                   />
                 </div>
-                <div>
-                  <Label htmlFor="endDate">End Date</Label>
-                  <Input
-                    id="endDate"
-                    type="datetime-local"
-                    value={form.endDate}
-                    onChange={(e) => handleChange('endDate', e.target.value)}
+                <div className="space-y-2">
+                  <Label>End Date</Label>
+                  <DatePicker
+                    value={form.endDate ? parseISO(form.endDate) : null}
+                    onChange={(date) => handleChange('endDate', date ? date.toISOString() : '')}
+                    enableTime
+                    placeholder="Select end date"
                   />
                 </div>
               </div>
