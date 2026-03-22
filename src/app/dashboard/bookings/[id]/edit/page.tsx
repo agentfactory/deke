@@ -55,6 +55,7 @@ export default function EditBookingPage({
         isPublic: values.isPublic ?? false,
         publicTitle: values.publicTitle || null,
         publicDescription: values.publicDescription || null,
+        organization: values.organization || null,
       };
 
       const response = await fetch(`/api/bookings/${id}`, {
@@ -125,7 +126,7 @@ export default function EditBookingPage({
         <CardContent>
           <BookingForm
             initialValues={{
-              leadId: booking.contact?.id ?? '',
+              contactId: booking.contact?.id ?? '',
               serviceType: booking.serviceType,
               status: booking.status,
               startDate: booking.startDate ? booking.startDate.slice(0, 16) : '',

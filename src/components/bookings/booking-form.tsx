@@ -54,7 +54,7 @@ const PAYMENT_STATUSES = [
 ] as const;
 
 const bookingFormSchema = z.object({
-  leadId: z.string().min(1, 'Lead is required'),
+  contactId: z.string().min(1, 'Contact is required'),
   serviceType: z.enum(SERVICE_TYPES),
   status: z.enum(STATUSES).optional(),
   startDate: z.string().optional(),
@@ -75,7 +75,7 @@ const bookingFormSchema = z.object({
 
 type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
-interface Lead {
+interface Contact {
   id: string;
   firstName: string;
   lastName: string;
@@ -103,37 +103,37 @@ export function BookingForm({
   isLoading = false,
   submitLabel = 'Create Booking',
 }: BookingFormProps) {
-  const [leads, setLeads] = useState<Lead[]>([]);
+  const [contacts, setContacts] = useState<Contact[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
-  const [loadingLeads, setLoadingLeads] = useState(true);
-  const [showCreateLead, setShowCreateLead] = useState(false);
-  const [creatingLead, setCreatingLead] = useState(false);
-  const [newLead, setNewLead] = useState({ firstName: '', lastName: '', email: '', organization: '' });
-  const [leadOpen, setLeadOpen] = useState(false);
+  const [loadingContacts, setLoadingContacts] = useState(true);
+  const [showCreateContact, setShowCreateContact] = useState(false);
+  const [creatingContact, setCreatingContact] = useState(false);
+  const [newContact, setNewContact] = useState({ firstName: '', lastName: '', email: '', organization: '' });
+  const [contactOpen, setContactOpen] = useState(false);
 
-  const fetchLeads = async () => {
+  const fetchContacts = async () => {
     try {
-      const res = await fetch('/api/leads?limit=500');
+      const res = await fetch('/api/contacts?limit=500');
       if (res.ok) {
         const data = await res.json();
-        setLeads(Array.isArray(data) ? data : data.leads || []);
+        setContacts(Array.isArray(data) ? data : data.contacts || []);
       }
     } catch (error) {
-      console.error('Error fetching leads:', error);
+      console.error('Error fetching contacts:', error);
     }
   };
 
   useEffect(() => {
     async function fetchData() {
       try {
-        const [leadsRes, tripsRes] = await Promise.all([
-          fetch('/api/leads?limit=500'),
+        const [contactsRes, tripsRes] = await Promise.all([
+          fetch('/api/contacts?limit=500'),
           fetch('/api/trips'),
         ]);
 
-        if (leadsRes.ok) {
-          const leadsData = await leadsRes.json();
-          setLeads(Array.isArray(leadsData) ? leadsData : leadsData.leads || []);
+        if (contactsRes.ok) {
+          const contactsData = await contactsRes.json();
+          setContacts(Array.isArray(contactsData) ? contactsData : contactsData.contacts || []);
         }
 
         if (tripsRes.ok) {
@@ -143,7 +143,7 @@ export function BookingForm({
       } catch (error) {
         console.error('Error fetching data:', error);
       } finally {
-        setLoadingLeads(false);
+        setLoadingContacts(false);
       }
     }
 
@@ -153,7 +153,7 @@ export function BookingForm({
   const form = useForm<BookingFormValues>({
     resolver: zodResolver(bookingFormSchema),
     defaultValues: {
-      leadId: initialValues?.leadId || '',
+      contactId: initialValues?.contactId || '',
       serviceType: initialValues?.serviceType || 'WORKSHOP',
       status: initialValues?.status || 'PENDING',
       startDate: initialValues?.startDate || '',
@@ -191,89 +191,89 @@ export function BookingForm({
     }
   }, [startDateValue, form]);
 
-  const handleCreateLead = async () => {
-    if (!newLead.firstName || !newLead.email) return;
+  const handleCreateContact = async () => {
+    if (!newContact.firstName || !newContact.email) return;
 
-    setCreatingLead(true);
+    setCreatingContact(true);
     try {
-      const res = await fetch('/api/leads', {
+      const res = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(newLead),
+        body: JSON.stringify(newContact),
       });
 
       if (!res.ok) {
         const err = await res.json();
-        throw new Error(err.message || 'Failed to create lead');
+        throw new Error(err.message || 'Failed to create contact');
       }
 
       const created = await res.json();
-      await fetchLeads();
-      form.setValue('leadId', created.id);
-      setShowCreateLead(false);
-      setNewLead({ firstName: '', lastName: '', email: '', organization: '' });
+      await fetchContacts();
+      form.setValue('contactId', created.id);
+      setShowCreateContact(false);
+      setNewContact({ firstName: '', lastName: '', email: '', organization: '' });
     } catch (error) {
-      console.error('Error creating lead:', error);
-      alert(error instanceof Error ? error.message : 'Failed to create lead');
+      console.error('Error creating contact:', error);
+      alert(error instanceof Error ? error.message : 'Failed to create contact');
     } finally {
-      setCreatingLead(false);
+      setCreatingContact(false);
     }
   };
 
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-6">
-        {/* Lead Selection */}
+        {/* Contact Selection */}
         <FormField
           control={form.control}
-          name="leadId"
+          name="contactId"
           render={({ field }) => {
-            const selectedLead = leads.find((l) => l.id === field.value);
+            const selectedContact = contacts.find((c) => c.id === field.value);
             return (
               <FormItem className="flex flex-col">
                 <div className="flex items-center justify-between">
-                  <FormLabel>Lead / Client</FormLabel>
+                  <FormLabel>Contact</FormLabel>
                   <Button
                     type="button"
                     variant="ghost"
                     size="sm"
                     className="h-7 text-xs"
-                    onClick={() => setShowCreateLead(true)}
+                    onClick={() => setShowCreateContact(true)}
                   >
                     <Plus className="h-3 w-3 mr-1" />
-                    New Lead
+                    New Contact
                   </Button>
                 </div>
-                {loadingLeads ? (
+                {loadingContacts ? (
                   <div className="flex items-center gap-2 text-sm text-muted-foreground">
                     <Loader2 className="h-4 w-4 animate-spin" />
-                    Loading leads...
+                    Loading contacts...
                   </div>
-                ) : leads.length === 0 ? (
+                ) : contacts.length === 0 ? (
                   <div className="text-sm text-muted-foreground">
-                    No leads found.{' '}
-                    <button type="button" className="underline" onClick={() => setShowCreateLead(true)}>
-                      Create a new lead
+                    No contacts found.{' '}
+                    <button type="button" className="underline" onClick={() => setShowCreateContact(true)}>
+                      Create a new contact
                     </button>{' '}
                     to get started.
                   </div>
                 ) : (
-                  <Popover open={leadOpen} onOpenChange={setLeadOpen}>
+                  <Popover open={contactOpen} onOpenChange={setContactOpen}>
                     <PopoverTrigger asChild>
                       <FormControl>
                         <Button
                           variant="outline"
                           role="combobox"
-                          aria-expanded={leadOpen}
+                          aria-expanded={contactOpen}
                           className={cn(
                             'w-full justify-between font-normal',
                             !field.value && 'text-muted-foreground'
                           )}
                         >
                           <span className="truncate">
-                            {selectedLead
-                              ? `${selectedLead.firstName} ${selectedLead.lastName}`
-                              : 'Search for a lead...'}
+                            {selectedContact
+                              ? `${selectedContact.firstName} ${selectedContact.lastName}`
+                              : 'Search for a contact...'}
                           </span>
                           <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
                         </Button>
@@ -281,34 +281,34 @@ export function BookingForm({
                     </PopoverTrigger>
                     <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
                       <Command filter={(value, search) => {
-                        const lead = leads.find((l) => l.id === value);
-                        if (!lead) return 0;
-                        const haystack = `${lead.firstName} ${lead.lastName} ${lead.email} ${lead.organization || ''}`.toLowerCase();
+                        const contact = contacts.find((c) => c.id === value);
+                        if (!contact) return 0;
+                        const haystack = `${contact.firstName} ${contact.lastName} ${contact.email} ${contact.organization || ''}`.toLowerCase();
                         return haystack.includes(search.toLowerCase()) ? 1 : 0;
                       }}>
                         <CommandInput placeholder="Type a name or email..." />
                         <CommandList>
-                          <CommandEmpty>No lead found.</CommandEmpty>
+                          <CommandEmpty>No contact found.</CommandEmpty>
                           <CommandGroup>
-                            {leads.map((lead) => (
+                            {contacts.map((contact) => (
                               <CommandItem
-                                key={lead.id}
-                                value={lead.id}
+                                key={contact.id}
+                                value={contact.id}
                                 onSelect={() => {
-                                  field.onChange(lead.id);
-                                  setLeadOpen(false);
+                                  field.onChange(contact.id);
+                                  setContactOpen(false);
                                 }}
                               >
                                 <Check
                                   className={cn(
                                     'mr-2 h-4 w-4',
-                                    field.value === lead.id ? 'opacity-100' : 'opacity-0'
+                                    field.value === contact.id ? 'opacity-100' : 'opacity-0'
                                   )}
                                 />
                                 <div className="flex flex-col">
-                                  <span>{lead.firstName} {lead.lastName}</span>
+                                  <span>{contact.firstName} {contact.lastName}</span>
                                   <span className="text-xs text-muted-foreground">
-                                    {lead.email}{lead.organization ? ` · ${lead.organization}` : ''}
+                                    {contact.email}{contact.organization ? ` · ${contact.organization}` : ''}
                                   </span>
                                 </div>
                               </CommandItem>
@@ -660,77 +660,77 @@ export function BookingForm({
         </div>
 
         {/* Submit */}
-        <Button type="submit" disabled={isLoading || loadingLeads} className="w-full">
+        <Button type="submit" disabled={isLoading || loadingContacts} className="w-full">
           {isLoading && <Loader2 className="mr-2 h-4 w-4 animate-spin" />}
           {submitLabel}
         </Button>
       </form>
 
-      {/* Quick Create Lead Dialog */}
-      <Dialog open={showCreateLead} onOpenChange={setShowCreateLead}>
+      {/* Quick Create Contact Dialog */}
+      <Dialog open={showCreateContact} onOpenChange={setShowCreateContact}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Create New Lead</DialogTitle>
+            <DialogTitle>Create New Contact</DialogTitle>
             <DialogDescription>
-              Add a new lead to associate with this booking.
+              Add a new contact to associate with this booking.
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-4 py-2">
             <div className="grid grid-cols-2 gap-4">
               <div className="space-y-2">
-                <Label htmlFor="newLeadFirstName">First Name *</Label>
+                <Label htmlFor="newContactFirstName">First Name *</Label>
                 <Input
-                  id="newLeadFirstName"
-                  value={newLead.firstName}
-                  onChange={(e) => setNewLead(prev => ({ ...prev, firstName: e.target.value }))}
+                  id="newContactFirstName"
+                  value={newContact.firstName}
+                  onChange={(e) => setNewContact(prev => ({ ...prev, firstName: e.target.value }))}
                   placeholder="First name"
                 />
               </div>
               <div className="space-y-2">
-                <Label htmlFor="newLeadLastName">Last Name</Label>
+                <Label htmlFor="newContactLastName">Last Name</Label>
                 <Input
-                  id="newLeadLastName"
-                  value={newLead.lastName}
-                  onChange={(e) => setNewLead(prev => ({ ...prev, lastName: e.target.value }))}
+                  id="newContactLastName"
+                  value={newContact.lastName}
+                  onChange={(e) => setNewContact(prev => ({ ...prev, lastName: e.target.value }))}
                   placeholder="Last name"
                 />
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newLeadEmail">Email *</Label>
+              <Label htmlFor="newContactEmail">Email *</Label>
               <Input
-                id="newLeadEmail"
+                id="newContactEmail"
                 type="email"
-                value={newLead.email}
-                onChange={(e) => setNewLead(prev => ({ ...prev, email: e.target.value }))}
+                value={newContact.email}
+                onChange={(e) => setNewContact(prev => ({ ...prev, email: e.target.value }))}
                 placeholder="email@example.com"
               />
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newLeadOrg">Organization</Label>
+              <Label htmlFor="newContactOrg">Organization</Label>
               <Input
-                id="newLeadOrg"
-                value={newLead.organization}
-                onChange={(e) => setNewLead(prev => ({ ...prev, organization: e.target.value }))}
+                id="newContactOrg"
+                value={newContact.organization}
+                onChange={(e) => setNewContact(prev => ({ ...prev, organization: e.target.value }))}
                 placeholder="Organization name"
               />
             </div>
           </div>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowCreateLead(false)}>
+            <Button variant="outline" onClick={() => setShowCreateContact(false)}>
               Cancel
             </Button>
             <Button
-              onClick={handleCreateLead}
-              disabled={creatingLead || !newLead.firstName || !newLead.email}
+              onClick={handleCreateContact}
+              disabled={creatingContact || !newContact.firstName || !newContact.email}
             >
-              {creatingLead ? (
+              {creatingContact ? (
                 <>
                   <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                   Creating...
                 </>
               ) : (
-                'Create Lead'
+                'Create Contact'
               )}
             </Button>
           </DialogFooter>
