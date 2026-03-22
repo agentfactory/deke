@@ -164,7 +164,7 @@ export class HarmonyAgent extends BaseAgent {
         // Create booking
         const booking = await prisma.booking.create({
           data: {
-            leadId: leadId as string,
+            contactId: leadId as string,
             serviceType: serviceType as string,
             location: location as string | null,
             startDate: startDate ? new Date(startDate as string) : null,
@@ -174,7 +174,7 @@ export class HarmonyAgent extends BaseAgent {
             paymentStatus: 'UNPAID',
           },
           include: {
-            lead: {
+            contact: {
               select: {
                 firstName: true,
                 lastName: true,

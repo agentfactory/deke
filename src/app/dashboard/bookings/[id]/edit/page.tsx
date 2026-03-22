@@ -112,7 +112,7 @@ export default function EditBookingPage({
         <div>
           <h1 className="text-3xl font-bold">Edit Booking</h1>
           <p className="text-muted-foreground">
-            {booking.lead.firstName} {booking.lead.lastName} - {booking.serviceType.replace('_', ' ')}
+            {booking.contact.firstName} {booking.contact.lastName} - {booking.serviceType.replace('_', ' ')}
           </p>
         </div>
       </div>
@@ -125,7 +125,7 @@ export default function EditBookingPage({
         <CardContent>
           <BookingForm
             initialValues={{
-              leadId: booking.lead.id,
+              leadId: booking.contact.id,
               serviceType: booking.serviceType,
               status: booking.status,
               startDate: booking.startDate ? booking.startDate.slice(0, 16) : '',

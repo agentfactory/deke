@@ -9,7 +9,8 @@ export const leadStatusSchema = z.enum([
   'NEGOTIATING',
   'WON',
   'LOST',
-  'DORMANT'
+  'DORMANT',
+  'CONVERTED'
 ])
 
 // Lead source enum

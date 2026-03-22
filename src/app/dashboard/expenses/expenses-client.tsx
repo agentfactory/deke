@@ -26,7 +26,7 @@ interface ExpenseBooking {
   serviceType: string
   startDate: string | null
   location: string | null
-  lead: {
+  contact: {
     firstName: string
     lastName: string
     organization: string | null
@@ -237,7 +237,7 @@ export function ExpensesClient({ expenses, totals }: ExpensesClientProps) {
                           className="text-[#1a1a1a] hover:text-[#C05A3C] font-medium"
                         >
                           {formatServiceType(expense.booking.serviceType)} —{" "}
-                          {expense.booking.lead.firstName} {expense.booking.lead.lastName}
+                          {expense.booking.contact.firstName} {expense.booking.contact.lastName}
                         </Link>
                       </TableCell>
                       <TableCell className="text-[#666666]">

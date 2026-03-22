@@ -44,7 +44,7 @@ model Lead {
   phone         String?
   organization  String?
   source        String?   // website, referral, social, etc.
-  status        String    @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL_SENT, NEGOTIATING, WON, LOST, DORMANT
+  status        String    @default("NEW") // NEW, CONTACTED, QUALIFIED, PROPOSAL_SENT, NEGOTIATING, WON, LOST, DORMANT, CONVERTED
   score         Int       @default(0)  // Lead scoring
 
   // Geographic coordinates for opportunity finder
@@ -61,21 +61,58 @@ model Lead {
   editorialSummary  String?   // Google's one-line description for email personalization
   googleRating      Float?    // Google Places rating (1-5)
 
+  // Conversion tracking
+  convertedAt   DateTime?
+
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 
   // Relations
   inquiries     Inquiry[]
   chatSessions  ChatSession[]
-  bookings      Booking[]
   orders        Order[]
   campaignLeads CampaignLead[]
   emailDrafts   EmailDraft[]
+  contacts      Contact[]  // Contacts created from this lead
 
   @@index([email])
   @@index([status])
   @@index([latitude, longitude])
   @@index([lastContactedAt])
+}
+
+model Contact {
+  id            String    @id @default(cuid())
+  firstName     String
+  lastName      String
+  email         String    @unique
+  phone         String?
+  organization  String?
+  source        String?
+  contactTitle  String?   // "Music Director", "President", etc.
+
+  // Geographic coordinates
+  latitude      Float?
+  longitude     Float?
+
+  // Enrichment fields (carried from lead)
+  website           String?
+  emailVerified     Boolean   @default(false)
+  editorialSummary  String?
+  googleRating      Float?
+
+  // Link back to original lead (nullable — contacts can exist without a lead origin)
+  leadId        String?
+  lead          Lead?     @relation(fields: [leadId], references: [id])
+
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  // Relations
+  bookings      Booking[]
+
+  @@index([email])
+  @@index([leadId])
 }
 
 // Removed enum LeadStatus - now using String with validation comments
@@ -140,8 +177,8 @@ model Inquiry {
 
 model Booking {
   id            String        @id @default(cuid())
-  leadId        String
-  lead          Lead          @relation(fields: [leadId], references: [id])
+  contactId     String
+  contact       Contact       @relation(fields: [contactId], references: [id])
   inquiryId     String?       @unique
   inquiry       Inquiry?      @relation(fields: [inquiryId], references: [id])
 
@@ -205,7 +242,7 @@ model Booking {
   // Relations
   campaigns     Campaign[]
 
-  @@index([leadId])
+  @@index([contactId])
   @@index([tripId])
   @@index([status])
   @@index([startDate])

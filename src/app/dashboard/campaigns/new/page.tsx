@@ -175,7 +175,7 @@ function NewCampaignContent() {
           <h1 className="font-heading text-3xl font-bold">Create Campaign</h1>
           <p className="text-muted-foreground mt-2">
             {bookingData
-              ? `Create a campaign for ${bookingData.lead.firstName} ${bookingData.lead.lastName}'s booking`
+              ? `Create a campaign for ${bookingData.contact.firstName} ${bookingData.contact.lastName}'s booking`
               : 'Set up a new outreach campaign to discover potential clients'}
           </p>
         </div>

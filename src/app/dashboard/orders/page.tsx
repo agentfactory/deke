@@ -42,8 +42,9 @@ export default async function OrdersPage() {
     console.error('Error fetching orders:', error)
   }
 
-  const serializedOrders = orders.map((o) => ({
+  const serializedOrders = orders.map(({ lead, ...o }) => ({
     ...o,
+    contact: lead,
     createdAt: o.createdAt.toISOString(),
     updatedAt: o.updatedAt.toISOString(),
     dueDate: o.dueDate?.toISOString() ?? null,

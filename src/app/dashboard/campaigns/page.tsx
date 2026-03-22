@@ -37,7 +37,7 @@ async function getCampaignsData() {
               id: true,
               serviceType: true,
               location: true,
-              lead: { select: { firstName: true, lastName: true } }
+              contact: { select: { firstName: true, lastName: true } }
             }
           }
         }

@@ -34,9 +34,13 @@ export async function GET(request: NextRequest) {
       lead = await prisma.lead.findUnique({
         where: { id: leadId },
         include: {
-          bookings: {
-            select: { serviceType: true },
-            where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+          contacts: {
+            select: {
+              bookings: {
+                select: { serviceType: true },
+                where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+              },
+            },
           },
         },
       })
@@ -46,9 +50,15 @@ export async function GET(request: NextRequest) {
       }
     }
 
+    // Flatten bookings from contacts for the recommendation engine
+    const flattenedLead = lead ? {
+      ...lead,
+      bookings: lead.contacts.flatMap(c => c.bookings),
+    } : { id: 'temp', bookings: [] as { serviceType: string }[] }
+
     // Get recommendations
     const recommendations = await getRecommendations({
-      lead: lead || { id: 'temp', bookings: [] },
+      lead: flattenedLead,
       organizationType: orgType || 'UNKNOWN',
       campaignBooking: serviceType ? { serviceType } : null,
     })

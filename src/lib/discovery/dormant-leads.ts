@@ -66,7 +66,6 @@ export async function discoverDormantLeads(campaign: Campaign) {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
-        bookings: true,
       },
     }),
     prisma.lead.findMany({
@@ -83,7 +82,6 @@ export async function discoverDormantLeads(campaign: Campaign) {
           orderBy: { createdAt: 'desc' },
           take: 1,
         },
-        bookings: true,
       },
     }),
   ])

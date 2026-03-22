@@ -79,9 +79,9 @@ export function BookingsClient({ initialBookings }: BookingsClientProps) {
   const filteredBookings = initialBookings.filter((booking) => {
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch =
-      booking.leadName.toLowerCase().includes(searchLower) ||
-      booking.leadEmail.toLowerCase().includes(searchLower) ||
-      booking.leadOrganization?.toLowerCase().includes(searchLower) ||
+      booking.contactName.toLowerCase().includes(searchLower) ||
+      booking.contactEmail.toLowerCase().includes(searchLower) ||
+      booking.contactOrganization?.toLowerCase().includes(searchLower) ||
       booking.location?.toLowerCase().includes(searchLower);
 
     const matchesStatus = statusFilter === 'ALL' || booking.status === statusFilter;
@@ -170,7 +170,7 @@ export function BookingsClient({ initialBookings }: BookingsClientProps) {
               key={booking.id}
               role="button"
               tabIndex={0}
-              aria-label={`Booking for ${booking.leadName} - ${formatServiceType(booking.serviceType)}`}
+              aria-label={`Booking for ${booking.contactName} - ${formatServiceType(booking.serviceType)}`}
               onClick={() => handleCardClick(booking.id)}
               onKeyDown={(e) => {
                 if (e.key === 'Enter' || e.key === ' ') {
@@ -196,11 +196,11 @@ export function BookingsClient({ initialBookings }: BookingsClientProps) {
                     <BookingStatusBadge status={booking.status} />
                   </div>
                   <p className="font-semibold text-slate-900 truncate">
-                    {booking.leadName}
+                    {booking.contactName}
                   </p>
                   <div className="flex items-center gap-4 text-sm text-muted-foreground">
-                    {booking.leadOrganization && (
-                      <span className="truncate">{booking.leadOrganization}</span>
+                    {booking.contactOrganization && (
+                      <span className="truncate">{booking.contactOrganization}</span>
                     )}
                     {booking.location && (
                       <span className="flex items-center gap-1 truncate">

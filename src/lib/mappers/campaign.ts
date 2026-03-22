@@ -9,7 +9,7 @@ type CampaignWithCount = PrismaCampaign & {
     id: string;
     serviceType: string;
     location: string | null;
-    lead: {
+    contact: {
       firstName: string;
       lastName: string;
     };
@@ -29,7 +29,7 @@ export function mapCampaignToComponent(
     createdAt: campaign.createdAt.toISOString(),
     booking: campaign.booking ? {
       id: campaign.booking.id,
-      clientName: `${campaign.booking.lead.firstName} ${campaign.booking.lead.lastName}`,
+      clientName: `${campaign.booking.contact.firstName} ${campaign.booking.contact.lastName}`,
       serviceType: campaign.booking.serviceType,
     } : null,
   };

@@ -5,7 +5,7 @@ import type { Trip, TripBooking } from '@/types/trips'
 
 type TripWithRelations = PrismaTrip & {
   bookings: (PrismaBooking & {
-    lead: { firstName: string; lastName: string; organization: string | null }
+    contact: { firstName: string; lastName: string; organization: string | null }
     travelExpenses: TravelExpense[]
     participants: BookingParticipant[]
   })[]
@@ -40,13 +40,13 @@ export function mapTripsToComponent(trips: TripWithRelations[]): Trip[] {
 }
 
 export function mapBookingToTripBooking(booking: PrismaBooking & {
-  lead: { firstName: string; lastName: string; organization: string | null }
+  contact: { firstName: string; lastName: string; organization: string | null }
   participants: BookingParticipant[]
 }): TripBooking {
   return {
     id: booking.id,
     tripId: booking.tripId || '',
-    venueName: booking.lead.organization || `${booking.lead.firstName} ${booking.lead.lastName}`,
+    venueName: booking.contact.organization || `${booking.contact.firstName} ${booking.contact.lastName}`,
     date: booking.startDate?.toISOString() || '',
     time: booking.startDate?.toLocaleTimeString() || '',
     duration: booking.endDate && booking.startDate

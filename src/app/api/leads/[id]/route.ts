@@ -14,20 +14,12 @@ export async function GET(
     const lead = await prisma.lead.findUnique({
       where: { id },
       include: {
-        bookings: {
+        contacts: {
           select: {
             id: true,
-            serviceType: true,
-            status: true,
-            startDate: true,
-            endDate: true,
-            location: true,
-            amount: true,
-            depositPaid: true,
-            paymentStatus: true,
-          },
-          orderBy: {
-            createdAt: 'desc'
+            firstName: true,
+            lastName: true,
+            email: true,
           }
         },
         inquiries: {
@@ -88,7 +80,7 @@ export async function GET(
         },
         _count: {
           select: {
-            bookings: true,
+            contacts: true,
             inquiries: true,
             orders: true,
             campaignLeads: true,
@@ -157,7 +149,7 @@ export async function PATCH(
       include: {
         _count: {
           select: {
-            bookings: true,
+            contacts: true,
             inquiries: true,
             orders: true,
           }
@@ -183,12 +175,8 @@ export async function DELETE(
     const lead = await prisma.lead.findUnique({
       where: { id },
       include: {
-        bookings: {
-          select: {
-            id: true,
-            serviceType: true,
-            status: true,
-          }
+        contacts: {
+          select: { id: true }
         },
       }
     })
@@ -197,12 +185,12 @@ export async function DELETE(
       throw new ApiError(404, 'Lead not found', 'LEAD_NOT_FOUND')
     }
 
-    // Prevent deletion if bookings exist (bookings are too important to cascade-delete)
-    if (lead.bookings && lead.bookings.length > 0) {
+    // Prevent deletion if contacts have been created from this lead
+    if (lead.contacts && lead.contacts.length > 0) {
       throw new ApiError(
         409,
-        `Cannot delete lead with ${lead.bookings.length} existing booking(s). Please delete or reassign bookings first.`,
-        'LEAD_HAS_BOOKINGS'
+        `Cannot delete lead with ${lead.contacts.length} linked contact(s). Delete the contact(s) first.`,
+        'LEAD_HAS_CONTACTS'
       )
     }
 

@@ -15,6 +15,7 @@ import {
   Plane,
   GitBranch,
   BarChart3,
+  Target,
   LogOut,
 } from "lucide-react";
 
@@ -29,6 +30,7 @@ const iconMap = {
   Plane,
   GitBranch,
   BarChart3,
+  Target,
 } as const;
 
 type BadgeCounts = Record<string, number>;

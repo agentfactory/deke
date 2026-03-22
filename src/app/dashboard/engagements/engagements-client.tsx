@@ -45,7 +45,7 @@ interface SerializedBooking {
   prepNotes: string | null
   deliverables: string | null
   followUpNotes: string | null
-  lead: BookingLead
+  contact: BookingLead
 }
 
 interface EngagementsClientProps {
@@ -158,10 +158,10 @@ function EngagementCard({ booking }: { booking: SerializedBooking }) {
         {/* Client */}
         <div>
           <p className="text-sm font-medium text-[#1a1a1a]">
-            {booking.lead.firstName} {booking.lead.lastName}
+            {booking.contact.firstName} {booking.contact.lastName}
           </p>
-          {booking.lead.organization && (
-            <p className="text-xs text-[#666666]">{booking.lead.organization}</p>
+          {booking.contact.organization && (
+            <p className="text-xs text-[#666666]">{booking.contact.organization}</p>
           )}
         </div>
 
@@ -411,11 +411,11 @@ export function EngagementsClient({ bookings }: EngagementsClientProps) {
                   {/* Client */}
                   <div>
                     <p className="text-sm text-[#1a1a1a]">
-                      {booking.lead.firstName} {booking.lead.lastName}
+                      {booking.contact.firstName} {booking.contact.lastName}
                     </p>
-                    {booking.lead.organization && (
+                    {booking.contact.organization && (
                       <p className="text-xs text-[#666666] truncate">
-                        {booking.lead.organization}
+                        {booking.contact.organization}
                       </p>
                     )}
                   </div>

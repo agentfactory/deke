@@ -4,10 +4,10 @@ import { useState, useMemo, useCallback } from 'react'
 import Link from 'next/link'
 import { useRouter } from 'next/navigation'
 import {
-  Search, Download, Plus, MoreHorizontal, Eye, Mail,
+  Search, Download, MoreHorizontal, Eye, Mail,
   Trash2, ArrowUpDown, ChevronLeft, ChevronRight, X, Phone,
-  ExternalLink, Pencil, Building2, Calendar, Target,
-  Clock, Briefcase
+  RefreshCw, ExternalLink, Pencil, Building2, Calendar, Target,
+  Megaphone, Clock, UserCheck, Users
 } from 'lucide-react'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
@@ -27,7 +27,8 @@ import {
 } from '@/components/ui/dialog'
 import {
   DropdownMenu, DropdownMenuContent, DropdownMenuItem,
-  DropdownMenuSeparator, DropdownMenuTrigger,
+  DropdownMenuSeparator, DropdownMenuSub, DropdownMenuSubContent,
+  DropdownMenuSubTrigger, DropdownMenuTrigger,
 } from '@/components/ui/dropdown-menu'
 import {
   Sheet, SheetContent, SheetHeader, SheetTitle, SheetDescription,
@@ -35,11 +36,32 @@ import {
 
 // --- Types & Constants ---
 
+const STATUSES = ['NEW', 'CONTACTED', 'QUALIFIED', 'PROPOSAL_SENT', 'NEGOTIATING', 'WON', 'CONVERTED'] as const
 const SOURCES = ['website', 'website_booking_form', 'website_chat', 'referral', 'social', 'event', 'campaign', 'manual', 'other'] as const
+
+const STATUS_COLORS: Record<string, string> = {
+  NEW: 'bg-blue-500',
+  CONTACTED: 'bg-indigo-500',
+  QUALIFIED: 'bg-purple-500',
+  PROPOSAL_SENT: 'bg-amber-500',
+  NEGOTIATING: 'bg-orange-500',
+  WON: 'bg-green-500',
+  CONVERTED: 'bg-teal-500',
+}
+
+const STATUS_TEXT_COLORS: Record<string, string> = {
+  NEW: 'text-blue-700 bg-blue-50 border border-blue-200',
+  CONTACTED: 'text-indigo-700 bg-indigo-50 border border-indigo-200',
+  QUALIFIED: 'text-purple-700 bg-purple-50 border border-purple-200',
+  PROPOSAL_SENT: 'text-amber-700 bg-amber-50 border border-amber-200',
+  NEGOTIATING: 'text-orange-700 bg-orange-50 border border-orange-200',
+  WON: 'text-green-700 bg-green-50 border border-green-200',
+  CONVERTED: 'text-teal-700 bg-teal-50 border border-teal-200',
+}
 
 const PAGE_SIZE = 25
 
-type Contact = {
+type Lead = {
   id: string
   firstName: string
   lastName: string
@@ -47,14 +69,15 @@ type Contact = {
   phone: string | null
   organization: string | null
   source: string | null
-  contactTitle: string | null
-  leadId: string | null
+  status: string
+  score: number
   createdAt: string
-  updatedAt: string
-  _count: { bookings: number }
+  lastContactedAt: string | null
+  convertedAt: string | null
+  _count: { contacts: number; campaignLeads: number }
 }
 
-type SortOption = 'newest' | 'oldest' | 'name_asc' | 'name_desc' | 'bookings_high'
+type SortOption = 'newest' | 'oldest' | 'name_asc' | 'score_high' | 'score_low'
 
 // --- Helpers ---
 
@@ -73,11 +96,12 @@ function relativeTime(date: string): string {
   return formatDate(date)
 }
 
-function toCSV(contacts: Contact[]): string {
-  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Organization', 'Title', 'Source', 'Bookings', 'Created']
-  const rows = contacts.map(c => [
-    c.firstName, c.lastName, c.email, c.phone || '', c.organization || '',
-    c.contactTitle || '', c.source || '', String(c._count.bookings), formatDate(c.createdAt),
+function toCSV(leads: Lead[]): string {
+  const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Organization', 'Source', 'Status', 'Score', 'Contacts', 'Converted At', 'Created']
+  const rows = leads.map(l => [
+    l.firstName, l.lastName, l.email, l.phone || '', l.organization || '',
+    l.source || '', l.status, String(l.score), String(l._count.contacts),
+    l.convertedAt ? formatDate(l.convertedAt) : '', formatDate(l.createdAt),
   ])
   return [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
 }
@@ -92,14 +116,19 @@ function downloadCSV(content: string, filename: string) {
   URL.revokeObjectURL(url)
 }
 
+function formatStatusLabel(status: string): string {
+  return status.replace(/_/g, ' ').toLowerCase().replace(/\b\w/g, c => c.toUpperCase())
+}
+
 // --- Component ---
 
-export default function ContactsClient({ initialContacts }: { initialContacts: Contact[] }) {
+export default function LeadsClient({ initialLeads }: { initialLeads: Lead[] }) {
   const router = useRouter()
-  const [contacts, setContacts] = useState<Contact[]>(initialContacts)
+  const [leads, setLeads] = useState<Lead[]>(initialLeads)
 
   // Filters & sorting
   const [searchQuery, setSearchQuery] = useState('')
+  const [statusFilter, setStatusFilter] = useState<string>('all')
   const [sourceFilter, setSourceFilter] = useState<string>('all')
   const [sortField, setSortField] = useState<SortOption>('newest')
   const [currentPage, setCurrentPage] = useState(1)
@@ -108,56 +137,48 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
 
   // Detail sheet
-  const [detailContact, setDetailContact] = useState<Contact | null>(null)
+  const [detailLead, setDetailLead] = useState<Lead | null>(null)
   const [isEditing, setIsEditing] = useState(false)
   const [editForm, setEditForm] = useState({
     firstName: '', lastName: '', email: '', phone: '', organization: '',
-    source: '', contactTitle: '',
+    source: '', status: '',
   })
   const [isSavingEdit, setIsSavingEdit] = useState(false)
 
   // Dialogs
-  const [isAddOpen, setIsAddOpen] = useState(false)
-  const [deleteTarget, setDeleteTarget] = useState<Contact | null>(null)
-  const [isSubmitting, setIsSubmitting] = useState(false)
+  const [deleteTarget, setDeleteTarget] = useState<Lead | null>(null)
 
-  // Add form
-  const [form, setForm] = useState({
-    firstName: '', lastName: '', email: '', phone: '', organization: '',
-    source: 'manual' as string, contactTitle: '',
-  })
-
-  // --- Filtered & sorted contacts ---
+  // --- Filtered & sorted leads ---
   const filtered = useMemo(() => {
-    let result = [...contacts]
+    let result = [...leads]
 
     // Search
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
-      result = result.filter(c =>
-        `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q) ||
-        (c.organization || '').toLowerCase().includes(q) ||
-        (c.contactTitle || '').toLowerCase().includes(q)
+      result = result.filter(l =>
+        `${l.firstName} ${l.lastName}`.toLowerCase().includes(q) ||
+        l.email.toLowerCase().includes(q) ||
+        (l.organization || '').toLowerCase().includes(q)
       )
     }
 
     // Filters
-    if (sourceFilter !== 'all') result = result.filter(c => c.source === sourceFilter)
+    if (statusFilter !== 'all') result = result.filter(l => l.status === statusFilter)
+    if (sourceFilter !== 'all') result = result.filter(l => l.source === sourceFilter)
 
     // Sort
     result.sort((a, b) => {
       switch (sortField) {
         case 'oldest': return new Date(a.createdAt).getTime() - new Date(b.createdAt).getTime()
         case 'name_asc': return `${a.firstName} ${a.lastName}`.localeCompare(`${b.firstName} ${b.lastName}`)
-        case 'name_desc': return `${b.firstName} ${b.lastName}`.localeCompare(`${a.firstName} ${a.lastName}`)
-        case 'bookings_high': return b._count.bookings - a._count.bookings
+        case 'score_high': return b.score - a.score
+        case 'score_low': return a.score - b.score
         default: return new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()
       }
     })
 
     return result
-  }, [contacts, searchQuery, sourceFilter, sortField])
+  }, [leads, searchQuery, statusFilter, sourceFilter, sortField])
 
   // Pagination
   const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE))
@@ -183,23 +204,47 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
     if (selectedIds.size === paginated.length) {
       setSelectedIds(new Set())
     } else {
-      setSelectedIds(new Set(paginated.map(c => c.id)))
+      setSelectedIds(new Set(paginated.map(l => l.id)))
     }
   }
 
-  const deleteContact = async (id: string) => {
+  const changeStatus = async (id: string, status: string) => {
     try {
-      const res = await fetch(`/api/contacts/${id}`, { method: 'DELETE' })
+      const res = await fetch(`/api/leads/${id}`, {
+        method: 'PATCH',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status }),
+      })
+      if (!res.ok) throw new Error('Failed to update status')
+      setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l))
+      // Update detail sheet if open for this lead
+      if (detailLead?.id === id) {
+        setDetailLead(prev => prev ? { ...prev, status } : null)
+      }
+    } catch (err) {
+      console.error('Status update failed:', err)
+    }
+  }
+
+  const bulkChangeStatus = async (status: string) => {
+    const ids = Array.from(selectedIds)
+    await Promise.all(ids.map(id => changeStatus(id, status)))
+    setSelectedIds(new Set())
+  }
+
+  const deleteLead = async (id: string) => {
+    try {
+      const res = await fetch(`/api/leads/${id}`, { method: 'DELETE' })
       if (!res.ok) {
         const data = await res.json()
-        alert(data.message || 'Failed to delete contact')
+        alert(data.message || 'Failed to delete lead')
         return
       }
-      setContacts(prev => prev.filter(c => c.id !== id))
+      setLeads(prev => prev.filter(l => l.id !== id))
       setSelectedIds(prev => { const n = new Set(prev); n.delete(id); return n })
-      // Close detail sheet if deleting the viewed contact
-      if (detailContact?.id === id) {
-        setDetailContact(null)
+      // Close detail sheet if deleting the viewed lead
+      if (detailLead?.id === id) {
+        setDetailLead(null)
         setIsEditing(false)
       }
     } catch (err) {
@@ -209,80 +254,65 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
   }
 
   const bulkDelete = async () => {
-    if (!confirm(`Delete ${selectedIds.size} selected contact(s)?`)) return
+    if (!confirm(`Delete ${selectedIds.size} selected lead(s)?`)) return
     const ids = Array.from(selectedIds)
-    await Promise.all(ids.map(id => deleteContact(id)))
+    await Promise.all(ids.map(id => deleteLead(id)))
     setSelectedIds(new Set())
   }
 
-  const addContact = async () => {
-    setIsSubmitting(true)
+  const convertToContact = async (leadId: string) => {
     try {
-      const res = await fetch('/api/contacts', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          firstName: form.firstName,
-          lastName: form.lastName,
-          email: form.email,
-          phone: form.phone || null,
-          organization: form.organization || null,
-          source: form.source,
-          contactTitle: form.contactTitle || null,
-        }),
-      })
+      const res = await fetch(`/api/leads/${leadId}/convert`, { method: 'POST' })
       if (!res.ok) {
-        const data = await res.json()
-        alert(data.message || 'Failed to create contact')
+        const err = await res.json()
+        alert(err.error || 'Failed to convert lead')
         return
       }
-      const newContact = await res.json()
-      setContacts(prev => [{
-        ...newContact,
-        createdAt: newContact.createdAt || new Date().toISOString(),
-        updatedAt: newContact.updatedAt || new Date().toISOString(),
-        _count: { bookings: 0 },
-      }, ...prev])
-      setIsAddOpen(false)
-      setForm({ firstName: '', lastName: '', email: '', phone: '', organization: '', source: 'manual', contactTitle: '' })
-    } catch (err) {
-      console.error('Add contact failed:', err)
-    } finally {
-      setIsSubmitting(false)
+      // Update the lead in local state
+      setLeads(prev => prev.map(l =>
+        l.id === leadId
+          ? { ...l, status: 'CONVERTED', convertedAt: new Date().toISOString(), _count: { ...l._count, contacts: l._count.contacts + 1 } }
+          : l
+      ))
+      if (detailLead?.id === leadId) {
+        setDetailLead(prev => prev ? { ...prev, status: 'CONVERTED', convertedAt: new Date().toISOString(), _count: { ...prev._count, contacts: prev._count.contacts + 1 } } : prev)
+      }
+    } catch {
+      alert('Failed to convert lead')
     }
   }
 
-  const exportCSV = (subset?: Contact[]) => {
+  const exportCSV = (subset?: Lead[]) => {
     const data = subset || filtered
-    downloadCSV(toCSV(data), `contacts-${new Date().toISOString().slice(0, 10)}.csv`)
+    downloadCSV(toCSV(data), `leads-${new Date().toISOString().slice(0, 10)}.csv`)
   }
 
   // --- Detail Sheet ---
 
-  const openDetail = (contact: Contact) => {
-    setDetailContact(contact)
+  const openDetail = (lead: Lead) => {
+    setDetailLead(lead)
     setIsEditing(false)
   }
 
   const startEditing = () => {
-    if (!detailContact) return
+    if (!detailLead) return
     setEditForm({
-      firstName: detailContact.firstName,
-      lastName: detailContact.lastName,
-      email: detailContact.email,
-      phone: detailContact.phone || '',
-      organization: detailContact.organization || '',
-      source: detailContact.source || 'manual',
-      contactTitle: detailContact.contactTitle || '',
+      firstName: detailLead.firstName,
+      lastName: detailLead.lastName,
+      email: detailLead.email,
+      phone: detailLead.phone || '',
+      organization: detailLead.organization || '',
+      source: detailLead.source || 'website',
+      status: detailLead.status,
     })
     setIsEditing(true)
   }
 
   const saveEdit = async () => {
-    if (!detailContact) return
+    if (!detailLead) return
     setIsSavingEdit(true)
     try {
-      const res = await fetch(`/api/contacts/${detailContact.id}`, {
+      const res = await fetch(`/api/leads/${detailLead.id}`, {
         method: 'PATCH',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -292,26 +322,26 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
           phone: editForm.phone || null,
           organization: editForm.organization || null,
           source: editForm.source,
-          contactTitle: editForm.contactTitle || null,
+          status: editForm.status,
         }),
       })
       if (!res.ok) {
         const data = await res.json()
-        alert(data.message || 'Failed to update contact')
+        alert(data.message || 'Failed to update lead')
         return
       }
       const updated = {
-        ...detailContact,
+        ...detailLead,
         firstName: editForm.firstName,
         lastName: editForm.lastName,
         email: editForm.email,
         phone: editForm.phone || null,
         organization: editForm.organization || null,
         source: editForm.source,
-        contactTitle: editForm.contactTitle || null,
+        status: editForm.status,
       }
-      setContacts(prev => prev.map(c => c.id === detailContact.id ? updated : c))
-      setDetailContact(updated)
+      setLeads(prev => prev.map(l => l.id === detailLead.id ? updated : l))
+      setDetailLead(updated)
       setIsEditing(false)
     } catch (err) {
       console.error('Edit failed:', err)
@@ -329,12 +359,29 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
         <div className="relative flex-1 min-w-[200px] max-w-sm">
           <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-[#999999]" />
           <Input
-            placeholder="Search name, email, org, title..."
+            placeholder="Search name, email, org..."
             value={searchQuery}
             onChange={e => updateFilter(setSearchQuery, e.target.value)}
             className="pl-9"
           />
         </div>
+
+        <Select value={statusFilter} onValueChange={v => updateFilter(setStatusFilter, v)}>
+          <SelectTrigger className="w-[140px]">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All Status</SelectItem>
+            {STATUSES.map(s => (
+              <SelectItem key={s} value={s}>
+                <span className="flex items-center gap-2">
+                  <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[s]}`} />
+                  {s}
+                </span>
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
 
         <Select value={sourceFilter} onValueChange={v => updateFilter(setSourceFilter, v)}>
           <SelectTrigger className="w-[150px]">
@@ -349,7 +396,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
         </Select>
 
         <Select value={sortField} onValueChange={v => setSortField(v as SortOption)}>
-          <SelectTrigger className="w-[150px]">
+          <SelectTrigger className="w-[140px]">
             <ArrowUpDown className="h-3.5 w-3.5 mr-1" />
             <SelectValue />
           </SelectTrigger>
@@ -357,17 +404,13 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
             <SelectItem value="newest">Newest</SelectItem>
             <SelectItem value="oldest">Oldest</SelectItem>
             <SelectItem value="name_asc">Name A-Z</SelectItem>
-            <SelectItem value="name_desc">Name Z-A</SelectItem>
-            <SelectItem value="bookings_high">Most Bookings</SelectItem>
+            <SelectItem value="score_high">Score High</SelectItem>
+            <SelectItem value="score_low">Score Low</SelectItem>
           </SelectContent>
         </Select>
 
         <Button variant="outline" size="sm" onClick={() => exportCSV()}>
           <Download className="h-4 w-4 mr-1" /> Export
-        </Button>
-
-        <Button size="sm" onClick={() => setIsAddOpen(true)}>
-          <Plus className="h-4 w-4 mr-1" /> Add Contact
         </Button>
       </div>
 
@@ -378,8 +421,24 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
             {selectedIds.size} selected
           </span>
 
+          <DropdownMenu>
+            <DropdownMenuTrigger asChild>
+              <Button variant="outline" size="sm">
+                <RefreshCw className="h-3.5 w-3.5 mr-1" /> Change Status
+              </Button>
+            </DropdownMenuTrigger>
+            <DropdownMenuContent>
+              {STATUSES.map(s => (
+                <DropdownMenuItem key={s} onClick={() => bulkChangeStatus(s)}>
+                  <span className={`h-2 w-2 rounded-full mr-2 ${STATUS_COLORS[s]}`} />
+                  {s}
+                </DropdownMenuItem>
+              ))}
+            </DropdownMenuContent>
+          </DropdownMenu>
+
           <Button variant="outline" size="sm" onClick={() => {
-            const subset = contacts.filter(c => selectedIds.has(c.id))
+            const subset = leads.filter(l => selectedIds.has(l.id))
             exportCSV(subset)
           }}>
             <Download className="h-3.5 w-3.5 mr-1" /> Export Selected
@@ -399,7 +458,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
       {filtered.length === 0 ? (
         <div className="flex flex-col items-center justify-center py-16 text-center">
           <Search className="h-10 w-10 text-[#999999]" />
-          <p className="mt-3 text-sm text-[#666666]">No contacts match your filters.</p>
+          <p className="mt-3 text-sm text-[#666666]">No leads match your filters.</p>
         </div>
       ) : (
         <div className="rounded-lg border border-[#E8E4DD] overflow-x-auto bg-white">
@@ -417,73 +476,88 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                 <TableHead className="font-semibold text-[#1a1a1a]">Name</TableHead>
                 <TableHead className="font-semibold text-[#1a1a1a]">Email</TableHead>
                 <TableHead className="font-semibold text-[#1a1a1a] hidden lg:table-cell">Organization</TableHead>
-                <TableHead className="font-semibold text-[#1a1a1a] hidden lg:table-cell">Title</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a]">Status</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] text-center">Score</TableHead>
                 <TableHead className="font-semibold text-[#1a1a1a] hidden md:table-cell">Source</TableHead>
-                <TableHead className="font-semibold text-[#1a1a1a] text-center hidden sm:table-cell">Bookings</TableHead>
-                <TableHead className="font-semibold text-[#1a1a1a] hidden md:table-cell">Added</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] hidden md:table-cell">Last Contacted</TableHead>
+                <TableHead className="font-semibold text-[#1a1a1a] text-center hidden sm:table-cell">Contacts</TableHead>
                 <TableHead className="font-semibold text-[#1a1a1a] w-10" />
               </TableRow>
             </TableHeader>
             <TableBody>
-              {paginated.map(contact => (
+              {paginated.map(lead => (
                 <TableRow
-                  key={contact.id}
-                  className="hover:bg-[#FAFAF8] transition-colors cursor-pointer"
+                  key={lead.id}
+                  className={`hover:bg-[#FAFAF8] transition-colors cursor-pointer ${lead.status === 'CONVERTED' ? 'opacity-60' : ''}`}
                   onClick={(e) => {
                     const target = e.target as HTMLElement
                     if (target.closest('input[type="checkbox"]') || target.closest('[data-slot="dropdown-menu"]') || target.closest('button')) return
-                    openDetail(contact)
+                    openDetail(lead)
                   }}
                 >
                   <TableCell onClick={e => e.stopPropagation()}>
                     <input
                       type="checkbox"
-                      checked={selectedIds.has(contact.id)}
-                      onChange={() => toggleSelect(contact.id)}
+                      checked={selectedIds.has(lead.id)}
+                      onChange={() => toggleSelect(lead.id)}
                       className="rounded border-[#E8E4DD]"
                     />
                   </TableCell>
                   {/* Name */}
                   <TableCell>
-                    <span className="font-medium text-[#1a1a1a] whitespace-nowrap">
-                      {contact.firstName} {contact.lastName}
-                    </span>
+                    <div className="flex items-center gap-2">
+                      <span className="font-medium text-[#1a1a1a] whitespace-nowrap">
+                        {lead.firstName} {lead.lastName}
+                      </span>
+                      {lead.status === 'CONVERTED' && (
+                        <Badge variant="outline" className="text-xs text-teal-700 bg-teal-50 border-teal-200">
+                          Converted
+                        </Badge>
+                      )}
+                    </div>
                   </TableCell>
                   {/* Email */}
                   <TableCell className="text-[#666666] max-w-[200px] truncate">
-                    {contact.email}
+                    {lead.email}
                   </TableCell>
                   {/* Organization */}
                   <TableCell className="text-[#666666] hidden lg:table-cell">
-                    {contact.organization || '\u2014'}
+                    {lead.organization || '\u2014'}
                   </TableCell>
-                  {/* Title */}
-                  <TableCell className="hidden lg:table-cell">
-                    {contact.contactTitle ? (
-                      <Badge variant="outline" className="text-xs border-[#E8E4DD] text-[#666666]">
-                        {contact.contactTitle}
-                      </Badge>
-                    ) : (
-                      <span className="text-[#999999]">{'\u2014'}</span>
-                    )}
+                  {/* Status */}
+                  <TableCell>
+                    <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_TEXT_COLORS[lead.status] || 'text-gray-600 bg-gray-100'}`}>
+                      <span className={`h-1.5 w-1.5 rounded-full shrink-0 ${STATUS_COLORS[lead.status] || 'bg-gray-400'}`} />
+                      {formatStatusLabel(lead.status)}
+                    </span>
+                  </TableCell>
+                  {/* Score */}
+                  <TableCell className="text-center">
+                    <span className={`text-sm font-semibold ${lead.score >= 70 ? 'text-green-700' : lead.score >= 40 ? 'text-[#1a1a1a]' : 'text-[#999999]'}`}>
+                      {lead.score}
+                    </span>
                   </TableCell>
                   {/* Source */}
                   <TableCell className="hidden md:table-cell">
-                    {contact.source ? (
+                    {lead.source ? (
                       <Badge variant="outline" className="text-xs capitalize border-[#E8E4DD] text-[#666666]">
-                        {contact.source.replace(/_/g, ' ')}
+                        {lead.source.replace(/_/g, ' ')}
                       </Badge>
                     ) : (
                       <span className="text-[#999999]">{'\u2014'}</span>
                     )}
                   </TableCell>
-                  {/* Bookings */}
-                  <TableCell className="text-center hidden sm:table-cell">
-                    <span className="text-sm text-[#1a1a1a]">{contact._count.bookings}</span>
-                  </TableCell>
-                  {/* Added */}
+                  {/* Last Contacted */}
                   <TableCell className="text-sm whitespace-nowrap hidden md:table-cell">
-                    <span className="text-[#666666]">{relativeTime(contact.createdAt)}</span>
+                    {lead.lastContactedAt ? (
+                      <span className="text-[#666666]">{formatDate(lead.lastContactedAt)}</span>
+                    ) : (
+                      <span className="text-[#999999]">Never</span>
+                    )}
+                  </TableCell>
+                  {/* Contacts */}
+                  <TableCell className="text-center hidden sm:table-cell">
+                    <span className="text-sm text-[#1a1a1a]">{lead._count.contacts}</span>
                   </TableCell>
                   {/* Actions */}
                   <TableCell onClick={e => e.stopPropagation()}>
@@ -494,27 +568,49 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                         </Button>
                       </DropdownMenuTrigger>
                       <DropdownMenuContent align="end">
-                        <DropdownMenuItem onClick={() => openDetail(contact)}>
+                        <DropdownMenuItem onClick={() => openDetail(lead)}>
                           <Eye className="h-4 w-4 mr-2" /> View Details
                         </DropdownMenuItem>
-                        <DropdownMenuItem onClick={() => router.push(`/dashboard/contacts/${contact.id}`)}>
+                        <DropdownMenuItem onClick={() => router.push(`/dashboard/leads/${lead.id}`)}>
                           <ExternalLink className="h-4 w-4 mr-2" /> Open Full Page
                         </DropdownMenuItem>
-                        {contact.email && (
+                        <DropdownMenuSub>
+                          <DropdownMenuSubTrigger>
+                            <RefreshCw className="h-4 w-4 mr-2" /> Change Status
+                          </DropdownMenuSubTrigger>
+                          <DropdownMenuSubContent>
+                            {STATUSES.map(s => (
+                              <DropdownMenuItem key={s} onClick={() => changeStatus(lead.id, s)}>
+                                <span className={`h-2 w-2 rounded-full mr-2 ${STATUS_COLORS[s]}`} />
+                                {s}
+                              </DropdownMenuItem>
+                            ))}
+                          </DropdownMenuSubContent>
+                        </DropdownMenuSub>
+                        {lead.email && (
                           <DropdownMenuItem asChild>
-                            <a href={`mailto:${contact.email}`}>
+                            <a href={`mailto:${lead.email}`}>
                               <Mail className="h-4 w-4 mr-2" /> Send Email
                             </a>
                           </DropdownMenuItem>
                         )}
+                        {lead.status !== 'CONVERTED' && (
+                          <>
+                            <DropdownMenuSeparator />
+                            <DropdownMenuItem onClick={() => convertToContact(lead.id)}>
+                              <UserCheck className="h-4 w-4 mr-2" />
+                              Convert to Contact
+                            </DropdownMenuItem>
+                          </>
+                        )}
                         <DropdownMenuSeparator />
                         <DropdownMenuItem
                           className="text-red-600 focus:text-red-700"
-                          disabled={contact._count.bookings > 0}
-                          onClick={() => setDeleteTarget(contact)}
+                          disabled={lead._count.contacts > 0}
+                          onClick={() => setDeleteTarget(lead)}
                         >
                           <Trash2 className="h-4 w-4 mr-2" /> Delete
-                          {contact._count.bookings > 0 && <span className="text-xs ml-1">(has bookings)</span>}
+                          {lead._count.contacts > 0 && <span className="text-xs ml-1">(has contacts)</span>}
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>
@@ -555,22 +651,21 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
       )}
 
       {/* Detail / Edit Sheet */}
-      <Sheet open={!!detailContact} onOpenChange={(open) => { if (!open) { setDetailContact(null); setIsEditing(false) } }}>
+      <Sheet open={!!detailLead} onOpenChange={(open) => { if (!open) { setDetailLead(null); setIsEditing(false) } }}>
         <SheetContent side="right" className="w-full sm:max-w-md overflow-y-auto">
-          {detailContact && !isEditing && (
+          {detailLead && !isEditing && (
             <>
               <SheetHeader className="pb-2">
                 <div className="flex items-start justify-between gap-2 pr-8">
                   <div>
                     <SheetTitle className="text-lg">
-                      {detailContact.firstName} {detailContact.lastName}
+                      {detailLead.firstName} {detailLead.lastName}
                     </SheetTitle>
                     <SheetDescription className="mt-0.5">
-                      {detailContact.contactTitle ? (
-                        <span className="text-sm text-[#666666]">{detailContact.contactTitle}</span>
-                      ) : (
-                        <span className="text-sm text-[#999999]">Contact</span>
-                      )}
+                      <span className={`inline-flex items-center gap-1.5 text-xs font-medium px-2 py-0.5 rounded-full ${STATUS_TEXT_COLORS[detailLead.status] || 'text-gray-600 bg-gray-100'}`}>
+                        <span className={`h-1.5 w-1.5 rounded-full ${STATUS_COLORS[detailLead.status] || 'bg-gray-400'}`} />
+                        {formatStatusLabel(detailLead.status)}
+                      </span>
                     </SheetDescription>
                   </div>
                 </div>
@@ -582,74 +677,106 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                   <Pencil className="h-3.5 w-3.5 mr-1" /> Edit
                 </Button>
                 <Button variant="outline" size="sm" asChild>
-                  <Link href={`/dashboard/contacts/${detailContact.id}`}>
+                  <Link href={`/dashboard/leads/${detailLead.id}`}>
                     <ExternalLink className="h-3.5 w-3.5 mr-1" /> Full Page
                   </Link>
                 </Button>
-                {detailContact.email && (
+                {detailLead.email && (
                   <Button variant="outline" size="sm" asChild>
-                    <a href={`mailto:${detailContact.email}`}>
+                    <a href={`mailto:${detailLead.email}`}>
                       <Mail className="h-3.5 w-3.5 mr-1" /> Email
                     </a>
+                  </Button>
+                )}
+                {detailLead.status !== 'CONVERTED' && (
+                  <Button variant="outline" size="sm" onClick={() => convertToContact(detailLead.id)}>
+                    <UserCheck className="h-3.5 w-3.5 mr-1" /> Convert
                   </Button>
                 )}
               </div>
 
               {/* Contact info */}
               <div className="px-4 space-y-4">
+                {/* Converted banner */}
+                {detailLead.status === 'CONVERTED' && detailLead.convertedAt && (
+                  <div className="rounded-lg bg-teal-50 border border-teal-200 px-3 py-2 text-sm text-teal-700">
+                    Converted to contact on {formatDate(detailLead.convertedAt)}
+                  </div>
+                )}
+
                 <div className="rounded-lg border border-[#E8E4DD] divide-y divide-[#E8E4DD]">
                   <DetailRow icon={<Mail className="h-4 w-4" />} label="Email">
-                    <a href={`mailto:${detailContact.email}`} className="text-blue-600 hover:underline text-sm">
-                      {detailContact.email}
+                    <a href={`mailto:${detailLead.email}`} className="text-blue-600 hover:underline text-sm">
+                      {detailLead.email}
                     </a>
                   </DetailRow>
                   <DetailRow icon={<Phone className="h-4 w-4" />} label="Phone">
-                    {detailContact.phone ? (
-                      <a href={`tel:${detailContact.phone}`} className="text-blue-600 hover:underline text-sm">
-                        {detailContact.phone}
+                    {detailLead.phone ? (
+                      <a href={`tel:${detailLead.phone}`} className="text-blue-600 hover:underline text-sm">
+                        {detailLead.phone}
                       </a>
                     ) : (
                       <span className="text-[#999999] text-sm">{'\u2014'}</span>
                     )}
                   </DetailRow>
                   <DetailRow icon={<Building2 className="h-4 w-4" />} label="Organization">
-                    <span className="text-sm">{detailContact.organization || '\u2014'}</span>
-                  </DetailRow>
-                  <DetailRow icon={<Briefcase className="h-4 w-4" />} label="Title">
-                    <span className="text-sm">{detailContact.contactTitle || '\u2014'}</span>
+                    <span className="text-sm">{detailLead.organization || '\u2014'}</span>
                   </DetailRow>
                 </div>
 
                 {/* Details */}
                 <div className="rounded-lg border border-[#E8E4DD] divide-y divide-[#E8E4DD]">
                   <DetailRow icon={<Target className="h-4 w-4" />} label="Source">
-                    {detailContact.source ? (
+                    {detailLead.source ? (
                       <Badge variant="outline" className="text-xs capitalize">
-                        {detailContact.source.replace(/_/g, ' ')}
+                        {detailLead.source.replace(/_/g, ' ')}
                       </Badge>
                     ) : (
                       <span className="text-[#999999] text-sm">{'\u2014'}</span>
                     )}
                   </DetailRow>
-                  <DetailRow icon={<Calendar className="h-4 w-4" />} label="Bookings">
-                    <span className="text-sm">{detailContact._count.bookings}</span>
+                  <DetailRow icon={<ArrowUpDown className="h-4 w-4" />} label="Score">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-medium">{detailLead.score}</span>
+                      <div className="w-16 h-1.5 rounded-full bg-[#E8E4DD] overflow-hidden">
+                        <div className="h-full rounded-full bg-blue-500" style={{ width: `${Math.min(detailLead.score, 100)}%` }} />
+                      </div>
+                    </div>
                   </DetailRow>
-                  {detailContact.leadId && (
-                    <DetailRow icon={<ExternalLink className="h-4 w-4" />} label="Original Lead">
-                      <Link
-                        href={`/dashboard/leads/${detailContact.leadId}`}
-                        className="text-blue-600 hover:underline text-sm"
-                      >
-                        View Lead
-                      </Link>
-                    </DetailRow>
-                  )}
-                  <DetailRow icon={<Clock className="h-4 w-4" />} label="Added">
-                    <span className="text-sm">{formatDate(detailContact.createdAt)}</span>
+                  <DetailRow icon={<Users className="h-4 w-4" />} label="Contacts">
+                    <span className="text-sm">{detailLead._count.contacts}</span>
                   </DetailRow>
-                  <DetailRow icon={<Clock className="h-4 w-4" />} label="Updated">
-                    <span className="text-sm">{relativeTime(detailContact.updatedAt)}</span>
+                  <DetailRow icon={<Megaphone className="h-4 w-4" />} label="Campaigns">
+                    <span className="text-sm">{detailLead._count.campaignLeads}</span>
                   </DetailRow>
+                  <DetailRow icon={<Clock className="h-4 w-4" />} label="Last Contact">
+                    <span className="text-sm">
+                      {detailLead.lastContactedAt ? relativeTime(detailLead.lastContactedAt) : '\u2014'}
+                    </span>
+                  </DetailRow>
+                  <DetailRow icon={<Calendar className="h-4 w-4" />} label="Created">
+                    <span className="text-sm">{formatDate(detailLead.createdAt)}</span>
+                  </DetailRow>
+                </div>
+
+                {/* Status change */}
+                <div>
+                  <label className="text-xs text-[#666666] mb-1.5 block">Quick Status Change</label>
+                  <Select value={detailLead.status} onValueChange={v => changeStatus(detailLead.id, v)}>
+                    <SelectTrigger className="w-full">
+                      <SelectValue />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map(s => (
+                        <SelectItem key={s} value={s}>
+                          <span className="flex items-center gap-2">
+                            <span className={`h-2 w-2 rounded-full ${STATUS_COLORS[s]}`} />
+                            {formatStatusLabel(s)}
+                          </span>
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
                 </div>
 
                 {/* Delete */}
@@ -657,22 +784,22 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                   variant="outline"
                   size="sm"
                   className="text-red-600 hover:text-red-700 w-full"
-                  disabled={detailContact._count.bookings > 0}
-                  onClick={() => setDeleteTarget(detailContact)}
+                  disabled={detailLead._count.contacts > 0}
+                  onClick={() => setDeleteTarget(detailLead)}
                 >
-                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Contact
-                  {detailContact._count.bookings > 0 && <span className="text-xs ml-1">(has bookings)</span>}
+                  <Trash2 className="h-3.5 w-3.5 mr-1" /> Delete Lead
+                  {detailLead._count.contacts > 0 && <span className="text-xs ml-1">(has contacts)</span>}
                 </Button>
               </div>
             </>
           )}
 
           {/* Edit mode */}
-          {detailContact && isEditing && (
+          {detailLead && isEditing && (
             <>
               <SheetHeader>
-                <SheetTitle>Edit Contact</SheetTitle>
-                <SheetDescription>Update contact information</SheetDescription>
+                <SheetTitle>Edit Lead</SheetTitle>
+                <SheetDescription>Update lead information</SheetDescription>
               </SheetHeader>
               <div className="px-4 space-y-3">
                 <div className="grid grid-cols-2 gap-3">
@@ -698,20 +825,23 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                   <Input value={editForm.organization} onChange={e => setEditForm(f => ({ ...f, organization: e.target.value }))} />
                 </div>
                 <div>
-                  <label className="text-sm font-medium mb-1 block">Title</label>
-                  <Input
-                    placeholder="e.g. Music Director, President"
-                    value={editForm.contactTitle}
-                    onChange={e => setEditForm(f => ({ ...f, contactTitle: e.target.value }))}
-                  />
-                </div>
-                <div>
                   <label className="text-sm font-medium mb-1 block">Source</label>
                   <Select value={editForm.source} onValueChange={v => setEditForm(f => ({ ...f, source: v }))}>
                     <SelectTrigger><SelectValue /></SelectTrigger>
                     <SelectContent>
                       {SOURCES.map(s => (
                         <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                </div>
+                <div>
+                  <label className="text-sm font-medium mb-1 block">Status</label>
+                  <Select value={editForm.status} onValueChange={v => setEditForm(f => ({ ...f, status: v }))}>
+                    <SelectTrigger><SelectValue /></SelectTrigger>
+                    <SelectContent>
+                      {STATUSES.map(s => (
+                        <SelectItem key={s} value={s}>{formatStatusLabel(s)}</SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
@@ -734,80 +864,18 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
         </SheetContent>
       </Sheet>
 
-      {/* Add Contact Dialog */}
-      <Dialog open={isAddOpen} onOpenChange={setIsAddOpen}>
-        <DialogContent className="sm:max-w-md">
-          <DialogHeader>
-            <DialogTitle>Add Contact</DialogTitle>
-            <DialogDescription>Create a new bookable contact.</DialogDescription>
-          </DialogHeader>
-          <div className="grid gap-3 py-4">
-            <div className="grid grid-cols-2 gap-3">
-              <div>
-                <label className="text-sm font-medium mb-1 block">First Name *</label>
-                <Input value={form.firstName} onChange={e => setForm(f => ({ ...f, firstName: e.target.value }))} />
-              </div>
-              <div>
-                <label className="text-sm font-medium mb-1 block">Last Name *</label>
-                <Input value={form.lastName} onChange={e => setForm(f => ({ ...f, lastName: e.target.value }))} />
-              </div>
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Email *</label>
-              <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Phone</label>
-              <Input value={form.phone} onChange={e => setForm(f => ({ ...f, phone: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Organization</label>
-              <Input value={form.organization} onChange={e => setForm(f => ({ ...f, organization: e.target.value }))} />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Title</label>
-              <Input
-                placeholder="e.g. Music Director, President"
-                value={form.contactTitle}
-                onChange={e => setForm(f => ({ ...f, contactTitle: e.target.value }))}
-              />
-            </div>
-            <div>
-              <label className="text-sm font-medium mb-1 block">Source</label>
-              <Select value={form.source} onValueChange={v => setForm(f => ({ ...f, source: v }))}>
-                <SelectTrigger><SelectValue /></SelectTrigger>
-                <SelectContent>
-                  {SOURCES.map(s => (
-                    <SelectItem key={s} value={s} className="capitalize">{s.replace(/_/g, ' ')}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
-            <Button
-              onClick={addContact}
-              disabled={isSubmitting || !form.firstName || !form.lastName || !form.email}
-            >
-              {isSubmitting ? 'Creating...' : 'Create Contact'}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
       {/* Delete Confirmation Dialog */}
       <Dialog open={!!deleteTarget} onOpenChange={() => setDeleteTarget(null)}>
         <DialogContent className="sm:max-w-sm">
           <DialogHeader>
-            <DialogTitle>Delete Contact</DialogTitle>
+            <DialogTitle>Delete Lead</DialogTitle>
             <DialogDescription>
               Are you sure you want to delete {deleteTarget?.firstName} {deleteTarget?.lastName}? This action cannot be undone.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setDeleteTarget(null)}>Cancel</Button>
-            <Button variant="destructive" onClick={() => deleteTarget && deleteContact(deleteTarget.id)}>
+            <Button variant="destructive" onClick={() => deleteTarget && deleteLead(deleteTarget.id)}>
               Delete
             </Button>
           </DialogFooter>

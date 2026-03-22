@@ -13,7 +13,7 @@ export default async function ExpensesPage() {
           serviceType: true,
           startDate: true,
           location: true,
-          lead: {
+          contact: {
             select: {
               firstName: true,
               lastName: true,

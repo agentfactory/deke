@@ -54,12 +54,23 @@ export async function POST(request: NextRequest) {
           organization: client.organization || null,
           phone: client.phone || null,
           source: "direct_booking",
-          status: "QUALIFIED", // They're booking, so they're qualified
+          status: "CONVERTED",
+          convertedAt: new Date(),
+        },
+      });
+    } else if (lead.status !== 'CONVERTED') {
+      lead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          firstName: lead.firstName || client.firstName,
+          lastName: lead.lastName || client.lastName,
+          organization: lead.organization || client.organization || null,
+          phone: lead.phone || client.phone || null,
+          status: 'CONVERTED',
+          convertedAt: new Date(),
         },
       });
     } else {
-      // Only update lead fields that are currently empty to avoid
-      // overwriting data that other bookings may depend on
       lead = await prisma.lead.update({
         where: { id: lead.id },
         data: {
@@ -71,7 +82,36 @@ export async function POST(request: NextRequest) {
       });
     }
 
-    // Step 2: Verify Trip exists if provided
+    // Step 2: Find or create Contact
+    let contact = await prisma.contact.findUnique({
+      where: { email: client.email },
+    });
+
+    if (!contact) {
+      contact = await prisma.contact.create({
+        data: {
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          organization: client.organization || null,
+          phone: client.phone || null,
+          source: "direct_booking",
+          leadId: lead.id,
+        },
+      });
+    } else {
+      contact = await prisma.contact.update({
+        where: { id: contact.id },
+        data: {
+          firstName: contact.firstName || client.firstName,
+          lastName: contact.lastName || client.lastName,
+          organization: contact.organization || client.organization || null,
+          phone: contact.phone || client.phone || null,
+        },
+      });
+    }
+
+    // Step 3: Verify Trip exists if provided
     if (tripId) {
       const trip = await prisma.trip.findUnique({ where: { id: tripId } });
       if (!trip) {
@@ -79,10 +119,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Step 3: Create Booking
+    // Step 4: Create Booking
     const booking = await prisma.booking.create({
       data: {
-        leadId: lead.id,
+        contactId: contact.id,
         tripId: tripId || null,
         serviceType,
         status: "CONFIRMED",
@@ -101,7 +141,7 @@ export async function POST(request: NextRequest) {
         organization: client.organization || null,
       },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,
@@ -122,9 +162,9 @@ export async function POST(request: NextRequest) {
     // Send booking notification emails (async - don't block response)
     sendBookingNotification({
       bookingId: booking.id,
-      leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
-      leadEmail: booking.lead.email,
-      organization: booking.lead.organization,
+      contactName: `${booking.contact.firstName} ${booking.contact.lastName}`,
+      contactEmail: booking.contact.email,
+      organization: booking.contact.organization,
       serviceType: booking.serviceType,
       startDate: booking.startDate,
       endDate: booking.endDate,

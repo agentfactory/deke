@@ -53,7 +53,7 @@ export async function GET() {
       include: {
         bookings: {
           include: {
-            lead: {
+            contact: {
               select: {
                 firstName: true,
                 lastName: true,

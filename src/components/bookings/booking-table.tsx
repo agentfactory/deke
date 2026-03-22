@@ -27,21 +27,21 @@ export function BookingTable({ bookings, onRowClick }: BookingTableProps) {
 
   const columns: ColumnDef<ComponentBooking>[] = [
     {
-      accessorKey: 'leadName',
+      accessorKey: 'contactName',
       header: ({ column }) => (
         <Button
           variant="ghost"
           onClick={() => column.toggleSorting(column.getIsSorted() === 'asc')}
           className="px-0 hover:bg-transparent"
         >
-          Lead Name
+          Contact Name
           <ArrowUpDown className="ml-2 h-4 w-4" />
         </Button>
       ),
       cell: ({ row }) => (
         <div>
-          <div className="font-medium">{row.getValue('leadName')}</div>
-          <div className="text-sm text-muted-foreground">{row.original.leadEmail}</div>
+          <div className="font-medium">{row.getValue('contactName')}</div>
+          <div className="text-sm text-muted-foreground">{row.original.contactEmail}</div>
         </div>
       ),
     },

@@ -97,6 +97,31 @@ export async function POST(request: NextRequest) {
       },
     });
 
+    // Step 2.5: Find or create Contact for booking
+    let contact = await prisma.contact.findUnique({
+      where: { email },
+    });
+
+    if (!contact) {
+      contact = await prisma.contact.create({
+        data: {
+          firstName,
+          lastName,
+          email,
+          organization: organization || null,
+          phone: phone || null,
+          source: "website_booking_request",
+          leadId: lead.id,
+        },
+      });
+    }
+
+    // Mark lead as CONVERTED
+    await prisma.lead.update({
+      where: { id: lead.id },
+      data: { status: 'CONVERTED', convertedAt: new Date() },
+    });
+
     // Step 3: Create Booking Request (pending status)
     // Parse eventDate safely — it's a free-text field so only use it if it's a valid date
     let parsedDate: Date | null = null;
@@ -109,7 +134,7 @@ export async function POST(request: NextRequest) {
 
     const booking = await prisma.booking.create({
       data: {
-        leadId: lead.id,
+        contactId: contact.id,
         inquiryId: inquiry.id,
         serviceType,
         status: "PENDING",
@@ -119,7 +144,7 @@ export async function POST(request: NextRequest) {
         internalNotes: [budget ? `Budget: ${budget}` : null, eventDate && !parsedDate ? `Preferred dates: ${eventDate}` : null].filter(Boolean).join('\n') || null,
       },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,
@@ -137,10 +162,10 @@ export async function POST(request: NextRequest) {
     const [resendResult, cfResult] = await Promise.allSettled([
       sendBookingNotification({
         bookingId: booking.id,
-        leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
-        leadEmail: booking.lead.email,
-        leadPhone: booking.lead.phone,
-        organization: booking.lead.organization,
+        contactName: `${booking.contact.firstName} ${booking.contact.lastName}`,
+        contactEmail: booking.contact.email,
+        contactPhone: booking.contact.phone,
+        organization: booking.contact.organization,
         serviceType: booking.serviceType,
         startDate: booking.startDate,
         location: null,

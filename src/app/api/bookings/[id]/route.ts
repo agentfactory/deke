@@ -15,7 +15,7 @@ export async function GET(
     const booking = await prisma.booking.findUnique({
       where: { id },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,
@@ -172,7 +172,7 @@ export async function PATCH(
         organization: validatedData.organization,
       },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,

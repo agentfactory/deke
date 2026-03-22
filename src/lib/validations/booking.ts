@@ -32,7 +32,7 @@ export const paymentStatusSchema = z.enum([
 
 // Create booking schema
 export const createBookingSchema = z.object({
-  leadId: z.string().min(1, 'Lead ID is required'),
+  contactId: z.string().min(1, 'Contact ID is required'),
   inquiryId: z.string().optional().nullable(),
   serviceType: serviceTypeSchema,
   startDate: z.string().optional().nullable(),
@@ -58,7 +58,7 @@ export const createBookingSchema = z.object({
 export const bookingFiltersSchema = z.object({
   status: bookingStatusSchema.optional(),
   serviceType: serviceTypeSchema.optional(),
-  leadId: z.string().optional(),
+  contactId: z.string().optional(),
   limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).optional(),
   offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 })

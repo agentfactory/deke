@@ -57,11 +57,11 @@ async function verify() {
 
   const futureBookings = await prisma.booking.findMany({
     where: { status: 'CONFIRMED' },
-    include: { lead: true },
+    include: { contact: true },
   });
 
   futureBookings.forEach(booking => {
-    console.log(`${booking.serviceType} - ${booking.lead.organization}`);
+    console.log(`${booking.serviceType} - ${booking.contact.organization}`);
     console.log(`  Date: ${booking.startDate?.toLocaleDateString()}, Amount: $${booking.amount}`);
     console.log(`  Location: ${booking.location}\n`);
   });

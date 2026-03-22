@@ -68,11 +68,12 @@ interface Campaign {
       email: string;
       phone: string | null;
       organization: string | null;
+      contactTitle: string | null;
       status: string;
       score: number;
       emailVerified?: boolean;
       needsEnrichment?: boolean;
-      website?: string | null;
+      website: string | null;
     };
     outreachLogs: Array<{
       id: string;

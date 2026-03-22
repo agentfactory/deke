@@ -127,7 +127,7 @@ function NewBookingForm() {
         </Button>
         <div>
           <h1 className="text-3xl font-bold">New Booking</h1>
-          <p className="text-muted-foreground">Create a booking — lead is auto-created if new.</p>
+          <p className="text-muted-foreground">Create a booking — contact is auto-created if new.</p>
         </div>
       </div>
 

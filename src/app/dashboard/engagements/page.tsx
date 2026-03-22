@@ -11,7 +11,7 @@ export default async function EngagementsPage() {
       status: { in: ["CONFIRMED", "IN_PROGRESS", "PENDING"] },
     },
     include: {
-      lead: {
+      contact: {
         select: {
           firstName: true,
           lastName: true,
@@ -37,7 +37,7 @@ export default async function EngagementsPage() {
     prepNotes: b.prepNotes ?? null,
     deliverables: b.deliverables ?? null,
     followUpNotes: b.followUpNotes ?? null,
-    lead: b.lead,
+    contact: b.contact,
   }))
 
   return <EngagementsClient bookings={serialized} />

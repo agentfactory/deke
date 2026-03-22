@@ -10,7 +10,7 @@ import { handleApiError } from '@/lib/api-error'
  */
 export async function POST() {
   try {
-    // Find all leads missing coordinates
+    // Find all leads missing coordinates, looking through contacts to find bookings
     const leadsWithoutCoords = await prisma.lead.findMany({
       where: {
         OR: [
@@ -23,18 +23,22 @@ export async function POST() {
         email: true,
         firstName: true,
         lastName: true,
-        bookings: {
-          where: {
-            latitude: { not: null },
-            longitude: { not: null },
-          },
+        contacts: {
           select: {
-            latitude: true,
-            longitude: true,
-            location: true,
+            bookings: {
+              where: {
+                latitude: { not: null },
+                longitude: { not: null },
+              },
+              select: {
+                latitude: true,
+                longitude: true,
+                location: true,
+              },
+              orderBy: { createdAt: 'desc' },
+              take: 1,
+            },
           },
-          orderBy: { createdAt: 'desc' },
-          take: 1,
         },
       },
     })
@@ -45,7 +49,8 @@ export async function POST() {
     let skipped = 0
 
     for (const lead of leadsWithoutCoords) {
-      const booking = lead.bookings[0]
+      // Find the first booking with coords across all contacts
+      const booking = lead.contacts.flatMap(c => c.bookings)[0]
       if (booking && booking.latitude !== null && booking.longitude !== null) {
         await prisma.lead.update({
           where: { id: lead.id },
@@ -92,14 +97,18 @@ export async function GET() {
       }),
     ])
 
-    // Check how many of the missing ones have bookings with coords
+    // Check how many of the missing ones have bookings with coords (via contacts)
     const backfillable = await prisma.lead.count({
       where: {
         OR: [{ latitude: null }, { longitude: null }],
-        bookings: {
+        contacts: {
           some: {
-            latitude: { not: null },
-            longitude: { not: null },
+            bookings: {
+              some: {
+                latitude: { not: null },
+                longitude: { not: null },
+              },
+            },
           },
         },
       },
