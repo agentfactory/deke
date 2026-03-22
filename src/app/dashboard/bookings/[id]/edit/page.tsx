@@ -64,8 +64,8 @@ export default function EditBookingPage({
       });
 
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.message || 'Failed to update booking');
+        const errorData = await response.json();
+        throw new Error(errorData.error || errorData.message || 'Failed to update booking');
       }
 
       router.push(`/dashboard/bookings/${id}`);

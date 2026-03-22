@@ -47,7 +47,7 @@ export const leadFiltersSchema = z.object({
   source: z.string().optional(),
   email: z.string().optional(),
   organization: z.string().optional(),
-  limit: z.string().transform(Number).pipe(z.number().min(1).max(100)).optional(),
+  limit: z.string().transform(Number).pipe(z.number().min(1).max(500)).optional(),
   offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 })
 
