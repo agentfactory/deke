@@ -31,6 +31,8 @@ export async function GET(
                 email: true,
                 phone: true,
                 organization: true,
+                contactTitle: true,
+                website: true,
               }
             },
             outreachLogs: true,

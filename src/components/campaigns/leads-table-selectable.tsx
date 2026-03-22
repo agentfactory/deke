@@ -35,11 +35,12 @@ interface CampaignLead {
     email: string
     phone: string | null
     organization: string | null
+    contactTitle: string | null
+    website: string | null
     status: string
     score: number
     emailVerified?: boolean
     needsEnrichment?: boolean
-    website?: string | null
   }
   outreachLogs: Array<{
     id: string
@@ -112,7 +113,8 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
       size: 32,
     },
     {
-      accessorKey: 'lead.firstName',
+      accessorFn: (row) => row.lead.organization || `${row.lead.firstName} ${row.lead.lastName}`,
+      id: 'name',
       header: ({ column }) => (
         <Button
           variant="ghost"
@@ -126,6 +128,11 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
       ),
       cell: ({ row }) => {
         const lead = row.original.lead
+        const isPlaceholderName = lead.firstName === 'Contact' && lead.lastName.startsWith('at ')
+        const displayName = isPlaceholderName ? null : `${lead.firstName} ${lead.lastName}`
+        const primaryLabel = lead.organization || displayName || 'Unknown'
+        const secondaryLabel = lead.organization && displayName ? displayName : null
+
         return (
           <button
             type="button"
@@ -133,7 +140,7 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
             onClick={() => setPreviewLead(row.original)}
           >
             <span className="font-medium text-xs flex items-center gap-1">
-              {lead.firstName} {lead.lastName}
+              {primaryLabel}
               {lead.emailVerified && (
                 <CheckCircle className="h-3 w-3 text-emerald-500 inline-flex shrink-0" />
               )}
@@ -141,9 +148,9 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
                 <AlertCircle className="h-3 w-3 text-amber-500 inline-flex shrink-0" />
               )}
             </span>
-            {lead.organization && (
+            {(secondaryLabel || lead.contactTitle) && (
               <span className="text-[11px] text-muted-foreground block truncate max-w-[180px]">
-                {lead.organization}
+                {secondaryLabel}{secondaryLabel && lead.contactTitle ? ' · ' : ''}{lead.contactTitle || ''}
               </span>
             )}
           </button>
@@ -310,10 +317,17 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
             <>
               <SheetHeader>
                 <SheetTitle className="text-lg">
-                  {previewLead.lead.firstName} {previewLead.lead.lastName}
+                  {(() => {
+                    const isPlaceholder = previewLead.lead.firstName === 'Contact' && previewLead.lead.lastName.startsWith('at ')
+                    return isPlaceholder
+                      ? (previewLead.lead.organization || 'Unknown Contact')
+                      : `${previewLead.lead.firstName} ${previewLead.lead.lastName}`
+                  })()}
                 </SheetTitle>
                 <SheetDescription>
-                  Lead preview — score {previewLead.score}/100
+                  {previewLead.lead.contactTitle
+                    ? `${previewLead.lead.contactTitle} · Score ${previewLead.score}/100`
+                    : `Lead preview — score ${previewLead.score}/100`}
                 </SheetDescription>
               </SheetHeader>
 
