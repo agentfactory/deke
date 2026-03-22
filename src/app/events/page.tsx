@@ -5,6 +5,9 @@ import { format, isPast } from "date-fns";
 import { prisma } from "@/lib/db";
 import { generateGoogleCalendarUrl } from "@/lib/utils/ical";
 
+// Force dynamic rendering so new public bookings appear quickly
+export const dynamic = "force-dynamic";
+
 export const metadata: Metadata = {
   title: "Upcoming Events",
   description:

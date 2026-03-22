@@ -2,6 +2,8 @@ import { NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { handleApiError } from '@/lib/api-error'
 
+export const dynamic = "force-dynamic";
+
 // GET /api/events - Returns upcoming public events (no auth required)
 export async function GET() {
   try {
