@@ -13,8 +13,6 @@ interface TripListProps {
 export function TripList({ trips, bookings }: TripListProps) {
   // Calculate summary metrics
   const totalRevenue = trips.reduce((sum, trip) => sum + trip.totalRevenue, 0)
-  const totalExpenses = trips.reduce((sum, trip) => sum + trip.totalExpenses, 0)
-  const totalProfit = totalRevenue - totalExpenses
 
   // Group trips by status
   const upcomingTrips = trips.filter(t => t.status === 'upcoming')
@@ -48,8 +46,8 @@ export function TripList({ trips, bookings }: TripListProps) {
             </Link>
           </div>
 
-          {/* Summary Cards */}
-          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3 sm:gap-4">
+          {/* Summary Card */}
+          <div className="max-w-xs">
             <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
               <div className="flex items-center justify-between mb-1.5">
                 <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">
@@ -59,30 +57,6 @@ export function TripList({ trips, bookings }: TripListProps) {
               </div>
               <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
                 ${totalRevenue.toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">
-                  Total Expenses
-                </p>
-                <div className="h-2 w-2 rounded-full bg-gradient-to-br from-cyan-500 to-cyan-600 shadow-lg shadow-cyan-500/50" />
-              </div>
-              <p className="text-2xl sm:text-3xl font-bold text-slate-900 dark:text-white tracking-tight">
-                ${totalExpenses.toLocaleString()}
-              </p>
-            </div>
-
-            <div className="bg-gradient-to-br from-white to-slate-50 dark:from-slate-800 dark:to-slate-900 p-4 sm:p-5 rounded-xl border border-slate-200 dark:border-slate-700 shadow-sm">
-              <div className="flex items-center justify-between mb-1.5">
-                <p className="text-xs sm:text-sm font-medium text-slate-600 dark:text-slate-400 uppercase tracking-wide">
-                  Net Profit
-                </p>
-                <div className="h-2 w-2 rounded-full bg-gradient-to-br from-violet-500 via-cyan-500 to-violet-600 shadow-lg shadow-violet-500/50 animate-pulse" />
-              </div>
-              <p className="text-2xl sm:text-3xl font-bold bg-gradient-to-br from-violet-600 to-cyan-600 bg-clip-text text-transparent tracking-tight">
-                ${totalProfit.toLocaleString()}
               </p>
             </div>
           </div>
@@ -183,7 +157,7 @@ export function TripList({ trips, bookings }: TripListProps) {
                     No trips yet
                   </h3>
                   <p className="text-sm sm:text-base text-slate-600 dark:text-slate-400 max-w-sm mx-auto">
-                    Create your first trip to start tracking bookings, expenses, and profitability
+                    Create your first trip to start tracking bookings and revenue
                   </p>
                   <Link
                     href="/dashboard/trips/new"
