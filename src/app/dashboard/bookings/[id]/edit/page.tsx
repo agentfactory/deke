@@ -55,6 +55,7 @@ export default function EditBookingPage({
         isPublic: values.isPublic ?? false,
         publicTitle: values.publicTitle || null,
         publicDescription: values.publicDescription || null,
+        organization: values.organization || null,
       };
 
       const response = await fetch(`/api/bookings/${id}`, {
@@ -112,7 +113,7 @@ export default function EditBookingPage({
         <div>
           <h1 className="text-3xl font-bold">Edit Booking</h1>
           <p className="text-muted-foreground">
-            {booking.lead.firstName} {booking.lead.lastName} - {booking.serviceType.replace('_', ' ')}
+            {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''} - {booking.serviceType.replace('_', ' ')}
           </p>
         </div>
       </div>
@@ -125,7 +126,7 @@ export default function EditBookingPage({
         <CardContent>
           <BookingForm
             initialValues={{
-              leadId: booking.lead.id,
+              contactId: booking.contact?.id ?? '',
               serviceType: booking.serviceType,
               status: booking.status,
               startDate: booking.startDate ? booking.startDate.slice(0, 16) : '',

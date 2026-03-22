@@ -16,7 +16,7 @@ interface Campaign {
   targetOrgTypes?: string | null // JSON array of org types for prospect mode
   booking?: {
     location: string | null
-    lead?: {
+    contact?: {
       organization: string | null
     } | null
   } | null
@@ -28,7 +28,7 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
     lng: campaign.longitude,
     radius: campaign.radius,
     bookingLocation: campaign.booking?.location,
-    leadOrg: campaign.booking?.lead?.organization,
+    contactOrg: campaign.booking?.contact?.organization,
   })
 
   // Determine search keywords: from targetOrgTypes (prospect mode) or booking location
@@ -61,8 +61,8 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
     let orgType = classifyFromLocation(bookingLocation)
 
     // Fallback: if location is a street address (UNKNOWN), try classifying the lead's organization name
-    if (orgType === 'UNKNOWN' && campaign.booking?.lead?.organization) {
-      orgType = classifyOrganization(campaign.booking.lead.organization)
+    if (orgType === 'UNKNOWN' && campaign.booking?.contact?.organization) {
+      orgType = classifyOrganization(campaign.booking.contact?.organization || '')
       if (orgType !== 'UNKNOWN') {
         console.log(`[Discovery:SimilarOrgs] Location unclassifiable, fell back to lead org: ${orgType}`)
       }
@@ -119,7 +119,6 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
         orderBy: { createdAt: 'desc' },
         take: 1,
       },
-      bookings: true,
     },
   })
 

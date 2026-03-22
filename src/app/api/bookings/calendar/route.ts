@@ -31,7 +31,7 @@ export async function GET(request: NextRequest) {
         },
       },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,
@@ -60,7 +60,7 @@ export async function GET(request: NextRequest) {
       location: booking.location,
       availabilityBefore: booking.availabilityBefore,
       availabilityAfter: booking.availabilityAfter,
-      lead: booking.lead,
+      contact: booking.contact,
       campaigns: booking.campaigns,
     }))
 

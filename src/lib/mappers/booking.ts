@@ -1,7 +1,7 @@
-import type { Booking, Lead, Inquiry } from '@prisma/client';
+import type { Booking, Contact, Inquiry } from '@prisma/client';
 
 type BookingWithRelations = Booking & {
-  lead: Lead;
+  contact: Contact;
   inquiry?: Inquiry | null;
   campaigns: Array<{
     id: string;
@@ -24,11 +24,11 @@ export type ComponentBooking = {
   internalNotes: string | null;
   clientNotes: string | null;
 
-  // Lead info (flattened for easy display)
-  leadName: string;
-  leadEmail: string;
-  leadPhone: string | null;
-  leadOrganization: string | null;
+  // Contact info (flattened for easy display)
+  contactName: string;
+  contactEmail: string;
+  contactPhone: string | null;
+  contactOrganization: string | null;
 
   // Related counts
   campaignCount: number;
@@ -55,11 +55,11 @@ export function mapBookingToComponent(
     internalNotes: booking.internalNotes,
     clientNotes: booking.clientNotes,
 
-    // Flatten lead info
-    leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
-    leadEmail: booking.lead.email,
-    leadPhone: booking.lead.phone,
-    leadOrganization: booking.lead.organization,
+    // Flatten contact info
+    contactName: booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact',
+    contactEmail: booking.contact?.email ?? '',
+    contactPhone: booking.contact?.phone ?? null,
+    contactOrganization: booking.contact?.organization ?? null,
 
     // Counts
     campaignCount: booking.campaigns.length,

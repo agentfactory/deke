@@ -8,9 +8,9 @@ const NOTIFICATION_EMAILS = (process.env.BOOKING_NOTIFICATION_EMAILS || 'deke@de
 
 export interface BookingNotificationData {
   bookingId: string
-  leadName: string
-  leadEmail: string
-  leadPhone?: string | null
+  contactName: string
+  contactEmail: string
+  contactPhone?: string | null
   organization?: string | null
   serviceType: string
   startDate?: Date | null
@@ -90,16 +90,16 @@ function generateAdminEmailHtml(data: BookingNotificationData): string {
     <table style="width: 100%; border-collapse: collapse;">
       <tr>
         <td style="padding: 8px 0; color: #666; width: 140px;"><strong>Name:</strong></td>
-        <td style="padding: 8px 0;">${data.leadName}</td>
+        <td style="padding: 8px 0;">${data.contactName}</td>
       </tr>
       <tr>
         <td style="padding: 8px 0; color: #666;"><strong>Email:</strong></td>
-        <td style="padding: 8px 0;"><a href="mailto:${data.leadEmail}" style="color: #c9a227;">${data.leadEmail}</a></td>
+        <td style="padding: 8px 0;"><a href="mailto:${data.contactEmail}" style="color: #c9a227;">${data.contactEmail}</a></td>
       </tr>
-      ${data.leadPhone ? `
+      ${data.contactPhone ? `
       <tr>
         <td style="padding: 8px 0; color: #666;"><strong>Phone:</strong></td>
-        <td style="padding: 8px 0;"><a href="tel:${data.leadPhone}" style="color: #c9a227;">${data.leadPhone}</a></td>
+        <td style="padding: 8px 0;"><a href="tel:${data.contactPhone}" style="color: #c9a227;">${data.contactPhone}</a></td>
       </tr>
       ` : ''}
       ${data.organization ? `
@@ -185,7 +185,7 @@ function generateClientEmailHtml(data: BookingNotificationData): string {
   </div>
 
   <div style="background: #f8f9fa; padding: 30px; border: 1px solid #e9ecef; border-top: none;">
-    <p style="font-size: 16px; margin-top: 0;">Dear ${data.leadName.split(' ')[0]},</p>
+    <p style="font-size: 16px; margin-top: 0;">Dear ${data.contactName.split(' ')[0]},</p>
 
     <p>Thank you for your interest in working with Deke Sharon! Your booking request has been received and is being reviewed.</p>
 
@@ -249,7 +249,7 @@ export async function sendBookingNotification(
   const apiKey = process.env.RESEND_API_KEY
   const fromEmail = process.env.RESEND_FROM_EMAIL
 
-  console.log('[NOTIFICATION:RESEND:BOOKING] Starting...', { bookingId: data.bookingId, serviceType: data.serviceType, to: NOTIFICATION_EMAILS, clientEmail: data.leadEmail })
+  console.log('[NOTIFICATION:RESEND:BOOKING] Starting...', { bookingId: data.bookingId, serviceType: data.serviceType, to: NOTIFICATION_EMAILS, clientEmail: data.contactEmail })
 
   if (!apiKey || !fromEmail) {
     console.error('[NOTIFICATION:RESEND:BOOKING] NOT CONFIGURED — missing:', [!apiKey && 'RESEND_API_KEY', !fromEmail && 'RESEND_FROM_EMAIL'].filter(Boolean).join(', '))
@@ -267,7 +267,7 @@ export async function sendBookingNotification(
     const adminResult = await resend.emails.send({
       from: fromEmail,
       to: NOTIFICATION_EMAILS,
-      subject: `🎵 New Booking Request: ${getServiceTypeLabel(data.serviceType)} - ${data.leadName}`,
+      subject: `🎵 New Booking Request: ${getServiceTypeLabel(data.serviceType)} - ${data.contactName}`,
       html: generateAdminEmailHtml(data),
       tags: [
         { name: 'type', value: 'booking_notification' },
@@ -287,7 +287,7 @@ export async function sendBookingNotification(
     // Send client confirmation
     const clientResult = await resend.emails.send({
       from: fromEmail,
-      to: data.leadEmail,
+      to: data.contactEmail,
       subject: `Thank you for your booking request - Deke Sharon`,
       html: generateClientEmailHtml(data),
       tags: [

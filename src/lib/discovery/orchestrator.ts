@@ -61,13 +61,13 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
 
   const warnings: string[] = []
 
-  // Fetch campaign details (include booking.lead for similar-orgs classification fallback)
+  // Fetch campaign details (include booking.contact for similar-orgs classification fallback)
   const campaign = await prisma.campaign.findUnique({
     where: { id: campaignId },
     include: {
       booking: {
         include: {
-          lead: {
+          contact: {
             select: { organization: true },
           },
         },
@@ -88,7 +88,7 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     radius: campaign.radius,
     hasBooking: !!campaign.booking,
     bookingLocation: campaign.booking?.location,
-    bookingLeadOrg: campaign.booking?.lead?.organization,
+    bookingContactOrg: campaign.booking?.contact?.organization,
   })
 
   // Pre-flight validation
@@ -215,9 +215,13 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       const fullLead = await prisma.lead.findUnique({
         where: { id: lead.id },
         include: {
-          bookings: {
-            select: { serviceType: true },
-            where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+          contacts: {
+            select: {
+              bookings: {
+                select: { serviceType: true },
+                where: { status: { in: ['CONFIRMED', 'COMPLETED'] } },
+              },
+            },
           },
         },
       })
@@ -226,12 +230,18 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
         return { ...lead, recommendations: [], recommendationBonus: 0 }
       }
 
+      // Flatten bookings from contacts for the recommendation engine
+      const leadWithBookings = {
+        ...fullLead,
+        bookings: fullLead.contacts.flatMap(c => c.bookings),
+      }
+
       // Classify organization type
       const orgType = classifyOrganization(fullLead.organization || '')
 
       // Get service recommendations
       const recommendations = await getRecommendations({
-        lead: fullLead,
+        lead: leadWithBookings,
         organizationType: orgType,
         campaignBooking: campaign.booking,
       })

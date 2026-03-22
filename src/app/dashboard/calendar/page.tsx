@@ -40,7 +40,7 @@ interface CalendarBooking {
   location: string | null;
   availabilityBefore: number | null;
   availabilityAfter: number | null;
-  lead: {
+  contact: {
     id: string;
     firstName: string;
     lastName: string;
@@ -225,14 +225,14 @@ export default function CalendarPage() {
           handleBookingClick(booking.id);
         }}
         className={`w-full truncate rounded border px-1.5 py-0.5 text-left text-[11px] font-medium leading-tight transition-opacity hover:opacity-80 ${style.bg} ${style.text} ${style.border}`}
-        title={`${serviceLabel(booking.serviceType)} - ${booking.lead.firstName} ${booking.lead.lastName} (${booking.status})`}
-        aria-label={`${serviceLabel(booking.serviceType)} with ${booking.lead.firstName} ${booking.lead.lastName}, status ${booking.status}`}
+        title={`${serviceLabel(booking.serviceType)} - ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''} (${booking.status})`}
+        aria-label={`${serviceLabel(booking.serviceType)} with ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''}, status ${booking.status}`}
       >
         <span className="block truncate">
           {serviceLabel(booking.serviceType)}
         </span>
         <span className="block truncate opacity-75">
-          {booking.lead.firstName} {booking.lead.lastName.charAt(0)}.
+          {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName?.charAt(0) ?? ''}.
         </span>
       </button>
     );
@@ -294,14 +294,14 @@ export default function CalendarPage() {
                       key={booking.id}
                       onClick={() => handleBookingClick(booking.id)}
                       className={`flex w-full items-center gap-3 rounded-md border px-3 py-2 text-left transition-colors hover:opacity-80 ${style.bg} ${style.border}`}
-                      aria-label={`${serviceLabel(booking.serviceType)} with ${booking.lead.firstName} ${booking.lead.lastName}`}
+                      aria-label={`${serviceLabel(booking.serviceType)} with ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''}`}
                     >
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-medium ${style.text}`}>
                           {serviceLabel(booking.serviceType)}
                         </p>
                         <p className="truncate text-xs text-[#666]">
-                          {booking.lead.firstName} {booking.lead.lastName}
+                          {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                           {booking.location ? ` - ${booking.location}` : ""}
                         </p>
                       </div>

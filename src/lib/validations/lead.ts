@@ -9,7 +9,8 @@ export const leadStatusSchema = z.enum([
   'NEGOTIATING',
   'WON',
   'LOST',
-  'DORMANT'
+  'DORMANT',
+  'CONVERTED'
 ])
 
 // Lead source enum
@@ -51,8 +52,9 @@ export const leadFiltersSchema = z.object({
   offset: z.string().transform(Number).pipe(z.number().min(0)).optional(),
 })
 
-// Update lead schema (email cannot be changed)
+// Update lead schema
 export const updateLeadSchema = z.object({
+  email: z.string().email('Invalid email address').optional(),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   phone: z.string().optional().nullable(),

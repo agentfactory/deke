@@ -39,7 +39,7 @@ async function getPipelineData() {
       where: { status: { in: ['PENDING', 'CONFIRMED', 'IN_PROGRESS'] } },
       take: 10,
       orderBy: { createdAt: 'desc' },
-      include: { lead: { select: { firstName: true, lastName: true } } },
+      include: { contact: { select: { firstName: true, lastName: true } } },
     }),
     prisma.order.findMany({
       where: { status: { in: ['PENDING', 'IN_PROGRESS', 'REVIEW'] } },
@@ -81,7 +81,7 @@ async function getPipelineData() {
     })),
     recentBookings: recentBookings.map(b => ({
       id: b.id,
-      name: `${b.lead.firstName} ${b.lead.lastName}`,
+      name: `${b.contact?.firstName ?? 'Unknown'} ${b.contact?.lastName ?? ''}`,
       serviceType: b.serviceType,
       status: b.status,
       amount: b.amount,

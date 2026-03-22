@@ -42,8 +42,12 @@ export async function discoverPastClients(campaign: Campaign) {
         longitude: { gte: bbox.minLon, lte: bbox.maxLon },
       },
       include: {
-        bookings: {
-          where: { status: { in: ['COMPLETED', 'CONFIRMED'] } },
+        contacts: {
+          select: {
+            bookings: {
+              where: { status: { in: ['COMPLETED', 'CONFIRMED'] } },
+            },
+          },
         },
       },
     }),
@@ -56,8 +60,12 @@ export async function discoverPastClients(campaign: Campaign) {
         ],
       },
       include: {
-        bookings: {
-          where: { status: { in: ['COMPLETED', 'CONFIRMED'] } },
+        contacts: {
+          select: {
+            bookings: {
+              where: { status: { in: ['COMPLETED', 'CONFIRMED'] } },
+            },
+          },
         },
       },
     }),

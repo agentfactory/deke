@@ -17,13 +17,13 @@ export async function POST(request: NextRequest) {
     // Validate input
     const validatedData: CreateBookingInput = createBookingSchema.parse(body)
 
-    // Check if lead exists
-    const lead = await prisma.lead.findUnique({
-      where: { id: validatedData.leadId }
+    // Check if contact exists
+    const contact = await prisma.contact.findUnique({
+      where: { id: validatedData.contactId }
     })
 
-    if (!lead) {
-      throw new ApiError(404, 'Lead not found', 'LEAD_NOT_FOUND')
+    if (!contact) {
+      throw new ApiError(404, 'Contact not found', 'CONTACT_NOT_FOUND')
     }
 
     // Geocode location if provided but coordinates missing
@@ -67,7 +67,7 @@ export async function POST(request: NextRequest) {
     // Create booking
     const booking = await prisma.booking.create({
       data: {
-        leadId: validatedData.leadId,
+        contactId: validatedData.contactId,
         inquiryId: validatedData.inquiryId ?? null,
         serviceType: validatedData.serviceType,
         startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
@@ -89,7 +89,7 @@ export async function POST(request: NextRequest) {
         organization: validatedData.organization ?? null,
       },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,
@@ -106,10 +106,10 @@ export async function POST(request: NextRequest) {
     // Send booking notification emails (async - don't block response)
     sendBookingNotification({
       bookingId: booking.id,
-      leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
-      leadEmail: booking.lead.email,
-      leadPhone: booking.lead.phone,
-      organization: booking.lead.organization,
+      contactName: booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact',
+      contactEmail: booking.contact?.email ?? '',
+      contactPhone: booking.contact?.phone ?? null,
+      organization: booking.contact?.organization ?? null,
       serviceType: booking.serviceType,
       startDate: booking.startDate,
       endDate: booking.endDate,
@@ -133,7 +133,7 @@ export async function GET(request: NextRequest) {
     const filters = bookingFiltersSchema.parse({
       status: searchParams.get('status') || undefined,
       serviceType: searchParams.get('serviceType') || undefined,
-      leadId: searchParams.get('leadId') || undefined,
+      contactId: searchParams.get('contactId') || undefined,
       limit: searchParams.get('limit') || undefined,
       offset: searchParams.get('offset') || undefined,
     })
@@ -141,7 +141,7 @@ export async function GET(request: NextRequest) {
     const where: any = {}
     if (filters.status) where.status = filters.status
     if (filters.serviceType) where.serviceType = filters.serviceType
-    if (filters.leadId) where.leadId = filters.leadId
+    if (filters.contactId) where.contactId = filters.contactId
 
     const limit = filters.limit ?? 50
     const offset = filters.offset ?? 0
@@ -156,7 +156,7 @@ export async function GET(request: NextRequest) {
           createdAt: 'desc'
         },
         include: {
-          lead: {
+          contact: {
             select: {
               id: true,
               firstName: true,

@@ -288,31 +288,23 @@ function EventCard({
             </p>
           )}
 
-          {/* Location */}
-          {event.location && (
+          {/* Location & organization */}
+          {(event.location || event.organization) && (
             <p className="flex items-center gap-1.5 text-sm text-[#666]">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-[#C05A3C]" />
-              <span>{event.location}</span>
+              <span>
+                {event.organization && event.location
+                  ? `${event.organization} — ${event.location}`
+                  : event.organization || event.location}
+              </span>
             </p>
           )}
 
-          {/* Organization */}
-          {event.organization && (
-            <p className="mt-1 text-sm font-medium text-[#1a1a1a]">
-              {event.organization}
-            </p>
-          )}
-
-          {/* Date range */}
+          {/* Date range (only shown for multi-day events) */}
           {event.startDate && event.endDate && (
             <p className="mt-2 text-xs text-[#999]">
               {format(event.startDate, "MMM d")} -{" "}
               {format(event.endDate, "MMM d, yyyy")}
-            </p>
-          )}
-          {event.startDate && !event.endDate && (
-            <p className="mt-2 text-xs text-[#999]">
-              {format(event.startDate, "EEEE, MMMM d, yyyy")}
             </p>
           )}
 
@@ -321,7 +313,7 @@ function EventCard({
             <div className={`mt-3 flex gap-2 ${isLeft ? "sm:justify-end" : ""}`}>
               <a
                 href={generateGoogleCalendarUrl({
-                  title: event.publicTitle || serviceLabel(event.serviceType),
+                  title: `Deke Sharon: ${event.publicTitle || serviceLabel(event.serviceType)}`,
                   description: event.publicDescription,
                   location: event.location,
                   startDate: event.startDate,

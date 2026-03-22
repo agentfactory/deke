@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
-import { ArrowLeft, Edit, Trash2, Loader2, Mail, Phone, Building2, MapPin, Calendar, Star, Plus, Package, MessageSquare } from 'lucide-react';
+import { ArrowLeft, Edit, Trash2, Loader2, Mail, Phone, Building2, MapPin, Calendar, Star, Plus, Package, MessageSquare, UserCheck, Users } from 'lucide-react';
 import { format } from 'date-fns';
 import Link from 'next/link';
 
@@ -24,16 +24,11 @@ interface Lead {
   lastContactedAt: string | null;
   createdAt: string;
   updatedAt: string;
-  bookings: Array<{
+  contacts: Array<{
     id: string;
-    serviceType: string;
-    status: string;
-    startDate: string | null;
-    endDate: string | null;
-    location: string | null;
-    amount: number | null;
-    depositPaid: number | null;
-    paymentStatus: string;
+    firstName: string;
+    lastName: string;
+    email: string;
   }>;
   inquiries: Array<{
     id: string;
@@ -75,7 +70,7 @@ interface Lead {
     };
   }>;
   _count: {
-    bookings: number;
+    contacts: number;
     inquiries: number;
     orders: number;
     campaignLeads: number;
@@ -104,6 +99,7 @@ export default function LeadProfilePage({
   const [lead, setLead] = useState<Lead | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [isDeleting, setIsDeleting] = useState(false);
+  const [isConverting, setIsConverting] = useState(false);
 
   const fetchLead = async () => {
     try {
@@ -164,6 +160,27 @@ export default function LeadProfilePage({
     }
   };
 
+  const handleConvert = async () => {
+    if (!lead) return;
+    try {
+      setIsConverting(true);
+      const response = await fetch(`/api/leads/${lead.id}/convert`, {
+        method: 'POST',
+      });
+      if (!response.ok) {
+        const data = await response.json();
+        throw new Error(data.message || 'Failed to convert lead');
+      }
+      // Refresh lead data to show updated status and contacts
+      await fetchLead();
+    } catch (err) {
+      console.error('Error converting lead:', err);
+      alert(err instanceof Error ? err.message : 'Failed to convert lead');
+    } finally {
+      setIsConverting(false);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="flex items-center justify-center min-h-[400px]">
@@ -188,10 +205,9 @@ export default function LeadProfilePage({
     );
   }
 
-  const totalRevenue = [
-    ...lead.bookings.map(b => b.amount || 0),
-    ...lead.orders.map(o => o.totalAmount || 0),
-  ].reduce((sum, val) => sum + val, 0);
+  const totalRevenue = lead.orders
+    .map(o => o.totalAmount || 0)
+    .reduce((sum, val) => sum + val, 0);
 
   return (
     <div className="space-y-6">
@@ -215,11 +231,21 @@ export default function LeadProfilePage({
           </div>
         </div>
         <div className="flex items-center gap-2">
-          <Link href={`/dashboard/bookings/new?leadId=${lead.id}`}>
-            <Button variant="outline" size="sm">
-              <Calendar className="h-4 w-4 mr-1" /> New Booking
+          {lead.status !== 'CONVERTED' && (
+            <Button
+              variant="default"
+              size="sm"
+              onClick={handleConvert}
+              disabled={isConverting}
+            >
+              {isConverting ? (
+                <Loader2 className="h-4 w-4 mr-1 animate-spin" />
+              ) : (
+                <UserCheck className="h-4 w-4 mr-1" />
+              )}
+              Convert to Contact
             </Button>
-          </Link>
+          )}
           <Link href={`/dashboard/orders?leadId=${lead.id}`}>
             <Button variant="outline" size="sm">
               <Package className="h-4 w-4 mr-1" /> New Order
@@ -234,10 +260,10 @@ export default function LeadProfilePage({
             variant="destructive"
             size="icon"
             onClick={handleDelete}
-            disabled={isDeleting || lead._count.bookings > 0 || lead._count.orders > 0}
+            disabled={isDeleting || lead._count.contacts > 0 || lead._count.orders > 0}
             title={
-              lead._count.bookings > 0 || lead._count.orders > 0
-                ? 'Cannot delete: has linked bookings or orders'
+              lead._count.contacts > 0 || lead._count.orders > 0
+                ? 'Cannot delete: has linked contacts or orders'
                 : 'Delete lead'
             }
           >
@@ -303,35 +329,26 @@ export default function LeadProfilePage({
             </CardContent>
           </Card>
 
-          {/* Bookings Card */}
-          {lead.bookings.length > 0 && (
+          {/* Contacts Card */}
+          {lead.contacts.length > 0 && (
             <Card>
               <CardHeader>
-                <CardTitle>Bookings ({lead.bookings.length})</CardTitle>
+                <CardTitle className="flex items-center gap-2">
+                  <Users className="h-5 w-5" />
+                  Contacts ({lead.contacts.length})
+                </CardTitle>
               </CardHeader>
               <CardContent>
                 <div className="space-y-3">
-                  {lead.bookings.map((booking) => (
-                    <Link key={booking.id} href={`/dashboard/bookings/${booking.id}`}>
+                  {lead.contacts.map((contact) => (
+                    <Link key={contact.id} href={`/dashboard/contacts/${contact.id}`}>
                       <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer transition-colors">
                         <div className="flex items-center justify-between">
                           <div>
-                            <p className="font-medium">{booking.serviceType.replace('_', ' ')}</p>
-                            <p className="text-sm text-muted-foreground">
-                              {booking.startDate
-                                ? format(new Date(booking.startDate), 'PPP')
-                                : 'Date not set'}
-                              {booking.location && ` • ${booking.location}`}
-                            </p>
+                            <p className="font-medium">{contact.firstName} {contact.lastName}</p>
+                            <p className="text-sm text-muted-foreground">{contact.email}</p>
                           </div>
-                          <div className="text-right">
-                            <Badge variant="outline">{booking.status}</Badge>
-                            {booking.amount && (
-                              <p className="text-sm font-medium mt-1">
-                                ${booking.amount.toLocaleString()}
-                              </p>
-                            )}
-                          </div>
+                          <Badge variant="default">Contact</Badge>
                         </div>
                       </div>
                     </Link>
@@ -447,8 +464,8 @@ export default function LeadProfilePage({
             </CardHeader>
             <CardContent className="space-y-3">
               <div className="flex justify-between">
-                <span className="text-muted-foreground">Total Bookings</span>
-                <span className="font-medium">{lead._count.bookings}</span>
+                <span className="text-muted-foreground">Contacts</span>
+                <span className="font-medium">{lead._count.contacts}</span>
               </div>
               <div className="flex justify-between">
                 <span className="text-muted-foreground">Total Orders</span>

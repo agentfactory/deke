@@ -55,7 +55,7 @@ const STATUS_DOTS: Record<string, string> = {
 
 const PAGE_SIZE = 25
 
-type OrderLead = {
+type OrderContact = {
   id: string
   firstName: string
   lastName: string
@@ -67,7 +67,7 @@ type OrderLead = {
 type Order = {
   id: string
   leadId: string
-  lead: OrderLead
+  contact: OrderContact
   orderNumber: string
   status: string
   songTitle: string | null
@@ -145,8 +145,8 @@ export default function OrdersClient({
     if (searchQuery) {
       const q = searchQuery.toLowerCase()
       result = result.filter(o =>
-        `${o.lead.firstName} ${o.lead.lastName}`.toLowerCase().includes(q) ||
-        o.lead.email.toLowerCase().includes(q) ||
+        `${o.contact?.firstName ?? ''} ${o.contact?.lastName ?? ''}`.toLowerCase().includes(q) ||
+        (o.contact?.email ?? '').toLowerCase().includes(q) ||
         o.orderNumber.toLowerCase().includes(q) ||
         (o.songTitle || '').toLowerCase().includes(q) ||
         (o.songArtist || '').toLowerCase().includes(q)
@@ -320,7 +320,7 @@ export default function OrdersClient({
                     </TableCell>
                     <TableCell>
                       <p className="font-medium text-stone-900 dark:text-white text-sm">
-                        {order.lead.firstName} {order.lead.lastName}
+                        {order.contact?.firstName ?? 'Unknown'} {order.contact?.lastName ?? ''}
                       </p>
                     </TableCell>
                     <TableCell className="hidden md:table-cell text-sm text-stone-600">
@@ -433,12 +433,14 @@ export default function OrdersClient({
                 <h3 className="text-sm font-semibold text-stone-900 dark:text-white">Client</h3>
                 <div className="text-sm space-y-1">
                   <p>
-                    <Link href={`/dashboard/leads/${detailOrder.lead.id}`} className="text-blue-600 hover:underline font-medium">
-                      {detailOrder.lead.firstName} {detailOrder.lead.lastName}
-                    </Link>
+                    {detailOrder.contact ? (
+                      <Link href={`/dashboard/leads/${detailOrder.contact.id}`} className="text-blue-600 hover:underline font-medium">
+                        {detailOrder.contact.firstName} {detailOrder.contact.lastName}
+                      </Link>
+                    ) : 'Unknown Contact'}
                   </p>
-                  <p className="text-stone-500">{detailOrder.lead.email}</p>
-                  {detailOrder.lead.phone && <p className="text-stone-500">{detailOrder.lead.phone}</p>}
+                  <p className="text-stone-500">{detailOrder.contact?.email ?? ''}</p>
+                  {detailOrder.contact?.phone && <p className="text-stone-500">{detailOrder.contact?.phone}</p>}
                 </div>
               </div>
 

@@ -71,7 +71,7 @@ const services = [
 
 type Step = "service" | "details" | "contact" | "confirm";
 
-interface LeadData {
+interface PrePopData {
   id: string;
   firstName: string;
   lastName: string;
@@ -79,20 +79,21 @@ interface LeadData {
   phone: string | null;
   organization: string | null;
   source: string | null;
-  score: number;
+  score?: number;
 }
 
 function BookingContent() {
   const searchParams = useSearchParams();
   const initialService = searchParams.get("service") || "";
+  const contactId = searchParams.get("contactId");
   const leadId = searchParams.get("leadId");
 
   const [step, setStep] = useState<Step>(initialService ? "details" : "service");
   const [selectedService, setSelectedService] = useState(initialService);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [error, setError] = useState<string | null>(null);
-  const [leadData, setLeadData] = useState<LeadData | null>(null);
-  const [isLoadingLead, setIsLoadingLead] = useState(false);
+  const [prePopData, setPrePopData] = useState<PrePopData | null>(null);
+  const [isLoadingPrePop, setIsLoadingPrePop] = useState(false);
   const [formData, setFormData] = useState({
     // Contact Info
     firstName: "",
@@ -111,36 +112,41 @@ function BookingContent() {
     message: "",
   });
 
-  // Fetch lead data if leadId is provided
+  // Fetch contact or lead data for pre-population
   useEffect(() => {
-    if (leadId) {
-      setIsLoadingLead(true);
-      fetch(`/api/leads/${leadId}`)
+    const fetchUrl = contactId
+      ? `/api/contacts/${contactId}`
+      : leadId
+        ? `/api/leads/${leadId}`
+        : null;
+
+    if (fetchUrl) {
+      setIsLoadingPrePop(true);
+      fetch(fetchUrl)
         .then((res) => {
-          if (!res.ok) throw new Error('Lead not found');
+          if (!res.ok) throw new Error('Record not found');
           return res.json();
         })
-        .then((lead: LeadData) => {
-          setLeadData(lead);
-          // Pre-populate form fields
+        .then((data: PrePopData) => {
+          setPrePopData(data);
           setFormData((prev) => ({
             ...prev,
-            firstName: lead.firstName || "",
-            lastName: lead.lastName || "",
-            email: lead.email || "",
-            phone: lead.phone || "",
-            organization: lead.organization || "",
+            firstName: data.firstName || "",
+            lastName: data.lastName || "",
+            email: data.email || "",
+            phone: data.phone || "",
+            organization: data.organization || "",
           }));
         })
         .catch((err) => {
-          console.error('Failed to load lead:', err);
-          setError('Failed to load lead information');
+          console.error('Failed to load pre-population data:', err);
+          setError('Failed to load contact information');
         })
         .finally(() => {
-          setIsLoadingLead(false);
+          setIsLoadingPrePop(false);
         });
     }
-  }, [leadId]);
+  }, [contactId, leadId]);
 
   const handleServiceSelect = (serviceId: string) => {
     setSelectedService(serviceId);
@@ -174,8 +180,8 @@ function BookingContent() {
     setError(null);
 
     try {
-      // Step 1: Create/update lead
-      const leadResponse = await fetch('/api/leads', {
+      // Step 1: Create/upsert contact
+      const contactResponse = await fetch('/api/contacts', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
@@ -188,18 +194,18 @@ function BookingContent() {
         })
       });
 
-      if (!leadResponse.ok) {
-        throw new Error('Failed to create lead. Please try again.');
+      if (!contactResponse.ok) {
+        throw new Error('Failed to create contact. Please try again.');
       }
 
-      const lead = await leadResponse.json();
+      const contact = await contactResponse.json();
 
-      // Step 2: Create booking
+      // Step 2: Create booking with contactId
       const bookingResponse = await fetch('/api/bookings', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({
-          leadId: lead.id,
+          contactId: contact.id,
           serviceType: mapServiceType(selectedService),
           location: formData.eventLocation || null,
           internalNotes: formData.message || null,
@@ -507,19 +513,14 @@ function BookingContent() {
               <p className="text-muted-foreground">
                 How can I reach you?
               </p>
-              {leadData && (
+              {prePopData && (
                 <div className="mt-4 inline-flex items-center gap-2 rounded-full bg-primary/10 px-4 py-2 text-sm font-medium text-primary">
                   <Sparkles className="h-4 w-4" />
-                  Discovered Lead
-                  {leadData.source && (
+                  {contactId ? 'Known Contact' : 'Discovered Lead'}
+                  {prePopData.source && (
                     <span className="text-xs opacity-75">
-                      • from {leadData.source.replace('_', ' ')}
+                      • from {prePopData.source.replace('_', ' ')}
                     </span>
-                  )}
-                  {leadData.score > 0 && (
-                    <Badge variant="secondary" className="ml-1 text-xs">
-                      Score: {leadData.score}
-                    </Badge>
                   )}
                 </div>
               )}

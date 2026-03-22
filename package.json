@@ -8,7 +8,7 @@
   },
   "scripts": {
     "dev": "next dev",
-    "build": "prisma generate && prisma db push --accept-data-loss && next build",
+    "build": "prisma generate && tsx prisma/migrate-leads-to-contacts.ts --save-mapping && prisma db push --accept-data-loss && tsx prisma/migrate-leads-to-contacts.ts --apply-mapping && next build",
     "start": "next start",
     "lint": "eslint",
     "type-check": "tsc --noEmit",
@@ -46,6 +46,7 @@
     "better-sqlite3": "^12.6.0",
     "class-variance-authority": "^0.7.1",
     "clsx": "^2.1.1",
+    "cmdk": "^1.1.1",
     "date-fns": "^4.1.0",
     "embla-carousel-autoplay": "^8.6.0",
     "embla-carousel-react": "^8.6.0",

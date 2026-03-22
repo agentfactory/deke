@@ -124,7 +124,7 @@ export async function GET(request: NextRequest) {
         include: {
           _count: {
             select: {
-              bookings: true,
+              contacts: true,
               inquiries: true,
               orders: true,
               campaignLeads: true,

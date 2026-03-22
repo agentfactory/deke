@@ -75,7 +75,22 @@ export async function POST(request: NextRequest) {
           organization: client.organization || null,
           phone: client.phone || null,
           source: "direct_booking",
-          status: "QUALIFIED",
+          status: "CONVERTED",
+          convertedAt: new Date(),
+          latitude: geoResult.latitude,
+          longitude: geoResult.longitude,
+        },
+      });
+    } else if (lead.status !== 'CONVERTED') {
+      lead = await prisma.lead.update({
+        where: { id: lead.id },
+        data: {
+          firstName: lead.firstName || client.firstName,
+          lastName: lead.lastName || client.lastName,
+          organization: lead.organization || client.organization || null,
+          phone: lead.phone || client.phone || null,
+          status: 'CONVERTED',
+          convertedAt: new Date(),
           latitude: geoResult.latitude,
           longitude: geoResult.longitude,
         },
@@ -84,12 +99,41 @@ export async function POST(request: NextRequest) {
       lead = await prisma.lead.update({
         where: { id: lead.id },
         data: {
-          firstName: client.firstName,
-          lastName: client.lastName,
-          organization: client.organization || lead.organization,
-          phone: client.phone || lead.phone,
+          firstName: lead.firstName || client.firstName,
+          lastName: lead.lastName || client.lastName,
+          organization: lead.organization || client.organization || null,
+          phone: lead.phone || client.phone || null,
           latitude: geoResult.latitude,
           longitude: geoResult.longitude,
+        },
+      });
+    }
+
+    // Step 2.5: Find or create Contact
+    let contact = await prisma.contact.findUnique({
+      where: { email: client.email },
+    });
+
+    if (!contact) {
+      contact = await prisma.contact.create({
+        data: {
+          firstName: client.firstName,
+          lastName: client.lastName,
+          email: client.email,
+          organization: client.organization || null,
+          phone: client.phone || null,
+          source: "direct_booking",
+          leadId: lead.id,
+        },
+      });
+    } else {
+      contact = await prisma.contact.update({
+        where: { id: contact.id },
+        data: {
+          firstName: contact.firstName || client.firstName,
+          lastName: contact.lastName || client.lastName,
+          organization: contact.organization || client.organization || null,
+          phone: contact.phone || client.phone || null,
         },
       });
     }
@@ -105,7 +149,7 @@ export async function POST(request: NextRequest) {
     // Step 4: Create Booking with availability fields
     const booking = await prisma.booking.create({
       data: {
-        leadId: lead.id,
+        contactId: contact.id,
         tripId: tripId || null,
         serviceType,
         status: "CONFIRMED",
@@ -122,7 +166,7 @@ export async function POST(request: NextRequest) {
         availabilityAfter,
       },
       include: {
-        lead: {
+        contact: {
           select: {
             id: true,
             firstName: true,
@@ -168,9 +212,9 @@ export async function POST(request: NextRequest) {
     // Send booking notification (async - don't block)
     sendBookingNotification({
       bookingId: booking.id,
-      leadName: `${booking.lead.firstName} ${booking.lead.lastName}`,
-      leadEmail: booking.lead.email,
-      organization: booking.lead.organization,
+      contactName: booking.contact ? `${booking.contact.firstName} ${booking.contact.lastName}` : 'Unknown Contact',
+      contactEmail: booking.contact?.email ?? '',
+      organization: booking.contact?.organization ?? null,
       serviceType: booking.serviceType,
       startDate: booking.startDate,
       endDate: booking.endDate,

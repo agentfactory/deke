@@ -13,7 +13,7 @@ export default async function BookingsPage() {
     const bookingsData = await prisma.booking.findMany({
       orderBy: { createdAt: 'desc' },
       include: {
-        lead: true,
+        contact: true,
         inquiry: true,
         campaigns: {
           select: { id: true, name: true, status: true }
