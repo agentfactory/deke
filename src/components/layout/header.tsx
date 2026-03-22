@@ -18,6 +18,7 @@ const navItems = [
   { label: "Workshops", href: "/workshops" },
   { label: "Speaking", href: "/speaking" },
   { label: "Media", href: "/media" },
+  { label: "Events", href: "/events" },
   { label: "Find a Group", href: "/find-group" },
   { label: "About", href: "/about" },
 ];
