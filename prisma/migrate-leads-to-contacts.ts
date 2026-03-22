@@ -17,8 +17,24 @@
  */
 
 import { PrismaClient } from '@prisma/client'
+import { PrismaPg } from '@prisma/adapter-pg'
+import { Pool } from 'pg'
 
-const prisma = new PrismaClient()
+const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL
+if (!connectionString) {
+  console.error('DATABASE_URL not set. Cannot run migration.')
+  process.exit(1)
+}
+
+const pool = new Pool({
+  connectionString,
+  max: 5,
+  ssl: { rejectUnauthorized: false },
+})
+
+const prisma = new PrismaClient({
+  adapter: new PrismaPg(pool),
+})
 
 async function saveMapping() {
   console.log('=== Phase 1: Save booking→lead mappings before schema push ===\n')
