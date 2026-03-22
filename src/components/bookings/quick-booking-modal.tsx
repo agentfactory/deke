@@ -1,10 +1,12 @@
 'use client';
 
 import { useState } from 'react';
+import { addDays, parseISO } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
+import { DatePicker } from '@/components/ui/date-picker';
 import { Loader2, Save, CheckCircle2 } from 'lucide-react';
 import {
   Dialog,
@@ -48,8 +50,8 @@ export function QuickBookingModal({
     clientEmail: '',
     clientOrganization: '',
     serviceType: 'WORKSHOP',
-    startDate: defaultDate ? `${defaultDate}T09:00` : '',
-    endDate: '',
+    startDate: defaultDate ? new Date(`${defaultDate}T09:00:00`).toISOString() : '',
+    endDate: defaultDate ? addDays(new Date(`${defaultDate}T09:00:00`), 1).toISOString() : '',
     location: '',
     amount: '',
   });
@@ -62,8 +64,8 @@ export function QuickBookingModal({
         clientEmail: '',
         clientOrganization: '',
         serviceType: 'WORKSHOP',
-        startDate: defaultDate ? `${defaultDate}T09:00` : '',
-        endDate: '',
+        startDate: defaultDate ? new Date(`${defaultDate}T09:00:00`).toISOString() : '',
+        endDate: defaultDate ? addDays(new Date(`${defaultDate}T09:00:00`), 1).toISOString() : '',
         location: '',
         amount: '',
       });
@@ -201,22 +203,32 @@ export function QuickBookingModal({
 
             {/* Scheduling */}
             <div className="grid grid-cols-2 gap-3">
-              <div>
-                <Label htmlFor="qb-start">Start Date</Label>
-                <Input
-                  id="qb-start"
-                  type="datetime-local"
-                  value={form.startDate}
-                  onChange={(e) => handleChange('startDate', e.target.value)}
+              <div className="space-y-1.5">
+                <Label>Start Date</Label>
+                <DatePicker
+                  value={form.startDate ? parseISO(form.startDate) : null}
+                  onChange={(date) => {
+                    const iso = date ? date.toISOString() : '';
+                    handleChange('startDate', iso);
+                    // Auto-fill end date to +1 day
+                    if (date) {
+                      const currentEnd = form.endDate ? parseISO(form.endDate) : null;
+                      if (!currentEnd || currentEnd <= date) {
+                        handleChange('endDate', addDays(date, 1).toISOString());
+                      }
+                    }
+                  }}
+                  enableTime
+                  placeholder="Start date"
                 />
               </div>
-              <div>
-                <Label htmlFor="qb-end">End Date</Label>
-                <Input
-                  id="qb-end"
-                  type="datetime-local"
-                  value={form.endDate}
-                  onChange={(e) => handleChange('endDate', e.target.value)}
+              <div className="space-y-1.5">
+                <Label>End Date</Label>
+                <DatePicker
+                  value={form.endDate ? parseISO(form.endDate) : null}
+                  onChange={(date) => handleChange('endDate', date ? date.toISOString() : '')}
+                  enableTime
+                  placeholder="End date"
                 />
               </div>
             </div>

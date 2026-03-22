@@ -4,12 +4,14 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
+import { parseISO, addDays } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
+import { DatePicker } from '@/components/ui/date-picker';
 import {
   Dialog,
   DialogContent,
@@ -166,6 +168,22 @@ export function BookingForm({
   });
 
   const isPublic = form.watch('isPublic');
+  const startDateValue = form.watch('startDate');
+
+  // Auto-fill end date to startDate + 1 day
+  useEffect(() => {
+    if (startDateValue) {
+      const currentEnd = form.getValues('endDate');
+      try {
+        const start = parseISO(startDateValue);
+        if (!currentEnd || parseISO(currentEnd) <= start) {
+          form.setValue('endDate', addDays(start, 1).toISOString());
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, [startDateValue, form]);
 
   const handleCreateLead = async () => {
     if (!newLead.firstName || !newLead.email) return;
@@ -346,7 +364,12 @@ export function BookingForm({
               <FormItem>
                 <FormLabel>Start Date</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} />
+                  <DatePicker
+                    value={field.value ? parseISO(field.value) : null}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : '')}
+                    enableTime
+                    placeholder="Select start date"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
@@ -360,7 +383,12 @@ export function BookingForm({
               <FormItem>
                 <FormLabel>End Date</FormLabel>
                 <FormControl>
-                  <Input type="datetime-local" {...field} />
+                  <DatePicker
+                    value={field.value ? parseISO(field.value) : null}
+                    onChange={(date) => field.onChange(date ? date.toISOString() : '')}
+                    enableTime
+                    placeholder="Select end date"
+                  />
                 </FormControl>
                 <FormMessage />
               </FormItem>
