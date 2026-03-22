@@ -152,6 +152,7 @@ export async function PATCH(
     const booking = await prisma.booking.update({
       where: { id },
       data: {
+        serviceType: validatedData.serviceType,
         status: validatedData.status,
         startDate: validatedData.startDate ? new Date(validatedData.startDate) : undefined,
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : undefined,

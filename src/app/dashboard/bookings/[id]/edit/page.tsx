@@ -42,6 +42,7 @@ export default function EditBookingPage({
 
       const payload = {
         status: values.status,
+        serviceType: values.serviceType,
         startDate: values.startDate || null,
         endDate: values.endDate || null,
         timezone: values.timezone || null,
@@ -51,6 +52,9 @@ export default function EditBookingPage({
         paymentStatus: values.paymentStatus,
         internalNotes: values.internalNotes || null,
         clientNotes: values.clientNotes || null,
+        isPublic: values.isPublic ?? false,
+        publicTitle: values.publicTitle || null,
+        publicDescription: values.publicDescription || null,
       };
 
       const response = await fetch(`/api/bookings/${id}`, {
@@ -133,6 +137,9 @@ export default function EditBookingPage({
               paymentStatus: booking.paymentStatus,
               internalNotes: booking.internalNotes || '',
               clientNotes: booking.clientNotes || '',
+              isPublic: booking.isPublic ?? false,
+              publicTitle: booking.publicTitle || '',
+              publicDescription: booking.publicDescription || '',
             }}
             onSubmit={handleSubmit}
             isLoading={isSaving}

@@ -64,6 +64,7 @@ export const bookingFiltersSchema = z.object({
 
 // Update booking schema
 export const updateBookingSchema = z.object({
+  serviceType: serviceTypeSchema.optional(),
   status: bookingStatusSchema.optional(),
   startDate: z.string().datetime().optional().nullable(),
   endDate: z.string().datetime().optional().nullable(),

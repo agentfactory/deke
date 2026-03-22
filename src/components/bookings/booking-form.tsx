@@ -106,10 +106,10 @@ export function BookingForm({
 
   const fetchLeads = async () => {
     try {
-      const res = await fetch('/api/leads');
+      const res = await fetch('/api/leads?limit=500');
       if (res.ok) {
         const data = await res.json();
-        setLeads(data);
+        setLeads(Array.isArray(data) ? data : data.leads || []);
       }
     } catch (error) {
       console.error('Error fetching leads:', error);
@@ -120,13 +120,13 @@ export function BookingForm({
     async function fetchData() {
       try {
         const [leadsRes, tripsRes] = await Promise.all([
-          fetch('/api/leads'),
+          fetch('/api/leads?limit=500'),
           fetch('/api/trips'),
         ]);
 
         if (leadsRes.ok) {
           const leadsData = await leadsRes.json();
-          setLeads(leadsData);
+          setLeads(Array.isArray(leadsData) ? leadsData : leadsData.leads || []);
         }
 
         if (tripsRes.ok) {
