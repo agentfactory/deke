@@ -128,10 +128,21 @@ export async function PATCH(
       throw new ApiError(404, 'Lead not found', 'LEAD_NOT_FOUND')
     }
 
+    // If email is being changed, check it's not already taken by another lead
+    if (validatedData.email && validatedData.email !== existingLead.email) {
+      const emailTaken = await prisma.lead.findUnique({
+        where: { email: validatedData.email }
+      })
+      if (emailTaken) {
+        throw new ApiError(409, 'A lead with this email already exists', 'EMAIL_ALREADY_EXISTS')
+      }
+    }
+
     // Update lead (auto-update lastContactedAt)
     const lead = await prisma.lead.update({
       where: { id },
       data: {
+        email: validatedData.email,
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         phone: validatedData.phone,
