@@ -2,15 +2,14 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useState } from "react";
 import {
-  LayoutDashboard,
+  Zap,
   Calendar,
-  Rocket,
   Users,
   CalendarDays,
   Briefcase,
   DollarSign,
-  MessageSquare,
   Package,
   Plane,
   GitBranch,
@@ -18,14 +17,12 @@ import {
 } from "lucide-react";
 
 const iconMap = {
-  LayoutDashboard,
+  Zap,
   Calendar,
-  Rocket,
   Users,
   CalendarDays,
   Briefcase,
   DollarSign,
-  MessageSquare,
   Package,
   Plane,
   GitBranch,
@@ -41,11 +38,53 @@ type NavItem = {
   badgeKey?: string;
 };
 
+function InsightButton({
+  item,
+  isActive,
+}: {
+  item: NavItem;
+  isActive: boolean;
+}) {
+  const [showTooltip, setShowTooltip] = useState(false);
+  const Icon = iconMap[item.icon];
+
+  return (
+    <Link
+      href={item.href}
+      className={`
+        relative flex h-10 w-10 items-center justify-center rounded-lg
+        transition-all duration-200
+        ${
+          isActive
+            ? "bg-[#1c1c1f] text-[#C05A3C]"
+            : "text-[#555557] hover:bg-[#1a1a1c] hover:text-[#888]"
+        }
+      `}
+      onMouseEnter={() => setShowTooltip(true)}
+      onMouseLeave={() => setShowTooltip(false)}
+      aria-label={item.label}
+    >
+      <Icon className="h-[18px] w-[18px]" strokeWidth={isActive ? 2.2 : 1.6} />
+
+      {showTooltip && (
+        <span
+          className="absolute left-full ml-3 whitespace-nowrap rounded-md bg-[#1c1c1f] px-2.5 py-1.5 text-[11px] font-medium tracking-[1px] text-[#CCCCCC] shadow-lg"
+          style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
+        >
+          {item.label}
+        </span>
+      )}
+    </Link>
+  );
+}
+
 export function DashboardSidebar({
-  navItems,
+  primaryNav,
+  insightNav,
   badgeCounts,
 }: {
-  navItems: NavItem[];
+  primaryNav: NavItem[];
+  insightNav: NavItem[];
   badgeCounts: BadgeCounts;
 }) {
   const pathname = usePathname();
@@ -76,10 +115,10 @@ export function DashboardSidebar({
           </Link>
         </div>
 
-        {/* Navigation */}
-        <nav className="flex-1 px-4 pt-2">
+        {/* Primary navigation */}
+        <nav className="px-4 pt-2">
           <ul className="space-y-1">
-            {navItems.map((item) => {
+            {primaryNav.map((item) => {
               const Icon = iconMap[item.icon];
               const active = isActive(item.href);
               const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
@@ -99,7 +138,6 @@ export function DashboardSidebar({
                     `}
                     style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
                   >
-                    {/* Active left border accent */}
                     {active && (
                       <span className="absolute left-0 top-1/2 h-5 w-[3px] -translate-y-1/2 rounded-r-full bg-[#C05A3C]" />
                     )}
@@ -127,7 +165,24 @@ export function DashboardSidebar({
           </ul>
         </nav>
 
-        {/* Footer version */}
+        {/* Divider */}
+        <div className="mx-7 my-5 h-px bg-[#222224]" />
+
+        {/* Insight icon grid */}
+        <div className="px-5">
+          <div className="grid grid-cols-3 gap-1.5 justify-items-center">
+            {insightNav.map((item) => (
+              <InsightButton
+                key={item.href}
+                item={item}
+                isActive={isActive(item.href)}
+              />
+            ))}
+          </div>
+        </div>
+
+        {/* Spacer + footer */}
+        <div className="flex-1" />
         <div className="px-7 py-5">
           <span
             className="text-[11px] tracking-[1px] text-[#444446]"
@@ -138,10 +193,10 @@ export function DashboardSidebar({
         </div>
       </aside>
 
-      {/* Mobile bottom navigation bar */}
+      {/* Mobile bottom navigation - primary items only */}
       <nav className="fixed bottom-0 left-0 right-0 z-30 border-t border-[#222224] bg-[#111113] lg:hidden">
         <ul className="flex items-center justify-around px-2 py-2">
-          {navItems.map((item) => {
+          {primaryNav.map((item) => {
             const Icon = iconMap[item.icon];
             const active = isActive(item.href);
             const badgeCount = item.badgeKey ? (badgeCounts[item.badgeKey] || 0) : 0;
@@ -165,12 +220,9 @@ export function DashboardSidebar({
                     className="text-[9px] font-medium tracking-[0.5px]"
                     style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
                   >
-                    {item.label.length > 10
-                      ? item.label.slice(0, 7) + "..."
-                      : item.label}
+                    {item.label}
                   </span>
 
-                  {/* Active dot indicator for mobile */}
                   {active && (
                     <span className="absolute -top-0.5 left-1/2 h-[3px] w-5 -translate-x-1/2 rounded-full bg-[#C05A3C]" />
                   )}
