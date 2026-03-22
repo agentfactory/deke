@@ -30,19 +30,20 @@ async function getPendingInquiryCount(): Promise<number> {
   }
 }
 
-const navItems = [
-  { href: "/dashboard", label: "COMMAND CENTER", icon: "LayoutDashboard" as const },
-  { href: "/dashboard/inquiries", label: "INQUIRIES", icon: "MessageSquare" as const, badgeKey: "inquiries" as const },
+const primaryNav = [
+  { href: "/dashboard", label: "TODAY", icon: "Zap" as const, badgeKey: "today" as const },
   { href: "/dashboard/bookings", label: "BOOKINGS", icon: "Calendar" as const },
-  { href: "/dashboard/orders", label: "ORDERS", icon: "Package" as const },
-  { href: "/dashboard/engagements", label: "ENGAGEMENTS", icon: "Briefcase" as const },
-  { href: "/dashboard/expenses", label: "EXPENSES", icon: "DollarSign" as const },
-  { href: "/dashboard/campaigns", label: "LEAD GEN", icon: "Rocket" as const },
-  { href: "/dashboard/contacts", label: "CONTACTS", icon: "Users" as const, badgeKey: "contacts" as const },
-  { href: "/dashboard/trips", label: "TRIPS", icon: "Plane" as const },
-  { href: "/dashboard/pipeline", label: "PIPELINE", icon: "GitBranch" as const },
+  { href: "/dashboard/contacts", label: "LEADS", icon: "Users" as const, badgeKey: "leads" as const },
   { href: "/dashboard/calendar", label: "CALENDAR", icon: "CalendarDays" as const },
-  { href: "/dashboard/analytics", label: "ANALYTICS", icon: "BarChart3" as const },
+];
+
+const insightNav = [
+  { href: "/dashboard/analytics", label: "Analytics", icon: "BarChart3" as const },
+  { href: "/dashboard/pipeline", label: "Pipeline", icon: "GitBranch" as const },
+  { href: "/dashboard/orders", label: "Orders", icon: "Package" as const },
+  { href: "/dashboard/expenses", label: "Expenses", icon: "DollarSign" as const },
+  { href: "/dashboard/trips", label: "Trips", icon: "Plane" as const },
+  { href: "/dashboard/engagements", label: "Engagements", icon: "Briefcase" as const },
 ];
 
 export default async function DashboardLayout({
@@ -56,16 +57,18 @@ export default async function DashboardLayout({
   ]);
 
   const badgeCounts = {
-    contacts: newRequestCount,
-    inquiries: pendingInquiryCount,
+    leads: newRequestCount,
+    today: pendingInquiryCount,
   };
 
   return (
     <div className="min-h-screen bg-[#FAFAF8]">
-      {/* Desktop sidebar */}
-      <DashboardSidebar navItems={navItems} badgeCounts={badgeCounts} />
+      <DashboardSidebar
+        primaryNav={primaryNav}
+        insightNav={insightNav}
+        badgeCounts={badgeCounts}
+      />
 
-      {/* Main content */}
       <main className="lg:pl-[260px] pb-20 lg:pb-0">
         <div className="mx-auto max-w-7xl p-6 md:p-8">{children}</div>
       </main>
