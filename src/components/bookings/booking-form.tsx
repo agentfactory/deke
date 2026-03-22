@@ -21,7 +21,10 @@ import {
   DialogTitle,
 } from '@/components/ui/dialog';
 import { Label } from '@/components/ui/label';
-import { Loader2, Plus } from 'lucide-react';
+import { Check, ChevronsUpDown, Loader2, Plus } from 'lucide-react';
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover';
+import { Command, CommandEmpty, CommandGroup, CommandInput, CommandItem, CommandList } from '@/components/ui/command';
+import { cn } from '@/lib/utils';
 
 const SERVICE_TYPES = [
   'ARRANGEMENT',
@@ -106,6 +109,7 @@ export function BookingForm({
   const [showCreateLead, setShowCreateLead] = useState(false);
   const [creatingLead, setCreatingLead] = useState(false);
   const [newLead, setNewLead] = useState({ firstName: '', lastName: '', email: '', organization: '' });
+  const [leadOpen, setLeadOpen] = useState(false);
 
   const fetchLeads = async () => {
     try {
@@ -223,56 +227,105 @@ export function BookingForm({
         <FormField
           control={form.control}
           name="leadId"
-          render={({ field }) => (
-            <FormItem>
-              <div className="flex items-center justify-between">
-                <FormLabel>Lead / Client</FormLabel>
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-7 text-xs"
-                  onClick={() => setShowCreateLead(true)}
-                >
-                  <Plus className="h-3 w-3 mr-1" />
-                  New Lead
-                </Button>
-              </div>
-              {loadingLeads ? (
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <Loader2 className="h-4 w-4 animate-spin" />
-                  Loading leads...
+          render={({ field }) => {
+            const selectedLead = leads.find((l) => l.id === field.value);
+            return (
+              <FormItem className="flex flex-col">
+                <div className="flex items-center justify-between">
+                  <FormLabel>Lead / Client</FormLabel>
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-7 text-xs"
+                    onClick={() => setShowCreateLead(true)}
+                  >
+                    <Plus className="h-3 w-3 mr-1" />
+                    New Lead
+                  </Button>
                 </div>
-              ) : leads.length === 0 ? (
-                <div className="text-sm text-muted-foreground">
-                  No leads found.{' '}
-                  <button type="button" className="underline" onClick={() => setShowCreateLead(true)}>
-                    Create a new lead
-                  </button>{' '}
-                  to get started.
-                </div>
-              ) : (
-                <Select onValueChange={field.onChange} value={field.value}>
-                  <FormControl>
-                    <SelectTrigger>
-                      <SelectValue placeholder="Select a lead" />
-                    </SelectTrigger>
-                  </FormControl>
-                  <SelectContent>
-                    {leads.map((lead) => (
-                      <SelectItem key={lead.id} value={lead.id}>
-                        {lead.firstName} {lead.lastName} {lead.organization ? `(${lead.organization})` : ''} - {lead.email}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              )}
-              <FormDescription>
-                The person or organization this booking is for
-              </FormDescription>
-              <FormMessage />
-            </FormItem>
-          )}
+                {loadingLeads ? (
+                  <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading leads...
+                  </div>
+                ) : leads.length === 0 ? (
+                  <div className="text-sm text-muted-foreground">
+                    No leads found.{' '}
+                    <button type="button" className="underline" onClick={() => setShowCreateLead(true)}>
+                      Create a new lead
+                    </button>{' '}
+                    to get started.
+                  </div>
+                ) : (
+                  <Popover open={leadOpen} onOpenChange={setLeadOpen}>
+                    <PopoverTrigger asChild>
+                      <FormControl>
+                        <Button
+                          variant="outline"
+                          role="combobox"
+                          aria-expanded={leadOpen}
+                          className={cn(
+                            'w-full justify-between font-normal',
+                            !field.value && 'text-muted-foreground'
+                          )}
+                        >
+                          <span className="truncate">
+                            {selectedLead
+                              ? `${selectedLead.firstName} ${selectedLead.lastName}`
+                              : 'Search for a lead...'}
+                          </span>
+                          <ChevronsUpDown className="ml-2 h-4 w-4 shrink-0 opacity-50" />
+                        </Button>
+                      </FormControl>
+                    </PopoverTrigger>
+                    <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                      <Command filter={(value, search) => {
+                        const lead = leads.find((l) => l.id === value);
+                        if (!lead) return 0;
+                        const haystack = `${lead.firstName} ${lead.lastName} ${lead.email} ${lead.organization || ''}`.toLowerCase();
+                        return haystack.includes(search.toLowerCase()) ? 1 : 0;
+                      }}>
+                        <CommandInput placeholder="Type a name or email..." />
+                        <CommandList>
+                          <CommandEmpty>No lead found.</CommandEmpty>
+                          <CommandGroup>
+                            {leads.map((lead) => (
+                              <CommandItem
+                                key={lead.id}
+                                value={lead.id}
+                                onSelect={() => {
+                                  field.onChange(lead.id);
+                                  setLeadOpen(false);
+                                }}
+                              >
+                                <Check
+                                  className={cn(
+                                    'mr-2 h-4 w-4',
+                                    field.value === lead.id ? 'opacity-100' : 'opacity-0'
+                                  )}
+                                />
+                                <div className="flex flex-col">
+                                  <span>{lead.firstName} {lead.lastName}</span>
+                                  <span className="text-xs text-muted-foreground">
+                                    {lead.email}{lead.organization ? ` · ${lead.organization}` : ''}
+                                  </span>
+                                </div>
+                              </CommandItem>
+                            ))}
+                          </CommandGroup>
+                        </CommandList>
+                      </Command>
+                    </PopoverContent>
+                  </Popover>
+                )}
+                <FormDescription>
+                  The person or organization this booking is for
+                </FormDescription>
+                <FormMessage />
+              </FormItem>
+            );
+          }}
         />
 
         {/* Trip Selection (Optional) */}
