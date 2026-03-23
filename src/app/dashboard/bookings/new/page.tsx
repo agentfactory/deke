@@ -24,6 +24,8 @@ const SERVICE_TYPES = [
   { value: 'INDIVIDUAL_COACHING', label: 'Individual Coaching' },
   { value: 'MASTERCLASS', label: 'Masterclass' },
   { value: 'ARRANGEMENT', label: 'Arrangement' },
+  { value: 'SINGALONG', label: 'Singalong' },
+  { value: 'CONCERT', label: 'Concert' },
   { value: 'CONSULTATION', label: 'Consultation' },
 ];
 
