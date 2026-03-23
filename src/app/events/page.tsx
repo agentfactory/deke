@@ -294,17 +294,11 @@ function EventCard({
               <MapPin className="h-3.5 w-3.5 shrink-0 text-[#C05A3C]" />
               <span>
                 {event.organization && event.location
-                  ? `${event.organization} — ${event.location}`
+                  ? event.location.toLowerCase().includes(event.organization.toLowerCase())
+                    ? event.location
+                    : `${event.organization} — ${event.location}`
                   : event.organization || event.location}
               </span>
-            </p>
-          )}
-
-          {/* Date range (only shown for multi-day events) */}
-          {event.startDate && event.endDate && (
-            <p className="mt-2 text-xs text-[#999]">
-              {format(event.startDate, "MMM d")} -{" "}
-              {format(event.endDate, "MMM d, yyyy")}
             </p>
           )}
 
