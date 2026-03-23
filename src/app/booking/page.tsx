@@ -61,6 +61,20 @@ const services = [
     price: "From $15,000",
   },
   {
+    id: "singalong",
+    icon: Sparkles,
+    title: "Singalong",
+    description: "Interactive singalong events for audiences of all ages",
+    price: "From $3,000",
+  },
+  {
+    id: "concert",
+    icon: BookOpen,
+    title: "Concert",
+    description: "Full concert performances for your venue or event",
+    price: "From $10,000",
+  },
+  {
     id: "consultation",
     icon: Clock,
     title: "Free Consultation",
@@ -169,6 +183,8 @@ function BookingContent() {
       individual: 'INDIVIDUAL_COACHING',
       workshop: 'WORKSHOP',
       speaking: 'SPEAKING',
+      singalong: 'SINGALONG',
+      concert: 'CONCERT',
       consultation: 'CONSULTATION'
     };
     return map[formId] || formId.toUpperCase();
@@ -306,6 +322,8 @@ function BookingContent() {
             </div>
           </>
         );
+      case "singalong":
+      case "concert":
       case "workshop":
       case "speaking":
         return (
