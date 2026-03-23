@@ -14,6 +14,8 @@ import {
   Headphones,
   Zap,
   Heart,
+  Mic,
+  Users,
 } from "lucide-react";
 
 const packages = [
@@ -105,6 +107,18 @@ const sampleCategories = [
     subtitle: "Audience favorites",
     description: "Fresh takes on beloved classics perfect for holiday performances.",
     icon: Heart,
+  },
+  {
+    title: "Singalong",
+    subtitle: "Interactive fun",
+    description: "Engaging arrangements designed to get the whole audience singing along.",
+    icon: Mic,
+  },
+  {
+    title: "Concert",
+    subtitle: "Stage ready",
+    description: "Polished arrangements crafted for powerful concert performances.",
+    icon: Users,
   },
 ];
 
@@ -330,7 +344,7 @@ export default function ArrangementsPage() {
             whileInView="animate"
             viewport={{ once: true }}
             variants={staggerContainer}
-            className="grid gap-6 md:grid-cols-3 max-w-4xl mx-auto"
+            className="grid gap-6 md:grid-cols-3 lg:grid-cols-5 max-w-6xl mx-auto"
           >
             {sampleCategories.map((category) => (
               <motion.div key={category.title} variants={fadeInUp}>
