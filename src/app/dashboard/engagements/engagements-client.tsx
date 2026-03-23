@@ -90,6 +90,7 @@ const PAYMENT_STATUS_STYLES: Record<string, string> = {
 const SERVICE_TYPES = [
   "WORKSHOP",
   "SPEAKING",
+  "FESTIVAL",
   "GROUP_COACHING",
   "INDIVIDUAL_COACHING",
   "MASTERCLASS",

@@ -33,7 +33,7 @@ import { Textarea } from '@/components/ui/textarea'
 // --- Types & Constants ---
 
 const STATUSES = ['PENDING', 'QUOTED', 'ACCEPTED', 'DECLINED', 'EXPIRED'] as const
-const SERVICE_TYPES = ['ARRANGEMENT', 'GROUP_COACHING', 'INDIVIDUAL_COACHING', 'WORKSHOP', 'SPEAKING', 'MASTERCLASS', 'CONSULTATION'] as const
+const SERVICE_TYPES = ['ARRANGEMENT', 'FESTIVAL', 'GROUP_COACHING', 'INDIVIDUAL_COACHING', 'WORKSHOP', 'SPEAKING', 'MASTERCLASS', 'CONSULTATION'] as const
 
 const STATUS_STYLES: Record<string, string> = {
   PENDING: 'text-yellow-700 bg-yellow-50 border-yellow-200',

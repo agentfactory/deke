@@ -150,7 +150,7 @@ export class HarmonyAgent extends BaseAgent {
         serviceType: {
           type: 'string',
           required: true,
-          enum: ['ARRANGEMENT', 'GROUP_COACHING', 'INDIVIDUAL_COACHING', 'WORKSHOP', 'SPEAKING', 'CONSULTATION'],
+          enum: ['ARRANGEMENT', 'FESTIVAL', 'GROUP_COACHING', 'INDIVIDUAL_COACHING', 'WORKSHOP', 'SPEAKING', 'MASTERCLASS', 'CONSULTATION'],
           description: 'Type of service being booked',
         },
         location: { type: 'string', required: false, description: 'Event location or "Virtual"' },

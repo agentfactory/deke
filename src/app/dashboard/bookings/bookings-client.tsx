@@ -16,6 +16,7 @@ interface BookingsClientProps {
 
 const SERVICE_TYPES = [
   'ARRANGEMENT',
+  'FESTIVAL',
   'GROUP_COACHING',
   'INDIVIDUAL_COACHING',
   'WORKSHOP',

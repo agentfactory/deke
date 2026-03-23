@@ -28,6 +28,7 @@ import { cn } from '@/lib/utils';
 
 const SERVICE_TYPES = [
   'ARRANGEMENT',
+  'FESTIVAL',
   'GROUP_COACHING',
   'INDIVIDUAL_COACHING',
   'WORKSHOP',

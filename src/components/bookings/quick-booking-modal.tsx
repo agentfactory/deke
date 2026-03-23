@@ -21,6 +21,7 @@ import {
 const SERVICE_TYPES = [
   { value: 'WORKSHOP', label: 'Workshop' },
   { value: 'SPEAKING', label: 'Speaking' },
+  { value: 'FESTIVAL', label: 'Festival' },
   { value: 'GROUP_COACHING', label: 'Group Coaching' },
   { value: 'INDIVIDUAL_COACHING', label: 'Individual Coaching' },
   { value: 'MASTERCLASS', label: 'Masterclass' },
