@@ -150,7 +150,7 @@ model Inquiry {
   id            String      @id @default(cuid())
   leadId        String
   lead          Lead        @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  serviceType   String      // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
+  serviceType   String      // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, SINGALONG, CONCERT, CONSULTATION
   status        String      @default("PENDING") // PENDING, QUOTED, ACCEPTED, DECLINED, EXPIRED
 
   // Service-specific details (JSON for flexibility)
@@ -186,7 +186,7 @@ model Booking {
   tripId        String?
   trip          Trip?         @relation(fields: [tripId], references: [id])
 
-  serviceType   String        // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
+  serviceType   String        // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, SINGALONG, CONCERT, CONSULTATION
   status        String        @default("PENDING") // PENDING, CONFIRMED, IN_PROGRESS, COMPLETED, CANCELLED, RESCHEDULED
 
   // Scheduling
@@ -392,7 +392,7 @@ model AnalyticsEvent {
 model RevenueMetric {
   id            String    @id @default(cuid())
   period        String    // YYYY-MM format
-  serviceType   String    // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
+  serviceType   String    // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, SINGALONG, CONCERT, CONSULTATION
 
   // Metrics
   inquiries     Int       @default(0)
@@ -597,7 +597,7 @@ model GeoPreference {
 model MessageTemplate {
   id          String          @id @default(cuid())
   name        String
-  serviceType String?         // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, CONSULTATION
+  serviceType String?         // ARRANGEMENT, FESTIVAL, GROUP_COACHING, INDIVIDUAL_COACHING, WORKSHOP, SPEAKING, MASTERCLASS, SINGALONG, CONCERT, CONSULTATION
   subject     String?         // for emails
   body        String
   channel     String          @default("EMAIL") // EMAIL, SMS, LINKEDIN
