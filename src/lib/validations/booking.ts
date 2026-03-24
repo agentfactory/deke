@@ -3,12 +3,14 @@ import { z } from 'zod'
 // Service type enum
 export const serviceTypeSchema = z.enum([
   'ARRANGEMENT',
+  'CONCERT',
   'FESTIVAL',
   'GROUP_COACHING',
   'INDIVIDUAL_COACHING',
-  'WORKSHOP',
-  'SPEAKING',
   'MASTERCLASS',
+  'SINGALONG',
+  'SPEAKING',
+  'WORKSHOP',
   'CONSULTATION'
 ])
 
