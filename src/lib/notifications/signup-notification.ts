@@ -6,7 +6,7 @@ const NOTIFICATION_EMAILS = (process.env.BOOKING_NOTIFICATION_EMAILS || 'deke@de
   .filter(Boolean)
 
 export interface SignupNotificationData {
-  type: 'contact' | 'notification-popup' | 'group-request'
+  type: 'contact' | 'notification-popup' | 'group-request' | 'newsletter-popup'
   name: string
   email: string
   location?: string | null
@@ -36,6 +36,11 @@ const TYPE_CONFIG: Record<SignupNotificationData['type'], { emoji: string; label
     emoji: '🎤',
     label: 'Find a Group Request',
     dashboardPath: '/dashboard/groups',
+  },
+  'newsletter-popup': {
+    emoji: '🎵',
+    label: 'Newsletter Signup',
+    dashboardPath: '/dashboard',
   },
 }
 
