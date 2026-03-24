@@ -174,14 +174,13 @@ export function QuickBookingModal({
                 />
               </div>
               <div>
-                <Label htmlFor="qb-email">Email *</Label>
+                <Label htmlFor="qb-email">Email</Label>
                 <Input
                   id="qb-email"
                   type="email"
                   placeholder="john@example.com"
                   value={form.clientEmail}
                   onChange={(e) => handleChange('clientEmail', e.target.value)}
-                  required
                 />
               </div>
             </div>
