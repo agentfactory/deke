@@ -59,7 +59,6 @@ interface PublicEvent {
   location: string | null;
   publicTitle: string | null;
   publicDescription: string | null;
-  organization: string | null;
 }
 
 async function getUpcomingEvents(): Promise<PublicEvent[]> {
@@ -85,7 +84,6 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
         location: true,
         publicTitle: true,
         publicDescription: true,
-        organization: true,
       },
       orderBy: {
         startDate: "asc",
@@ -102,7 +100,6 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
       location: b.location,
       publicTitle: b.publicTitle ?? null,
       publicDescription: b.publicDescription ?? null,
-      organization: b.organization ?? null,
     }));
   } catch (error) {
     console.error("Error fetching public events:", error);
@@ -288,17 +285,11 @@ function EventCard({
             </p>
           )}
 
-          {/* Location & organization */}
-          {(event.location || event.organization) && (
+          {/* Location */}
+          {event.location && (
             <p className="flex items-center gap-1.5 text-sm text-[#666]">
               <MapPin className="h-3.5 w-3.5 shrink-0 text-[#C05A3C]" />
-              <span>
-                {event.organization && event.location
-                  ? event.location.toLowerCase().includes(event.organization.toLowerCase())
-                    ? event.location
-                    : `${event.organization} — ${event.location}`
-                  : event.organization || event.location}
-              </span>
+              <span>{event.location}</span>
             </p>
           )}
 
