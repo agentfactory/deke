@@ -33,7 +33,7 @@ interface Contact {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   organization: string | null;
   phone: string | null;
 }
@@ -102,7 +102,7 @@ function NewBookingForm() {
     setForm(prev => ({
       ...prev,
       clientName: `${contact.firstName} ${contact.lastName}`.trim(),
-      clientEmail: contact.email,
+      clientEmail: contact.email || '',
       clientOrganization: contact.organization || '',
       clientPhone: contact.phone || '',
     }));

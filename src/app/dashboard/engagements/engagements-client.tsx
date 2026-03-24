@@ -29,7 +29,7 @@ interface BookingLead {
   firstName: string
   lastName: string
   organization: string | null
-  email: string
+  email: string | null
 }
 
 interface SerializedBooking {
@@ -45,7 +45,7 @@ interface SerializedBooking {
   prepNotes: string | null
   deliverables: string | null
   followUpNotes: string | null
-  contact: BookingLead
+  contact: BookingLead | null
 }
 
 interface EngagementsClientProps {

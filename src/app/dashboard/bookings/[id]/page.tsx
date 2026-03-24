@@ -43,7 +43,7 @@ interface Booking {
     id: string;
     firstName: string;
     lastName: string;
-    email: string;
+    email: string | null;
     phone: string | null;
     organization: string | null;
   };

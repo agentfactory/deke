@@ -73,10 +73,13 @@ export async function PATCH(
       throw new ApiError(404, 'Contact not found', 'CONTACT_NOT_FOUND')
     }
 
+    // Normalize empty email to null
+    const emailValue = validatedData.email || null
+
     // If email is being changed, check it's not already taken
-    if (validatedData.email && validatedData.email !== existingContact.email) {
+    if (emailValue && emailValue !== existingContact.email) {
       const emailTaken = await prisma.contact.findUnique({
-        where: { email: validatedData.email }
+        where: { email: emailValue }
       })
       if (emailTaken) {
         throw new ApiError(409, 'A contact with this email already exists', 'EMAIL_ALREADY_EXISTS')
@@ -86,7 +89,7 @@ export async function PATCH(
     const contact = await prisma.contact.update({
       where: { id },
       data: {
-        email: validatedData.email,
+        email: emailValue,
         firstName: validatedData.firstName,
         lastName: validatedData.lastName,
         phone: validatedData.phone,

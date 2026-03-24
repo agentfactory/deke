@@ -43,7 +43,7 @@ type Contact = {
   id: string
   firstName: string
   lastName: string
-  email: string
+  email: string | null
   phone: string | null
   organization: string | null
   source: string | null
@@ -76,7 +76,7 @@ function relativeTime(date: string): string {
 function toCSV(contacts: Contact[]): string {
   const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Organization', 'Title', 'Source', 'Bookings', 'Created']
   const rows = contacts.map(c => [
-    c.firstName, c.lastName, c.email, c.phone || '', c.organization || '',
+    c.firstName, c.lastName, c.email || '', c.phone || '', c.organization || '',
     c.contactTitle || '', c.source || '', String(c._count.bookings), formatDate(c.createdAt),
   ])
   return [headers, ...rows].map(r => r.map(c => `"${c.replace(/"/g, '""')}"`).join(',')).join('\n')
@@ -136,7 +136,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
       const q = searchQuery.toLowerCase()
       result = result.filter(c =>
         `${c.firstName} ${c.lastName}`.toLowerCase().includes(q) ||
-        c.email.toLowerCase().includes(q) ||
+        (c.email || '').toLowerCase().includes(q) ||
         (c.organization || '').toLowerCase().includes(q) ||
         (c.contactTitle || '').toLowerCase().includes(q)
       )
@@ -269,7 +269,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
     setEditForm({
       firstName: detailContact.firstName,
       lastName: detailContact.lastName,
-      email: detailContact.email,
+      email: detailContact.email || '',
       phone: detailContact.phone || '',
       organization: detailContact.organization || '',
       source: detailContact.source || 'manual',
@@ -288,7 +288,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
         body: JSON.stringify({
           firstName: editForm.firstName,
           lastName: editForm.lastName,
-          email: editForm.email,
+          email: editForm.email || null,
           phone: editForm.phone || null,
           organization: editForm.organization || null,
           source: editForm.source,
@@ -451,7 +451,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                   </TableCell>
                   {/* Email */}
                   <TableCell className="text-[#666666] max-w-[200px] truncate">
-                    {contact.email}
+                    {contact.email || '\u2014'}
                   </TableCell>
                   {/* Organization */}
                   <TableCell className="text-[#666666] hidden lg:table-cell">
@@ -719,7 +719,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
                 <div className="flex gap-2 pt-2">
                   <Button
                     onClick={saveEdit}
-                    disabled={isSavingEdit || !editForm.firstName || !editForm.lastName || !editForm.email}
+                    disabled={isSavingEdit || !editForm.firstName || !editForm.lastName}
                     className="flex-1"
                   >
                     {isSavingEdit ? 'Saving...' : 'Save Changes'}

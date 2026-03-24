@@ -51,8 +51,18 @@ export async function POST(
 
     for (const draft of drafts) {
       try {
+        const leadEmail = draft.lead.email
+        if (!leadEmail) {
+          await prisma.emailDraft.update({
+            where: { id: draft.id },
+            data: { status: 'FAILED', errorMessage: 'Lead has no email address' },
+          })
+          failed++
+          continue
+        }
+
         const result = await sendEmail({
-          to: draft.lead.email,
+          to: leadEmail,
           subject: draft.subject,
           html: draft.body,
           campaignId,

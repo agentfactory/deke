@@ -1,7 +1,7 @@
 import type { Booking, Contact, Inquiry } from '@prisma/client';
 
 type BookingWithRelations = Booking & {
-  contact: Contact;
+  contact: Contact | null;
   inquiry?: Inquiry | null;
   campaigns: Array<{
     id: string;

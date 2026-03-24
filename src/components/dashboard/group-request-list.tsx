@@ -14,7 +14,7 @@ import { MapPin, Mail, Music, Clock, User, Calendar } from 'lucide-react'
 interface GroupRequest {
   id: string
   name: string
-  email: string
+  email: string | null
   location: string
   message: string
   status: string

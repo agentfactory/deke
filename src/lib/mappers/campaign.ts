@@ -12,7 +12,7 @@ type CampaignWithCount = PrismaCampaign & {
     contact: {
       firstName: string;
       lastName: string;
-    };
+    } | null;
   } | null;
 };
 

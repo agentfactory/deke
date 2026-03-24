@@ -80,7 +80,7 @@ interface Contact {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   organization: string | null;
 }
 
@@ -309,7 +309,7 @@ export function BookingForm({
                                 <div className="flex flex-col">
                                   <span>{contact.firstName} {contact.lastName}</span>
                                   <span className="text-xs text-muted-foreground">
-                                    {contact.email}{contact.organization ? ` · ${contact.organization}` : ''}
+                                    {contact.email || ''}{contact.organization ? `${contact.email ? ' · ' : ''}${contact.organization}` : ''}
                                   </span>
                                 </div>
                               </CommandItem>

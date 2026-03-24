@@ -32,7 +32,7 @@ interface CampaignLead {
     id: string
     firstName: string
     lastName: string
-    email: string
+    email: string | null
     phone: string | null
     organization: string | null
     contactTitle: string | null
@@ -389,7 +389,7 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
                         <span className="text-emerald-500 ml-1">(verified)</span>
                       )}
                     </p>
-                    {previewLead.lead.email.includes('@placeholder.local') ? (
+                    {!previewLead.lead.email || previewLead.lead.email.includes('@placeholder.local') ? (
                       <p className="text-sm text-amber-500 italic">No email found</p>
                     ) : (
                       <a

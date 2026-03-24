@@ -24,7 +24,7 @@ interface Draft {
   lead: {
     firstName: string
     lastName: string
-    email: string
+    email: string | null
     organization: string | null
   }
 }

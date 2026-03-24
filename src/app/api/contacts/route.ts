@@ -1,5 +1,4 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { randomUUID } from 'crypto'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
 import {
@@ -43,7 +42,7 @@ export async function POST(request: NextRequest) {
       isNew = true
       contact = await prisma.contact.create({
         data: {
-          email: contactEmail || `noemail-${randomUUID()}@placeholder.internal`,
+          email: contactEmail,
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
           phone: validatedData.phone ?? null,
