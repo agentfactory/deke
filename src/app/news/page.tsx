@@ -114,7 +114,7 @@ function SignupForm({ size = "md" }: { size?: "md" | "lg" }) {
           type="submit"
           className={`${btnClass} bg-[#C9943A] text-[#0D1117] font-semibold whitespace-nowrap hover:bg-[#D4A84A] transition-colors`}
         >
-          Join the Arrangement
+          Subscribe
         </button>
       </div>
       <p className="text-xs text-[#4A5A6A] leading-relaxed max-w-md">
@@ -155,7 +155,7 @@ export default function NewsPage() {
               <div className="inline-flex items-center gap-2.5 bg-[#C9943A]/10 px-3.5 py-1.5 rounded-sm">
                 <span className="w-5 h-px bg-[#C9943A]" />
                 <span className="text-[11px] font-medium tracking-[0.15em] text-[#C9943A] uppercase">
-                  A Monthly Letter from Deke Sharon
+                  One Voice — A Monthly Letter from Deke Sharon
                 </span>
               </div>
             </motion.div>
@@ -164,16 +164,15 @@ export default function NewsPage() {
               variants={fadeUp}
               className="font-[family-name:var(--font-cormorant)] text-5xl lg:text-6xl xl:text-7xl font-semibold leading-[1.08] text-white mb-6"
             >
-              One voice started it all. This newsletter continues the
-              conversation.
+              From one voice to many.
             </motion.h1>
 
             <motion.p
               variants={fadeUp}
               className="text-[#9BA8B8] text-lg leading-relaxed mb-8 max-w-lg"
             >
-              The Arrangement — a monthly letter from Deke Sharon on the craft,
-              stories, and future of a cappella.
+              Hear Deke&apos;s thoughts on the latest a cappella happenings
+              around the world, and the state of vocal harmony.
             </motion.p>
 
             <motion.div variants={fadeUp}>
@@ -401,7 +400,7 @@ export default function NewsPage() {
         <div className="max-w-7xl mx-auto px-8 lg:px-16 flex flex-col sm:flex-row items-center justify-between gap-4">
           <div>
             <span className="font-[family-name:var(--font-cormorant)] text-base font-semibold text-white">
-              The Arrangement
+              One Voice
             </span>
             <span className="text-[#3A4A5A] text-sm ml-2">by Deke Sharon</span>
           </div>
