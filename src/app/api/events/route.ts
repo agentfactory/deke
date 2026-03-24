@@ -15,9 +15,11 @@ export async function GET() {
         status: {
           notIn: ['CANCELLED'],
         },
-        startDate: {
-          gte: now,
-        },
+        OR: [
+          { startDate: { gte: now } },
+          { endDate: { gte: now } },
+          { startDate: null },
+        ],
       },
       select: {
         id: true,

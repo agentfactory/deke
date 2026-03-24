@@ -77,9 +77,11 @@ async function getUpcomingEvents(): Promise<PublicEvent[]> {
         status: {
           notIn: ["CANCELLED"],
         },
-        startDate: {
-          gte: now,
-        },
+        OR: [
+          { startDate: { gte: now } },
+          { endDate: { gte: now } },
+          { startDate: null },
+        ],
       },
       select: {
         id: true,
