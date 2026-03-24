@@ -10,18 +10,17 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import { Menu, ArrowRight, LogIn, Music, Mic2, GraduationCap, Presentation, Play, Calendar, Users, User, Newspaper } from "lucide-react";
+import { Menu, ArrowRight, LogIn, Newspaper } from "lucide-react";
 
 const navItems = [
-  { label: "Arrangements", href: "/arrangements", icon: Music },
-  { label: "Coaching", href: "/coaching", icon: Mic2 },
-  { label: "Workshops", href: "/workshops", icon: GraduationCap },
-  { label: "Speaking", href: "/speaking", icon: Presentation },
-  { label: "Media", href: "/media", icon: Play },
-  { label: "Events", href: "/events", icon: Calendar },
-  { label: "Find a Group", href: "/find-group", icon: Users },
-  { label: "Newsletter", href: "/news", icon: Newspaper },
-  { label: "About", href: "/about", icon: User },
+  { label: "Arrangements", href: "/arrangements" },
+  { label: "Coaching", href: "/coaching" },
+  { label: "Workshops", href: "/workshops" },
+  { label: "Speaking", href: "/speaking" },
+  { label: "Media", href: "/media" },
+  { label: "Events", href: "/events" },
+  { label: "Find a Group", href: "/find-group" },
+  { label: "About", href: "/about" },
 ];
 
 export function Header() {
@@ -55,22 +54,30 @@ export function Header() {
         {/* Desktop Navigation */}
         <NavigationMenu className="hidden lg:flex">
           <NavigationMenuList className="gap-1">
-            {navItems.map((item) => {
-              const Icon = item.icon;
-              return (
-                <NavigationMenuItem key={item.href}>
-                  <NavigationMenuLink asChild>
-                    <Link
-                      href={item.href}
-                      className="group inline-flex h-9 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:text-foreground focus:text-foreground focus:outline-none link-underline"
-                    >
-                      <Icon className="h-3.5 w-3.5" />
-                      {item.label}
-                    </Link>
-                  </NavigationMenuLink>
-                </NavigationMenuItem>
-              );
-            })}
+            {navItems.map((item) => (
+              <NavigationMenuItem key={item.href}>
+                <NavigationMenuLink asChild>
+                  <Link
+                    href={item.href}
+                    className="group inline-flex h-9 items-center justify-center px-3 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:text-foreground focus:text-foreground focus:outline-none link-underline"
+                  >
+                    {item.label}
+                  </Link>
+                </NavigationMenuLink>
+              </NavigationMenuItem>
+            ))}
+            {/* Newsletter Tab */}
+            <NavigationMenuItem>
+              <NavigationMenuLink asChild>
+                <Link
+                  href="/news"
+                  className="inline-flex h-9 items-center justify-center gap-1.5 px-4 py-2 text-sm font-bold text-primary bg-primary/10 rounded-full transition-colors hover:bg-primary/20 hover:text-primary focus:outline-none"
+                >
+                  <Newspaper className="h-4 w-4" />
+                  Newsletter
+                </Link>
+              </NavigationMenuLink>
+            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
 
@@ -119,20 +126,25 @@ export function Header() {
 
               {/* Mobile Navigation */}
               <nav className="flex flex-col gap-1">
-                {navItems.map((item) => {
-                  const Icon = item.icon;
-                  return (
-                    <Link
-                      key={item.href}
-                      href={item.href}
-                      className="flex items-center gap-3 text-base font-semibold text-foreground/80 hover:text-foreground transition-colors py-3 px-2 rounded-md hover:bg-muted"
-                      onClick={() => setIsOpen(false)}
-                    >
-                      <Icon className="h-5 w-5" />
-                      {item.label}
-                    </Link>
-                  );
-                })}
+                {navItems.map((item) => (
+                  <Link
+                    key={item.href}
+                    href={item.href}
+                    className="flex items-center text-base font-semibold text-foreground/80 hover:text-foreground transition-colors py-3 px-2 rounded-md hover:bg-muted"
+                    onClick={() => setIsOpen(false)}
+                  >
+                    {item.label}
+                  </Link>
+                ))}
+                {/* Newsletter Tab */}
+                <Link
+                  href="/news"
+                  className="flex items-center gap-2 text-base font-bold text-primary bg-primary/10 py-3 px-3 rounded-lg hover:bg-primary/20 transition-colors mt-1"
+                  onClick={() => setIsOpen(false)}
+                >
+                  <Newspaper className="h-5 w-5" />
+                  Newsletter
+                </Link>
               </nav>
 
               {/* Mobile CTAs */}
