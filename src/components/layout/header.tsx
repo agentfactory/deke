@@ -10,17 +10,18 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import { Menu, ArrowRight, LogIn } from "lucide-react";
+import { Menu, ArrowRight, LogIn, Music, Mic2, GraduationCap, Presentation, Play, Calendar, Users, User, Newspaper } from "lucide-react";
 
 const navItems = [
-  { label: "Arrangements", href: "/arrangements" },
-  { label: "Coaching", href: "/coaching" },
-  { label: "Workshops", href: "/workshops" },
-  { label: "Speaking", href: "/speaking" },
-  { label: "Media", href: "/media" },
-  { label: "Events", href: "/events" },
-  { label: "Find a Group", href: "/find-group" },
-  { label: "About", href: "/about" },
+  { label: "Arrangements", href: "/arrangements", icon: Music },
+  { label: "Coaching", href: "/coaching", icon: Mic2 },
+  { label: "Workshops", href: "/workshops", icon: GraduationCap },
+  { label: "Speaking", href: "/speaking", icon: Presentation },
+  { label: "Media", href: "/media", icon: Play },
+  { label: "Events", href: "/events", icon: Calendar },
+  { label: "Find a Group", href: "/find-group", icon: Users },
+  { label: "Newsletter", href: "/news", icon: Newspaper },
+  { label: "About", href: "/about", icon: User },
 ];
 
 export function Header() {
@@ -54,18 +55,22 @@ export function Header() {
         {/* Desktop Navigation */}
         <NavigationMenu className="hidden lg:flex">
           <NavigationMenuList className="gap-1">
-            {navItems.map((item) => (
-              <NavigationMenuItem key={item.href}>
-                <NavigationMenuLink asChild>
-                  <Link
-                    href={item.href}
-                    className="group inline-flex h-9 items-center justify-center px-4 py-2 text-sm font-medium text-muted-foreground transition-colors hover:text-foreground focus:text-foreground focus:outline-none link-underline"
-                  >
-                    {item.label}
-                  </Link>
-                </NavigationMenuLink>
-              </NavigationMenuItem>
-            ))}
+            {navItems.map((item) => {
+              const Icon = item.icon;
+              return (
+                <NavigationMenuItem key={item.href}>
+                  <NavigationMenuLink asChild>
+                    <Link
+                      href={item.href}
+                      className="group inline-flex h-9 items-center justify-center gap-1.5 px-3 py-2 text-sm font-semibold text-foreground/80 transition-colors hover:text-foreground focus:text-foreground focus:outline-none link-underline"
+                    >
+                      <Icon className="h-3.5 w-3.5" />
+                      {item.label}
+                    </Link>
+                  </NavigationMenuLink>
+                </NavigationMenuItem>
+              );
+            })}
           </NavigationMenuList>
         </NavigationMenu>
 
@@ -73,7 +78,7 @@ export function Header() {
         <div className="hidden lg:flex items-center gap-3">
           <Link
             href="/login"
-            className="text-muted-foreground/50 hover:text-muted-foreground transition-colors p-2"
+            className="text-foreground/40 hover:text-foreground/70 transition-colors p-2"
             title="Admin Login"
           >
             <LogIn className="h-4 w-4" />
@@ -114,16 +119,20 @@ export function Header() {
 
               {/* Mobile Navigation */}
               <nav className="flex flex-col gap-1">
-                {navItems.map((item) => (
-                  <Link
-                    key={item.href}
-                    href={item.href}
-                    className="flex items-center text-base font-medium text-muted-foreground hover:text-foreground transition-colors py-3 px-2 rounded-md hover:bg-muted"
-                    onClick={() => setIsOpen(false)}
-                  >
-                    {item.label}
-                  </Link>
-                ))}
+                {navItems.map((item) => {
+                  const Icon = item.icon;
+                  return (
+                    <Link
+                      key={item.href}
+                      href={item.href}
+                      className="flex items-center gap-3 text-base font-semibold text-foreground/80 hover:text-foreground transition-colors py-3 px-2 rounded-md hover:bg-muted"
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Icon className="h-5 w-5" />
+                      {item.label}
+                    </Link>
+                  );
+                })}
               </nav>
 
               {/* Mobile CTAs */}
