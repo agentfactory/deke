@@ -193,7 +193,7 @@ export function BookingForm({
   }, [startDateValue, form]);
 
   const handleCreateContact = async () => {
-    if (!newContact.firstName || !newContact.email) return;
+    if (!newContact.firstName) return;
 
     setCreatingContact(true);
     try {
@@ -698,7 +698,7 @@ export function BookingForm({
               </div>
             </div>
             <div className="space-y-2">
-              <Label htmlFor="newContactEmail">Email *</Label>
+              <Label htmlFor="newContactEmail">Email</Label>
               <Input
                 id="newContactEmail"
                 type="email"
@@ -723,7 +723,7 @@ export function BookingForm({
             </Button>
             <Button
               onClick={handleCreateContact}
-              disabled={creatingContact || !newContact.firstName || !newContact.email}
+              disabled={creatingContact || !newContact.firstName}
             >
               {creatingContact ? (
                 <>
