@@ -65,7 +65,7 @@ type Lead = {
   id: string
   firstName: string
   lastName: string
-  email: string
+  email: string | null
   phone: string | null
   organization: string | null
   source: string | null
@@ -99,7 +99,7 @@ function relativeTime(date: string): string {
 function toCSV(leads: Lead[]): string {
   const headers = ['First Name', 'Last Name', 'Email', 'Phone', 'Organization', 'Source', 'Status', 'Score', 'Contacts', 'Converted At', 'Created']
   const rows = leads.map(l => [
-    l.firstName, l.lastName, l.email, l.phone || '', l.organization || '',
+    l.firstName, l.lastName, l.email || '', l.phone || '', l.organization || '',
     l.source || '', l.status, String(l.score), String(l._count.contacts),
     l.convertedAt ? formatDate(l.convertedAt) : '', formatDate(l.createdAt),
   ])
@@ -157,7 +157,7 @@ export default function LeadsClient({ initialLeads }: { initialLeads: Lead[] }) 
       const q = searchQuery.toLowerCase()
       result = result.filter(l =>
         `${l.firstName} ${l.lastName}`.toLowerCase().includes(q) ||
-        l.email.toLowerCase().includes(q) ||
+        (l.email || '').toLowerCase().includes(q) ||
         (l.organization || '').toLowerCase().includes(q)
       )
     }
@@ -299,7 +299,7 @@ export default function LeadsClient({ initialLeads }: { initialLeads: Lead[] }) 
     setEditForm({
       firstName: detailLead.firstName,
       lastName: detailLead.lastName,
-      email: detailLead.email,
+      email: detailLead.email || '',
       phone: detailLead.phone || '',
       organization: detailLead.organization || '',
       source: detailLead.source || 'website',

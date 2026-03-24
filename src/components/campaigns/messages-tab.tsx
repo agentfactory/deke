@@ -17,7 +17,7 @@ interface MessagesTabProps {
     respondedAt: string | null
     errorMessage: string | null
     leadName: string
-    leadEmail: string
+    leadEmail: string | null
   }>
 }
 

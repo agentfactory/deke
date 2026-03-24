@@ -52,7 +52,7 @@ export async function processOutreachQueue(
         firstName: campaignLead.lead.firstName,
         lastName: campaignLead.lead.lastName,
         organization: campaignLead.lead.organization || '',
-        email: campaignLead.lead.email,
+        email: campaignLead.lead.email || '',
         phone: campaignLead.lead.phone || '',
       })
 
@@ -60,6 +60,14 @@ export async function processOutreachQueue(
 
       // Send via appropriate channel
       if (job.channel === 'EMAIL') {
+        if (!campaignLead.lead.email) {
+          results.push({
+            success: false,
+            jobId: job.campaignLeadId,
+            error: 'Lead has no email address',
+          })
+          continue
+        }
         providerResult = await sendEmail({
           to: campaignLead.lead.email,
           subject: job.variables.subject || 'Message from Deke Sharon',

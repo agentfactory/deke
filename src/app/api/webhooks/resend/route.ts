@@ -97,11 +97,12 @@ export async function POST(request: NextRequest) {
           include: { lead: true },
         })
 
-        if (campaignLead) {
+        const bouncedEmail = campaignLead?.lead.email
+        if (bouncedEmail) {
           await prisma.suppression.upsert({
-            where: { email: campaignLead.lead.email },
+            where: { email: bouncedEmail },
             create: {
-              email: campaignLead.lead.email,
+              email: bouncedEmail,
               reason: 'bounce',
               source: campaignId,
             },
@@ -122,11 +123,12 @@ export async function POST(request: NextRequest) {
           include: { lead: true },
         })
 
-        if (complaintLead) {
+        const complainedEmail = complaintLead?.lead.email
+        if (complainedEmail) {
           await prisma.suppression.upsert({
-            where: { email: complaintLead.lead.email },
+            where: { email: complainedEmail },
             create: {
-              email: complaintLead.lead.email,
+              email: complainedEmail,
               reason: 'complaint',
               source: campaignId,
             },

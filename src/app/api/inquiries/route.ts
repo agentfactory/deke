@@ -56,7 +56,7 @@ export async function POST(request: NextRequest) {
       const details = validatedData.details ? JSON.parse(validatedData.details) : {}
       sendGroupRequestNotification({
         name: `${lead.firstName} ${lead.lastName}`.trim(),
-        email: lead.email,
+        email: lead.email ?? '',
         location: details.location || lead.organization || 'Not specified',
         age: details.age ? Number(details.age) : null,
         experience: details.experience || 'Not specified',

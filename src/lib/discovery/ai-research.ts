@@ -20,7 +20,7 @@ interface Campaign {
 interface DiscoveredLead {
   firstName: string
   lastName: string
-  email: string
+  email: string | null
   phone: string | null
   organization: string
   source: 'AI_RESEARCH'
@@ -720,7 +720,7 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
     try {
       // Upsert lead (create if not exists, update if exists)
       const dbLead = await prisma.lead.upsert({
-        where: { email: lead.email },
+        where: { email: lead.email ?? undefined },
         update: {
           // Update fields that might have changed
           latitude: lead.latitude,

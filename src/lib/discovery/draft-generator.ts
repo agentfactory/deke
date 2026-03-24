@@ -108,7 +108,7 @@ Deke Sharon
     }
 
     // Skip leads that need enrichment (no usable email)
-    if (cl.lead.needsEnrichment || cl.lead.email.includes('@placeholder.local')) {
+    if (cl.lead.needsEnrichment || !cl.lead.email || cl.lead.email.includes('@placeholder.local')) {
       draftsSkipped++
       continue
     }
@@ -125,7 +125,7 @@ Deke Sharon
       organization: cl.lead.organization || '',
       contactTitle: cl.lead.contactTitle || '',
       editorialSummary: cl.lead.editorialSummary || '',
-      email: cl.lead.email,
+      email: cl.lead.email || '',
       baseLocation: campaign.baseLocation,
       availabilityDates: availabilityDates ? ` ${availabilityDates}` : ' soon',
       workshopLink,

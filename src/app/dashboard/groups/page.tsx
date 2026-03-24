@@ -9,7 +9,7 @@ import { GroupRequestList } from '@/components/dashboard/group-request-list'
 interface GroupRequest {
   id: string
   name: string
-  email: string
+  email: string | null
   location: string
   message: string
   status: string

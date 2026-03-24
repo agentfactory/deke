@@ -57,7 +57,7 @@ type InquiryLead = {
   id: string
   firstName: string
   lastName: string
-  email: string
+  email: string | null
   phone: string | null
   organization: string | null
 }
@@ -163,7 +163,7 @@ export default function InquiriesClient({
       const q = searchQuery.toLowerCase()
       result = result.filter(inq =>
         `${inq.lead.firstName} ${inq.lead.lastName}`.toLowerCase().includes(q) ||
-        inq.lead.email.toLowerCase().includes(q) ||
+        (inq.lead.email || '').toLowerCase().includes(q) ||
         (inq.lead.organization || '').toLowerCase().includes(q) ||
         inq.serviceType.toLowerCase().includes(q)
       )

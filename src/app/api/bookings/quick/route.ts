@@ -1,6 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
 import { z } from "zod";
-import { randomUUID } from "crypto";
 import { prisma } from "@/lib/db";
 import { handleApiError, ApiError } from "@/lib/api-error";
 import { sendBookingNotification } from "@/lib/notifications/booking-notification";
@@ -53,7 +52,7 @@ export async function POST(request: NextRequest) {
         data: {
           firstName: client.firstName,
           lastName: client.lastName,
-          email: clientEmail || `noemail-${randomUUID()}@placeholder.internal`,
+          email: clientEmail,
           organization: client.organization || null,
           phone: client.phone || null,
           source: "direct_booking",
@@ -95,7 +94,7 @@ export async function POST(request: NextRequest) {
         data: {
           firstName: client.firstName,
           lastName: client.lastName,
-          email: clientEmail || `noemail-${randomUUID()}@placeholder.internal`,
+          email: clientEmail,
           organization: client.organization || null,
           phone: client.phone || null,
           source: "direct_booking",

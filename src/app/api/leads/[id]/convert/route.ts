@@ -29,9 +29,12 @@ export async function POST(
     }
 
     // Check if a contact with this email already exists
-    const existingContactByEmail = await prisma.contact.findUnique({
-      where: { email: lead.email }
-    })
+    const leadEmail = lead.email
+    const existingContactByEmail = leadEmail
+      ? await prisma.contact.findUnique({
+          where: { email: leadEmail }
+        })
+      : null
 
     if (existingContactByEmail) {
       // Link the existing contact to this lead if not already linked
@@ -59,7 +62,7 @@ export async function POST(
       data: {
         firstName: lead.firstName,
         lastName: lead.lastName,
-        email: lead.email,
+        email: lead.email ?? undefined,
         phone: lead.phone,
         organization: lead.organization,
         source: lead.source,

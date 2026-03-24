@@ -17,7 +17,7 @@ export const createContactSchema = z.object({
 
 // Update contact schema
 export const updateContactSchema = z.object({
-  email: z.string().email('Invalid email address').optional(),
+  email: z.string().email('Invalid email address').optional().nullable().or(z.literal('')),
   firstName: z.string().min(1).optional(),
   lastName: z.string().min(1).optional(),
   phone: z.string().optional().nullable(),

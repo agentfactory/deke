@@ -6,7 +6,7 @@
  */
 
 interface Lead {
-  email: string
+  email: string | null
   score?: number
   source: string
   [key: string]: unknown
@@ -31,9 +31,14 @@ interface Lead {
  * ```
  */
 export function deduplicate<T extends Lead>(leads: T[]): T[] {
-  // Use email as the deduplication key
+  // Use email as the deduplication key; leads without email are kept as-is
+  const noEmail: T[] = []
   const byEmail = leads.reduce((acc, lead) => {
     const email = lead.email
+    if (!email) {
+      noEmail.push(lead)
+      return acc
+    }
 
     // If this email hasn't been seen, or this lead has a higher score, keep it
     if (!acc[email] || (lead.score || 0) > (acc[email].score || 0)) {
@@ -43,8 +48,8 @@ export function deduplicate<T extends Lead>(leads: T[]): T[] {
     return acc
   }, {} as Record<string, T>)
 
-  // Return all unique leads as an array
-  return Object.values(byEmail)
+  // Return all unique leads as an array, plus leads without email
+  return [...Object.values(byEmail), ...noEmail]
 }
 
 /**
@@ -78,6 +83,7 @@ export function findDuplicates(leads: Lead[]): Map<string, string[]> {
   const duplicates = new Map<string, string[]>()
 
   leads.forEach((lead) => {
+    if (!lead.email) return
     const existing = duplicates.get(lead.email) || []
     duplicates.set(lead.email, [...existing, lead.source])
   })

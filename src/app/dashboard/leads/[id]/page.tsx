@@ -13,7 +13,7 @@ interface Lead {
   id: string;
   firstName: string;
   lastName: string;
-  email: string;
+  email: string | null;
   phone: string | null;
   organization: string | null;
   source: string | null;
@@ -28,7 +28,7 @@ interface Lead {
     id: string;
     firstName: string;
     lastName: string;
-    email: string;
+    email: string | null;
   }>;
   inquiries: Array<{
     id: string;
