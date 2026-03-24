@@ -10,6 +10,7 @@ export const outreachChannelSchema = z.enum([
 // Service type enum (reuse from booking)
 export const serviceTypeSchema = z.enum([
   'ARRANGEMENT',
+  'FESTIVAL',
   'GROUP_COACHING',
   'INDIVIDUAL_COACHING',
   'WORKSHOP',
