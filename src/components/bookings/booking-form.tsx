@@ -28,12 +28,14 @@ import { cn } from '@/lib/utils';
 
 const SERVICE_TYPES = [
   'ARRANGEMENT',
+  'CONCERT',
   'FESTIVAL',
   'GROUP_COACHING',
   'INDIVIDUAL_COACHING',
-  'WORKSHOP',
-  'SPEAKING',
   'MASTERCLASS',
+  'SINGALONG',
+  'SPEAKING',
+  'WORKSHOP',
   'CONSULTATION'
 ] as const;
 
