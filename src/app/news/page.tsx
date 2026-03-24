@@ -1,8 +1,9 @@
 "use client";
 
 import { Cormorant_Garamond } from "next/font/google";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { motion } from "framer-motion";
+import Link from "next/link";
 
 const cormorant = Cormorant_Garamond({
   subsets: ["latin"],
@@ -153,6 +154,110 @@ function SectionLabel({ text }: { text: string }) {
         {text}
       </span>
     </div>
+  );
+}
+
+interface ArchiveIssue {
+  id: string;
+  issueNumber: number;
+  title: string;
+  subject: string | null;
+  storyContent: string | null;
+  sentAt: string;
+  _count: { comments: number };
+}
+
+function ArchiveSection() {
+  const [issues, setIssues] = useState<ArchiveIssue[]>([]);
+  const [loaded, setLoaded] = useState(false);
+
+  useEffect(() => {
+    fetch("/api/newsletters/issues/public")
+      .then((r) => r.json())
+      .then((data) => {
+        setIssues(data.issues || []);
+        setLoaded(true);
+      })
+      .catch(() => setLoaded(true));
+  }, []);
+
+  if (!loaded || issues.length === 0) return null;
+
+  return (
+    <section className="bg-[#0D1117] py-20 lg:py-24">
+      <div className="max-w-7xl mx-auto px-8 lg:px-16">
+        <motion.div
+          className="mb-14"
+          initial={{ opacity: 0, y: 20 }}
+          whileInView={{ opacity: 1, y: 0 }}
+          viewport={{ once: true }}
+          transition={{ duration: 0.6 }}
+        >
+          <SectionLabel text="Past issues" />
+          <h2 className="font-[family-name:var(--font-cormorant)] text-4xl lg:text-5xl font-semibold leading-[1.1] text-white mt-4">
+            Read previous editions
+          </h2>
+        </motion.div>
+
+        <div className="space-y-0 divide-y divide-[#1E2A38]">
+          {issues.map((issue, i) => {
+            const teaser = issue.storyContent
+              ? issue.storyContent.slice(0, 160).trim() + (issue.storyContent.length > 160 ? "..." : "")
+              : null;
+            return (
+              <motion.div
+                key={issue.id}
+                initial={{ opacity: 0, y: 16 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                viewport={{ once: true }}
+                transition={{ duration: 0.4, delay: i * 0.05 }}
+              >
+                <Link
+                  href={`/news/${issue.issueNumber}`}
+                  className="group flex flex-col sm:flex-row sm:items-center gap-4 py-6 transition-colors hover:bg-[#141C26]/40 -mx-4 px-4 rounded"
+                >
+                  <div className="flex items-center gap-4 sm:w-48 flex-shrink-0">
+                    <span className="text-[11px] font-medium tracking-[0.15em] text-[#C9943A] uppercase whitespace-nowrap">
+                      Issue #{issue.issueNumber}
+                    </span>
+                    {issue.sentAt && (
+                      <span className="text-[11px] text-[#3A4A5A]">
+                        {new Date(issue.sentAt).toLocaleDateString("en-US", {
+                          month: "short",
+                          year: "numeric",
+                        })}
+                      </span>
+                    )}
+                  </div>
+
+                  <div className="flex-1 min-w-0">
+                    <h3 className="font-[family-name:var(--font-cormorant)] text-xl font-semibold text-white leading-snug group-hover:text-[#C9943A] transition-colors">
+                      {issue.subject || issue.title}
+                    </h3>
+                    {teaser && (
+                      <p className="text-[#5A6878] text-[13px] leading-relaxed mt-1 line-clamp-1">
+                        {teaser}
+                      </p>
+                    )}
+                  </div>
+
+                  <div className="flex items-center gap-3 flex-shrink-0">
+                    {issue._count.comments > 0 && (
+                      <span className="text-[11px] text-[#4A5A6A]">
+                        {issue._count.comments} {issue._count.comments === 1 ? "comment" : "comments"}
+                      </span>
+                    )}
+                    <span className="text-[#C9943A] text-sm opacity-0 group-hover:opacity-100 transition-opacity">
+                      Read &rarr;
+                    </span>
+                  </div>
+                </Link>
+              </motion.div>
+            );
+          })}
+        </div>
+      </div>
+    </section>
   );
 }
 
@@ -368,6 +473,9 @@ export default function NewsPage() {
           </div>
         </div>
       </section>
+
+      {/* ── PAST ISSUES (ARCHIVE) ──────────────────────────── */}
+      <ArchiveSection />
 
       {/* ── FINAL CTA ────────────────────────────────────────── */}
       <section className="bg-[#0A0E15] py-24 lg:py-32">

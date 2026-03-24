@@ -733,21 +733,37 @@ model NewsletterIdea {
 }
 
 model NewsletterIssue {
-  id               String             @id @default(cuid())
-  issueNumber      Int                @unique
+  id               String               @id @default(cuid())
+  issueNumber      Int                  @unique
   title            String
   subject          String?
   storyContent     String?
   craftContent     String?
   communityContent String?
   noteContent      String?
-  status           String             @default("DRAFT")
+  status           String               @default("DRAFT")
   sentAt           DateTime?
   subscriberCount  Int?
-  createdAt        DateTime           @default(now())
-  updatedAt        DateTime           @updatedAt
+  createdAt        DateTime             @default(now())
+  updatedAt        DateTime             @updatedAt
   ideas            NewsletterIdea[]
+  comments         NewsletterComment[]
 
   @@index([status])
   @@index([issueNumber])
+}
+
+model NewsletterComment {
+  id        String          @id @default(cuid())
+  issueId   String
+  issue     NewsletterIssue @relation(fields: [issueId], references: [id], onDelete: Cascade)
+  name      String
+  email     String
+  body      String
+  approved  Boolean         @default(false)
+  createdAt DateTime        @default(now())
+
+  @@index([issueId])
+  @@index([approved])
+  @@index([createdAt])
 }

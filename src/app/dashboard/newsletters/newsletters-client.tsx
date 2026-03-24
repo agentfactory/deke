@@ -15,6 +15,10 @@ import {
   Mail,
   MapPin,
   Clock,
+  MessageCircle,
+  Check,
+  X,
+  ExternalLink,
 } from "lucide-react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
@@ -258,6 +262,10 @@ export function NewslettersClient({ initialIdeas, initialIssues, subscriberCount
           <TabsTrigger value="subscribers" className="gap-2 data-[state=active]:text-[#C05A3C]">
             <Users className="h-4 w-4" />
             Subscribers
+          </TabsTrigger>
+          <TabsTrigger value="comments" className="gap-2 data-[state=active]:text-[#C05A3C]">
+            <MessageCircle className="h-4 w-4" />
+            Comments
           </TabsTrigger>
         </TabsList>
 
@@ -519,6 +527,11 @@ export function NewslettersClient({ initialIdeas, initialIssues, subscriberCount
         <TabsContent value="subscribers" className="mt-4 space-y-4">
           <SubscribersTab count={subscriberCount} />
         </TabsContent>
+
+        {/* ═══ COMMENTS TAB ═══ */}
+        <TabsContent value="comments" className="mt-4 space-y-4">
+          <CommentsTab />
+        </TabsContent>
       </Tabs>
 
       {/* ─── Edit Idea Modal ─── */}
@@ -719,6 +732,190 @@ function SubscribersTab({ count }: { count: number }) {
             </table>
           </div>
         </Card>
+      )}
+    </div>
+  );
+}
+
+// ─── Comments Moderation Sub-component ───────────────────
+
+interface DashboardComment {
+  id: string;
+  name: string;
+  email: string;
+  body: string;
+  approved: boolean;
+  createdAt: string;
+  issue: { issueNumber: number; title: string };
+}
+
+function CommentsTab() {
+  const [comments, setComments] = useState<DashboardComment[]>([]);
+  const [pendingCount, setPendingCount] = useState(0);
+  const [loaded, setLoaded] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [filter, setFilter] = useState<"pending" | "approved" | "all">("pending");
+
+  async function loadComments(status?: string) {
+    setLoading(true);
+    try {
+      const res = await fetch(`/api/newsletters/comments?status=${status || filter}`);
+      if (res.ok) {
+        const data = await res.json();
+        setComments(data.comments);
+        setPendingCount(data.pendingCount);
+      }
+    } finally {
+      setLoading(false);
+      setLoaded(true);
+    }
+  }
+
+  async function approveComment(id: string) {
+    const res = await fetch(`/api/newsletters/comments/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ approved: true }),
+    });
+    if (res.ok) {
+      setComments((prev) => prev.map((c) => (c.id === id ? { ...c, approved: true } : c)));
+      setPendingCount((prev) => Math.max(0, prev - 1));
+    }
+  }
+
+  async function deleteComment(id: string) {
+    const res = await fetch(`/api/newsletters/comments/${id}`, { method: "DELETE" });
+    if (res.ok) {
+      const wasUnapproved = comments.find((c) => c.id === id && !c.approved);
+      setComments((prev) => prev.filter((c) => c.id !== id));
+      if (wasUnapproved) setPendingCount((prev) => Math.max(0, prev - 1));
+    }
+  }
+
+  function switchFilter(f: "pending" | "approved" | "all") {
+    setFilter(f);
+    if (loaded) loadComments(f);
+  }
+
+  if (!loaded) {
+    return (
+      <div className="text-center py-8">
+        <Button
+          onClick={() => loadComments()}
+          variant="outline"
+          disabled={loading}
+          className="border-[#E8E4DD]"
+        >
+          {loading ? "Loading..." : "Load Comments"}
+        </Button>
+      </div>
+    );
+  }
+
+  return (
+    <div className="space-y-4">
+      {/* Filter bar */}
+      <div className="flex items-center gap-2">
+        {(["pending", "approved", "all"] as const).map((f) => (
+          <button
+            key={f}
+            onClick={() => switchFilter(f)}
+            className={`px-3 py-1.5 rounded-md text-xs font-medium transition-all ${
+              filter === f
+                ? "bg-[#1a1a1a] text-white"
+                : "bg-white text-[#666] border border-[#E8E4DD] hover:border-[#CCC]"
+            }`}
+          >
+            {f.charAt(0).toUpperCase() + f.slice(1)}
+            {f === "pending" && pendingCount > 0 && (
+              <span className="ml-1.5 inline-flex items-center justify-center h-4 min-w-[16px] rounded-full bg-[#C05A3C] text-white text-[9px] px-1">
+                {pendingCount}
+              </span>
+            )}
+          </button>
+        ))}
+      </div>
+
+      {/* Comments list */}
+      {comments.length === 0 ? (
+        <div className="text-center py-12">
+          <MessageCircle className="h-10 w-10 text-[#DDD] mx-auto mb-3" />
+          <p className="text-sm text-[#999]">
+            {filter === "pending" ? "No comments awaiting approval." : "No comments yet."}
+          </p>
+        </div>
+      ) : (
+        <div className="space-y-2">
+          {comments.map((comment) => (
+            <Card key={comment.id} className="border-[#E8E4DD]">
+              <CardContent className="p-4">
+                <div className="flex items-start justify-between gap-4">
+                  <div className="flex-1 min-w-0">
+                    <div className="flex items-center gap-2 mb-1 flex-wrap">
+                      <span className="text-sm font-semibold text-[#1a1a1a]">
+                        {comment.name}
+                      </span>
+                      <span className="text-[11px] text-[#BBB]">{comment.email}</span>
+                      <span className="text-[10px] text-[#BBB]">&middot;</span>
+                      <span className="text-[10px] text-[#BBB]">
+                        Issue #{comment.issue.issueNumber}
+                      </span>
+                      {comment.approved ? (
+                        <Badge className="bg-emerald-100 text-emerald-700 border-0 text-[9px]">
+                          Approved
+                        </Badge>
+                      ) : (
+                        <Badge className="bg-amber-100 text-amber-700 border-0 text-[9px]">
+                          Pending
+                        </Badge>
+                      )}
+                    </div>
+                    <p className="text-sm text-[#666] leading-relaxed line-clamp-3">
+                      {comment.body}
+                    </p>
+                    <p className="text-[10px] text-[#BBB] mt-1">
+                      {new Date(comment.createdAt).toLocaleDateString("en-US", {
+                        month: "short",
+                        day: "numeric",
+                        year: "numeric",
+                        hour: "numeric",
+                        minute: "2-digit",
+                      })}
+                    </p>
+                  </div>
+
+                  <div className="flex items-center gap-1 flex-shrink-0">
+                    {!comment.approved && (
+                      <button
+                        onClick={() => approveComment(comment.id)}
+                        className="p-1.5 rounded hover:bg-emerald-50 text-[#999] hover:text-emerald-600 transition-colors"
+                        title="Approve"
+                      >
+                        <Check className="h-4 w-4" />
+                      </button>
+                    )}
+                    <a
+                      href={`/news/${comment.issue.issueNumber}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="p-1.5 rounded hover:bg-[#F5F3EF] text-[#999] hover:text-[#666] transition-colors"
+                      title="View issue"
+                    >
+                      <ExternalLink className="h-4 w-4" />
+                    </a>
+                    <button
+                      onClick={() => deleteComment(comment.id)}
+                      className="p-1.5 rounded hover:bg-red-50 text-[#999] hover:text-red-500 transition-colors"
+                      title="Delete"
+                    >
+                      <Trash2 className="h-4 w-4" />
+                    </button>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          ))}
+        </div>
       )}
     </div>
   );
