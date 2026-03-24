@@ -5,6 +5,7 @@ import { Header } from "@/components/layout/header";
 import { Footer } from "@/components/layout/footer";
 import { HarmonyWidget } from "@/components/chat/harmony-widget";
 import { NotificationPopup } from "@/components/notification-popup";
+import { NewsletterPopup } from "@/components/newsletter-popup";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -71,6 +72,7 @@ export default function RootLayout({
         <Footer />
         <HarmonyWidget />
         <NotificationPopup />
+        <NewsletterPopup />
       </body>
     </html>
   );
