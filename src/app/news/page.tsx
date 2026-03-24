@@ -76,11 +76,25 @@ function SignupForm({ size = "md" }: { size?: "md" | "lg" }) {
   const [email, setEmail] = useState("");
   const [status, setStatus] = useState<"idle" | "success" | "error">("idle");
 
+  const [loading, setLoading] = useState(false);
+
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!email) return;
-    // TODO: wire to mailing list API
-    setStatus("success");
+    if (!email || loading) return;
+    setLoading(true);
+    try {
+      const res = await fetch("/api/newsletter-signup", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ email, source: "news-page" }),
+      });
+      const data = await res.json();
+      setStatus(data.success ? "success" : "error");
+    } catch {
+      setStatus("error");
+    } finally {
+      setLoading(false);
+    }
   };
 
   if (status === "success") {
@@ -112,11 +126,17 @@ function SignupForm({ size = "md" }: { size?: "md" | "lg" }) {
         />
         <button
           type="submit"
-          className={`${btnClass} bg-[#C9943A] text-[#0D1117] font-semibold whitespace-nowrap hover:bg-[#D4A84A] transition-colors`}
+          disabled={loading}
+          className={`${btnClass} bg-[#C9943A] text-[#0D1117] font-semibold whitespace-nowrap hover:bg-[#D4A84A] transition-colors disabled:opacity-60 disabled:cursor-not-allowed`}
         >
-          Subscribe
+          {loading ? "Subscribing..." : "Subscribe"}
         </button>
       </div>
+      {status === "error" && (
+        <p className="text-red-400 text-xs">
+          Something went wrong. Please try again.
+        </p>
+      )}
       <p className="text-xs text-[#4A5A6A] leading-relaxed max-w-md">
         Join 3,400+ singers, directors, and arrangers. One email per month.
         Unsubscribe anytime.

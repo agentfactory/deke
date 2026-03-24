@@ -696,17 +696,58 @@ model ServiceRecommendation {
 // ============================================
 
 model EmailSubscriber {
-  id              String    @id @default(cuid())
-  firstName       String
-  email           String    @unique
-  location        String
-  groupName       String?
-  newsletterOptIn Boolean   @default(false)
-  source          String    @default("popup")
-  createdAt       DateTime  @default(now())
-  updatedAt       DateTime  @updatedAt
+  id               String    @id @default(cuid())
+  firstName        String
+  email            String    @unique
+  location         String
+  groupName        String?
+  newsletterOptIn  Boolean   @default(false)
+  unsubscribeToken String?   @unique @default(cuid())
+  source           String    @default("popup")
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
 
   @@index([email])
   @@index([location])
   @@index([createdAt])
+}
+
+// ============================================
+// NEWSLETTER CONTENT MANAGEMENT
+// ============================================
+
+model NewsletterIdea {
+  id        String            @id @default(cuid())
+  title     String
+  body      String?
+  section   String            @default("UNCATEGORIZED")
+  status    String            @default("IDEA")
+  issueId   String?
+  issue     NewsletterIssue?  @relation(fields: [issueId], references: [id])
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  @@index([section])
+  @@index([status])
+  @@index([issueId])
+}
+
+model NewsletterIssue {
+  id               String             @id @default(cuid())
+  issueNumber      Int                @unique
+  title            String
+  subject          String?
+  storyContent     String?
+  craftContent     String?
+  communityContent String?
+  noteContent      String?
+  status           String             @default("DRAFT")
+  sentAt           DateTime?
+  subscriberCount  Int?
+  createdAt        DateTime           @default(now())
+  updatedAt        DateTime           @updatedAt
+  ideas            NewsletterIdea[]
+
+  @@index([status])
+  @@index([issueNumber])
 }
