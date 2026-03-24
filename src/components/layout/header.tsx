@@ -10,7 +10,7 @@ import {
   NavigationMenuLink,
   NavigationMenuList,
 } from "@/components/ui/navigation-menu";
-import { Menu, ArrowRight, LogIn, Newspaper } from "lucide-react";
+import { Menu, ArrowRight, LogIn } from "lucide-react";
 
 const navItems = [
   { label: "Arrangements", href: "/arrangements" },
@@ -66,18 +66,6 @@ export function Header() {
                 </NavigationMenuLink>
               </NavigationMenuItem>
             ))}
-            {/* Newsletter Tab */}
-            <NavigationMenuItem>
-              <NavigationMenuLink asChild>
-                <Link
-                  href="/news"
-                  className="inline-flex h-9 items-center justify-center gap-1.5 px-4 py-2 text-sm font-bold text-primary bg-primary/10 rounded-full transition-colors hover:bg-primary/20 hover:text-primary focus:outline-none"
-                >
-                  <Newspaper className="h-4 w-4" />
-                  Newsletter
-                </Link>
-              </NavigationMenuLink>
-            </NavigationMenuItem>
           </NavigationMenuList>
         </NavigationMenu>
 
@@ -136,15 +124,6 @@ export function Header() {
                     {item.label}
                   </Link>
                 ))}
-                {/* Newsletter Tab */}
-                <Link
-                  href="/news"
-                  className="flex items-center gap-2 text-base font-bold text-primary bg-primary/10 py-3 px-3 rounded-lg hover:bg-primary/20 transition-colors mt-1"
-                  onClick={() => setIsOpen(false)}
-                >
-                  <Newspaper className="h-5 w-5" />
-                  Newsletter
-                </Link>
               </nav>
 
               {/* Mobile CTAs */}

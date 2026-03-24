@@ -63,7 +63,7 @@ function InsightButton({
         ${
           isActive
             ? "bg-[#1c1c1f] text-[#C05A3C]"
-            : "text-[#555557] hover:bg-[#1a1a1c] hover:text-[#888]"
+            : "text-[#888888] hover:bg-[#1a1a1c] hover:text-[#CCCCCC]"
         }
       `}
       onMouseEnter={() => setShowTooltip(true)}
@@ -141,7 +141,7 @@ export function DashboardSidebar({
                       ${
                         active
                           ? "bg-[#1c1c1f] text-[#F5F3EF]"
-                          : "text-[#777779] hover:bg-[#1a1a1c] hover:text-[#CCCCCC]"
+                          : "text-[#999999] hover:bg-[#1a1a1c] hover:text-[#E0E0E0]"
                       }
                     `}
                     style={{ fontFamily: "var(--font-heading, 'Space Grotesk'), sans-serif" }}
@@ -231,7 +231,7 @@ export function DashboardSidebar({
                     ${
                       active
                         ? "text-[#C05A3C]"
-                        : "text-[#666668] hover:text-[#999]"
+                        : "text-[#999999] hover:text-[#CCCCCC]"
                     }
                   `}
                 >
