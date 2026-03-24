@@ -753,7 +753,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
               </div>
             </div>
             <div>
-              <label className="text-sm font-medium mb-1 block">Email *</label>
+              <label className="text-sm font-medium mb-1 block">Email</label>
               <Input type="email" value={form.email} onChange={e => setForm(f => ({ ...f, email: e.target.value }))} />
             </div>
             <div>
@@ -788,7 +788,7 @@ export default function ContactsClient({ initialContacts }: { initialContacts: C
             <Button variant="outline" onClick={() => setIsAddOpen(false)}>Cancel</Button>
             <Button
               onClick={addContact}
-              disabled={isSubmitting || !form.firstName || !form.lastName || !form.email}
+              disabled={isSubmitting || !form.firstName || !form.lastName}
             >
               {isSubmitting ? 'Creating...' : 'Create Contact'}
             </Button>

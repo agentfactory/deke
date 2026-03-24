@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { randomUUID } from 'crypto'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
 import {
@@ -13,16 +14,19 @@ export async function POST(request: NextRequest) {
     const body = await request.json()
     const validatedData: CreateContactInput = createContactSchema.parse(body)
 
-    const existingContact = await prisma.contact.findUnique({
-      where: { email: validatedData.email }
-    })
+    const contactEmail = validatedData.email || null
 
     let contact
     let isNew = false
 
+    // Only look up existing contact if a real email was provided
+    const existingContact = contactEmail
+      ? await prisma.contact.findUnique({ where: { email: contactEmail } })
+      : null
+
     if (existingContact) {
       contact = await prisma.contact.update({
-        where: { email: validatedData.email },
+        where: { email: contactEmail! },
         data: {
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
@@ -39,7 +43,7 @@ export async function POST(request: NextRequest) {
       isNew = true
       contact = await prisma.contact.create({
         data: {
-          email: validatedData.email,
+          email: contactEmail || `noemail-${randomUUID()}@placeholder.internal`,
           firstName: validatedData.firstName,
           lastName: validatedData.lastName,
           phone: validatedData.phone ?? null,

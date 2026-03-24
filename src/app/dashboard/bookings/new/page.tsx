@@ -345,14 +345,13 @@ function NewBookingForm() {
                       />
                     </div>
                     <div className="col-span-2 sm:col-span-1">
-                      <Label htmlFor="clientEmail">Email *</Label>
+                      <Label htmlFor="clientEmail">Email</Label>
                       <Input
                         id="clientEmail"
                         type="email"
                         placeholder="john@example.com"
                         value={form.clientEmail}
                         onChange={(e) => handleChange('clientEmail', e.target.value)}
-                        required
                         readOnly={!!selectedContactId}
                         className={selectedContactId ? 'bg-muted' : ''}
                       />
