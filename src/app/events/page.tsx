@@ -20,11 +20,14 @@ export const metadata: Metadata = {
 
 const SERVICE_LABELS: Record<string, string> = {
   ARRANGEMENT: "Arrangement Session",
+  CONCERT: "Concert",
+  FESTIVAL: "Festival",
   GROUP_COACHING: "Group Coaching",
   INDIVIDUAL_COACHING: "Individual Coaching",
-  WORKSHOP: "Workshop",
-  SPEAKING: "Speaking Engagement",
   MASTERCLASS: "Masterclass",
+  SINGALONG: "Singalong",
+  SPEAKING: "Speaking Engagement",
+  WORKSHOP: "Workshop",
   CONSULTATION: "Consultation",
 };
 
@@ -37,13 +40,16 @@ function serviceLabel(type: string) {
 // ------------------------------------------------------------------
 
 const SERVICE_ACCENT: Record<string, string> = {
-  WORKSHOP: "border-[#C05A3C]",
-  MASTERCLASS: "border-[#C9A96E]",
-  SPEAKING: "border-[#1a1a1a]",
+  ARRANGEMENT: "border-[#1a1a1a]",
+  CONCERT: "border-[#C05A3C]",
+  CONSULTATION: "border-[#C9A96E]",
+  FESTIVAL: "border-[#C9A96E]",
   GROUP_COACHING: "border-[#C05A3C]",
   INDIVIDUAL_COACHING: "border-[#C9A96E]",
-  ARRANGEMENT: "border-[#1a1a1a]",
-  CONSULTATION: "border-[#C9A96E]",
+  MASTERCLASS: "border-[#C9A96E]",
+  SINGALONG: "border-[#C05A3C]",
+  SPEAKING: "border-[#1a1a1a]",
+  WORKSHOP: "border-[#C05A3C]",
 };
 
 // ------------------------------------------------------------------

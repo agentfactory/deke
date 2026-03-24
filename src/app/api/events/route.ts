@@ -13,7 +13,7 @@ export async function GET() {
       where: {
         isPublic: true,
         status: {
-          in: ['CONFIRMED', 'IN_PROGRESS'],
+          notIn: ['CANCELLED'],
         },
         startDate: {
           gte: now,
