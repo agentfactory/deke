@@ -16,6 +16,8 @@ const PUBLIC_API_ROUTES = [
   "/api/group-requests",
   "/api/auth",
   "/api/webhooks",
+  "/api/subscribers",
+  "/api/newsletter-signup",
 ]
 
 function isPublicApiRoute(pathname: string): boolean {
