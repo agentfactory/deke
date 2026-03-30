@@ -1,7 +1,7 @@
 /**
- * AI Research Discovery (Google Places API)
+ * AI Research Discovery (Firecrawl Search)
  *
- * Discovers new leads by scraping geographic data from Google Places API.
+ * Discovers new leads by searching the web via Firecrawl API.
  * Focuses on music-specific organizations: choirs, barbershop groups,
  * a cappella ensembles, and youth music education programs.
  */
@@ -55,7 +55,6 @@ export interface AIResearchResult {
 }
 
 // Music-specific keywords for targeted search
-// Uses Text Search API for more precise matching than generic place types
 const MUSIC_KEYWORDS = [
   // Vocal music groups (specific organizations to avoid haircut barbershops)
   'choir',
@@ -72,29 +71,146 @@ const MUSIC_KEYWORDS = [
   'music school',
 ]
 
+// Firecrawl search result shape
+interface FirecrawlSearchResult {
+  url: string
+  title: string
+  description: string
+  _searchKeyword?: string
+}
+
 /**
- * Calculate music relevance score for a place
+ * Search the web using Firecrawl API
+ */
+async function firecrawlSearch(
+  query: string,
+  apiKey: string,
+  limit: number = 10
+): Promise<FirecrawlSearchResult[]> {
+  const response = await fetch('https://api.firecrawl.dev/v1/search', {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${apiKey}`,
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ query, limit }),
+  })
+
+  if (!response.ok) {
+    const errorBody = await response.text().catch(() => 'unknown')
+    throw new Error(`Firecrawl search error: ${response.status} ${response.statusText} - ${errorBody}`)
+  }
+
+  const data = await response.json()
+
+  if (!data.success) {
+    throw new Error(`Firecrawl search failed: ${data.error || 'unknown'}`)
+  }
+
+  return (data.data || []).map((item: any) => ({
+    url: item.url || '',
+    title: item.title || '',
+    description: item.description || '',
+  }))
+}
+
+/**
+ * Extract a clean organization name from a search result title
+ * Strips common suffixes like " - Home", " | Official Site", etc.
+ */
+function extractOrgName(title: string): string {
+  return title
+    .replace(/\s*[-–—|]\s*(Home|Homepage|Official\s+Site|Official\s+Website|Welcome|About(\s+Us)?|Contact(\s+Us)?|Main\s+Page).*$/i, '')
+    .replace(/\s*[-–—|]\s*$/, '')
+    .trim()
+}
+
+// In-memory geocoding cache
+const geocodeCache = new Map<string, { lat: number; lng: number } | null>()
+
+/**
+ * Geocode an address using free Nominatim API (OpenStreetMap)
+ * Rate limited to 1 request/second per Nominatim policy
+ */
+async function geocodeAddress(address: string): Promise<{ lat: number; lng: number } | null> {
+  if (geocodeCache.has(address)) {
+    return geocodeCache.get(address) || null
+  }
+
+  try {
+    const params = new URLSearchParams({
+      q: address,
+      format: 'json',
+      limit: '1',
+    })
+
+    const response = await fetch(
+      `https://nominatim.openstreetmap.org/search?${params}`,
+      {
+        headers: {
+          'User-Agent': 'DekeBot/1.0 (contact enrichment)',
+        },
+      }
+    )
+
+    if (!response.ok) {
+      geocodeCache.set(address, null)
+      return null
+    }
+
+    const results = await response.json()
+    if (results.length === 0) {
+      geocodeCache.set(address, null)
+      return null
+    }
+
+    const coords = {
+      lat: parseFloat(results[0].lat),
+      lng: parseFloat(results[0].lon),
+    }
+
+    geocodeCache.set(address, coords)
+    return coords
+  } catch {
+    geocodeCache.set(address, null)
+    return null
+  }
+}
+
+/**
+ * Try to extract an address-like string from a search result description
+ */
+function extractAddressHint(description: string, title: string): string | null {
+  // Look for patterns like "123 Main St", "City, State", zip codes
+  const addressPattern = /\d+\s+[A-Z][a-z]+(?:\s+[A-Z][a-z]+)*\s*(?:St|Ave|Blvd|Dr|Rd|Ln|Way|Ct|Pl|Pkwy|Cir)\b[^.]*(?:,\s*[A-Z]{2}\s+\d{5})?/i
+  const match = description.match(addressPattern)
+  if (match) return match[0]
+
+  // Look for "City, State" pattern
+  const cityStatePattern = /([A-Z][a-z]+(?:\s+[A-Z][a-z]+)*),\s*([A-Z]{2})\b/
+  const csMatch = description.match(cityStatePattern)
+  if (csMatch) return csMatch[0]
+
+  // Fall back to org name as a search hint
+  return null
+}
+
+/**
+ * Calculate music relevance score for a search result
  *
  * Higher scores indicate stronger music focus and better lead quality
  *
- * @param place - Google Place result
- * @returns Music relevance score (0-35 points, or 0 if excluded)
+ * @param name - Organization name from search result
+ * @returns Music relevance score (0-35 points, or -1 if excluded)
  */
-function calculateMusicRelevance(place: any): number {
+function calculateMusicRelevance(name: string): number {
   let score = 0
-  const name = (place.name || '').toLowerCase()
-  const types = place.types || []
+  const lowerName = name.toLowerCase()
 
   // CRITICAL: Exclude haircut barbershops (return -1 to signal explicit exclusion)
   const haircutKeywords = /\bcut\b|\bhaircut\b|\bbarber\s*shop\b|\bgrooming\b|\bshave\b|\bfade\b|\btrim\b|\bsalon\b|\brazor\b/i
   if (haircutKeywords.test(name)) {
     return -1 // Not a music organization - it's a haircut place
-  }
-
-  // Also check Google Place types for hair care
-  const haircutTypes = ['hair_care', 'beauty_salon', 'barber_shop']
-  if (types.some((type: string) => haircutTypes.includes(type))) {
-    return -1 // Definitely a haircut place
   }
 
   // +20 pts: General music keywords in name (excluding "barbershop" alone due to ambiguity)
@@ -139,108 +255,45 @@ function calculateProximityBonus(distance: number, maxRadius: number): number {
 }
 
 /**
- * Deduplicate places by Google's place_id
- *
- * When searching multiple keywords, the same place can appear multiple times.
- * This function ensures we only keep one instance of each unique place.
- *
- * @param places - Array of places (potentially with duplicates)
- * @returns Deduplicated array of places
+ * Deduplicate search results by normalized URL
  */
-function deduplicateByPlaceId(places: any[]): any[] {
-  const placeMap = new Map<string, any>()
+function deduplicateByUrl(results: FirecrawlSearchResult[]): FirecrawlSearchResult[] {
+  const urlMap = new Map<string, FirecrawlSearchResult & { _searchKeywords: string[] }>()
 
-  for (const place of places) {
-    const placeId = place.place_id
-    if (!placeId) continue
+  for (const result of results) {
+    if (!result.url) continue
 
-    if (!placeMap.has(placeId)) {
-      placeMap.set(placeId, { ...place, _searchKeywords: [place._searchKeyword] })
+    // Normalize URL: strip protocol, www, trailing slash
+    const normalized = result.url
+      .replace(/^https?:\/\//, '')
+      .replace(/^www\./, '')
+      .replace(/\/+$/, '')
+      .toLowerCase()
+
+    if (!urlMap.has(normalized)) {
+      urlMap.set(normalized, { ...result, _searchKeywords: [result._searchKeyword || ''] })
     } else {
-      // Accumulate all keywords that found this place
-      const existing = placeMap.get(placeId)
-      if (place._searchKeyword && !existing._searchKeywords.includes(place._searchKeyword)) {
-        existing._searchKeywords.push(place._searchKeyword)
+      const existing = urlMap.get(normalized)!
+      if (result._searchKeyword && !existing._searchKeywords.includes(result._searchKeyword)) {
+        existing._searchKeywords.push(result._searchKeyword)
       }
     }
   }
 
-  return Array.from(placeMap.values())
-}
-
-interface PlaceDetails {
-  phone: string | null
-  website: string | null
-  googleRating: number | null
-  userRatingCount: number | null
-  editorialSummary: string | null
-  primaryType: string | null
-}
-
-/**
- * Fetch place details from Google Places API (legacy)
- *
- * Gets phone, website, rating, editorial summary, and primary type.
- * Uses GET https://maps.googleapis.com/maps/api/place/details/json
- */
-async function fetchPlaceDetails(
-  placeId: string,
-  apiKey: string
-): Promise<PlaceDetails> {
-  const emptyResult: PlaceDetails = {
-    phone: null,
-    website: null,
-    googleRating: null,
-    userRatingCount: null,
-    editorialSummary: null,
-    primaryType: null,
-  }
-
-  try {
-    const fields = 'formatted_phone_number,website,rating,user_ratings_total,editorial_summary,type,name'
-    const response = await fetch(
-      `https://maps.googleapis.com/maps/api/place/details/json?place_id=${placeId}&fields=${fields}&key=${apiKey}`
-    )
-
-    if (!response.ok) {
-      console.error(`[AI Research] Details API error: ${response.status} ${response.statusText}`)
-      return emptyResult
-    }
-
-    const data = await response.json()
-
-    if (data.status !== 'OK') {
-      console.error(`[AI Research] Details API status: ${data.status} - ${data.error_message || ''}`)
-      return emptyResult
-    }
-
-    const result = data.result || {}
-
-    return {
-      phone: result.formatted_phone_number || null,
-      website: result.website || null,
-      googleRating: result.rating || null,
-      userRatingCount: result.user_ratings_total || null,
-      editorialSummary: result.editorial_summary?.overview || null,
-      primaryType: result.types?.[0] || null,
-    }
-  } catch (error) {
-    console.error(`[AI Research] Failed to fetch details for place ${placeId}:`, error)
-    return emptyResult
-  }
+  return Array.from(urlMap.values())
 }
 
 // Maximum API calls to prevent runaway costs
 const MAX_API_CALLS = 200
 
 /**
- * Search Google Places API for organizations in the campaign radius
+ * Search Firecrawl for organizations in the campaign area
  *
  * @param campaign - Campaign with location and radius
  * @returns Array of discovered leads
  */
 export async function discoverAIResearch(campaign: Campaign): Promise<AIResearchResult> {
-  const apiKey = process.env.GOOGLE_PLACES_API_KEY
+  const apiKey = process.env.FIRECRAWL_API_KEY
 
   const diagnostics: AIResearchDiagnostics = {
     apiCallsMade: 0,
@@ -256,20 +309,15 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
   // If no API key, return empty with clear diagnostic
   if (!apiKey) {
-    const msg = 'GOOGLE_PLACES_API_KEY not set - skipping AI research discovery'
+    const msg = 'FIRECRAWL_API_KEY not set - skipping AI research discovery'
     console.warn(msg)
     diagnostics.errors.push(msg)
     return { leads: [], diagnostics }
   }
 
-  const allPlaces: any[] = []
+  const allResults: FirecrawlSearchResult[] = []
 
-  // Convert radius from miles to meters (Places API uses meters)
-  // Text Search with location bias uses radius as a preference, not a hard limit,
-  // so we pass the full radius. The query includes location name for additional targeting.
-  const radiusMeters = Math.round(campaign.radius * 1609.34)
-
-  console.log(`[AI Research] Starting search: ${MUSIC_KEYWORDS.length} keywords, radius=${radiusMeters}m, location="${campaign.baseLocation}" (${campaign.latitude}, ${campaign.longitude})`)
+  console.log(`[AI Research] Starting Firecrawl search: ${MUSIC_KEYWORDS.length} keywords, location="${campaign.baseLocation}"`)
 
   // Search for each music keyword
   for (const keyword of MUSIC_KEYWORDS) {
@@ -280,17 +328,14 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 
     diagnostics.apiCallsMade++
     try {
-      const places = await searchPlacesByKeyword(
-        campaign.latitude,
-        campaign.longitude,
-        campaign.baseLocation,
-        radiusMeters,
-        keyword,
-        apiKey,
-        diagnostics
-      )
-      diagnostics.keywordResults.push({ keyword, count: places.length })
-      allPlaces.push(...places)
+      const query = `${keyword} in ${campaign.baseLocation}`
+      const results = await firecrawlSearch(query, apiKey, 10)
+
+      // Tag each result with the keyword that found it
+      const tagged = results.map(r => ({ ...r, _searchKeyword: keyword }))
+
+      diagnostics.keywordResults.push({ keyword, count: results.length })
+      allResults.push(...tagged)
     } catch (error) {
       diagnostics.apiCallsFailed++
       const errMsg = error instanceof Error ? error.message : String(error)
@@ -300,25 +345,25 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     }
   }
 
-  diagnostics.rawPlaces = allPlaces.length
-  console.log(`[AI Research] Found ${allPlaces.length} raw places from ${diagnostics.apiCallsMade} API calls (${diagnostics.apiCallsFailed} failed)`)
+  diagnostics.rawPlaces = allResults.length
+  console.log(`[AI Research] Found ${allResults.length} raw results from ${diagnostics.apiCallsMade} API calls (${diagnostics.apiCallsFailed} failed)`)
 
   // If ALL keyword searches failed, throw with aggregated error
-  if (diagnostics.apiCallsFailed === diagnostics.apiCallsMade) {
-    const aggregatedMsg = `All ${diagnostics.apiCallsMade} Places API calls failed. First error: ${diagnostics.errors[0] || 'unknown'}`
+  if (diagnostics.apiCallsFailed === diagnostics.apiCallsMade && diagnostics.apiCallsMade > 0) {
+    const aggregatedMsg = `All ${diagnostics.apiCallsMade} Firecrawl API calls failed. First error: ${diagnostics.errors[0] || 'unknown'}`
     console.error(`[AI Research] FATAL: ${aggregatedMsg}`)
     throw new Error(aggregatedMsg)
   }
 
-  // CRITICAL: Deduplicate by place_id FIRST (same place appears in multiple keyword searches)
-  const uniquePlaces = deduplicateByPlaceId(allPlaces)
-  diagnostics.uniquePlaces = uniquePlaces.length
+  // Deduplicate by URL
+  const uniqueResults = deduplicateByUrl(allResults)
+  diagnostics.uniquePlaces = uniqueResults.length
 
   console.log(
-    `[AI Research] ${uniquePlaces.length} unique places (removed ${allPlaces.length - uniquePlaces.length} duplicates)`
+    `[AI Research] ${uniqueResults.length} unique results (removed ${allResults.length - uniqueResults.length} duplicates)`
   )
 
-  // Music-specific keywords that provide strong signal when Google returns a result for them
+  // Music-specific keywords that provide strong signal
   const MUSIC_SPECIFIC_KEYWORDS = [
     'choir', 'chorus', 'chorale', 'a cappella', 'vocal ensemble',
     'gospel choir', 'community chorus', 'youth choir', 'high school choir',
@@ -326,23 +371,27 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
     'barbershop harmony society', 'bhs chorus', 'casa a cappella',
   ]
 
-  // Score each UNIQUE place by music relevance + proximity
-  const scoredPlaces = uniquePlaces.map((place) => {
-    const distance = haversineDistance(
-      campaign.latitude,
-      campaign.longitude,
-      place.geometry.location.lat,
-      place.geometry.location.lng
-    )
+  // Geocode results and score by music relevance
+  console.log('[AI Research] Geocoding search results...')
 
-    let musicScore = calculateMusicRelevance(place)
+  const scoredResults = []
+  for (const result of uniqueResults) {
+    const orgName = extractOrgName(result.title)
+    if (!orgName) continue
 
-    // Keyword trust boost: if Google returned this place for a music-specific query
-    // but the name doesn't contain music keywords (e.g., "First Baptist Church" for "choir"),
-    // give it enough score to pass the filter.
-    // Skip if musicScore is -1 (explicitly excluded as haircut shop etc.)
-    if (musicScore >= 0 && musicScore < 10 && place._searchKeywords) {
-      const hasSpecificKeyword = place._searchKeywords.some((kw: string) =>
+    let musicScore = calculateMusicRelevance(orgName)
+
+    // Also check the description for music relevance if name alone doesn't score
+    if (musicScore === 0) {
+      const descScore = calculateMusicRelevance(result.description)
+      if (descScore > 0) {
+        musicScore = Math.max(musicScore, Math.floor(descScore / 2)) // Half credit from description
+      }
+    }
+
+    // Keyword trust boost (same logic as before)
+    if (musicScore >= 0 && musicScore < 10 && (result as any)._searchKeywords) {
+      const hasSpecificKeyword = (result as any)._searchKeywords.some((kw: string) =>
         MUSIC_SPECIFIC_KEYWORDS.some(mk => kw.toLowerCase().includes(mk))
       )
       if (hasSpecificKeyword) {
@@ -350,88 +399,100 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
       }
     }
 
-    return {
-      ...place,
+    // Try to geocode
+    const addressHint = extractAddressHint(result.description, result.title)
+    let coords: { lat: number; lng: number } | null = null
+
+    if (addressHint) {
+      coords = await geocodeAddress(addressHint)
+      // Nominatim rate limit: 1 req/sec
+      await new Promise(resolve => setTimeout(resolve, 1100))
+    }
+
+    // If no address found in description, try geocoding the org name + location
+    if (!coords) {
+      coords = await geocodeAddress(`${orgName} ${campaign.baseLocation}`)
+      await new Promise(resolve => setTimeout(resolve, 1100))
+    }
+
+    // Fall back to campaign center if geocoding fails
+    const lat = coords?.lat ?? campaign.latitude
+    const lng = coords?.lng ?? campaign.longitude
+
+    const distance = haversineDistance(campaign.latitude, campaign.longitude, lat, lng)
+
+    scoredResults.push({
+      name: orgName,
+      url: result.url,
+      description: result.description,
+      geometry: { location: { lat, lng } },
+      _searchKeywords: (result as any)._searchKeywords || [result._searchKeyword],
       musicScore,
       proximityScore: calculateProximityBonus(distance, campaign.radius),
       distance,
-    }
-  })
+    })
+  }
 
   // Filter: ONLY organizations with strong music relevance (score >= 10)
-  // Requires at least one real music signal (choir/chorus=20, music education=15, youth program=10)
-  // or keyword trust boost from Google returning the place for a music-specific query
-  // Also enforce max distance: 2x campaign radius (Google Text Search sometimes returns distant results)
   const maxDistance = campaign.radius * 2
-  const musicOrgs = scoredPlaces.filter((p) => p.musicScore >= 10 && p.distance <= maxDistance)
+  const musicOrgs = scoredResults.filter((p) => p.musicScore >= 10 && p.distance <= maxDistance)
   diagnostics.musicRelevant = musicOrgs.length
 
-  const filteredOut = uniquePlaces.length - musicOrgs.length
+  const filteredOut = scoredResults.length - musicOrgs.length
   console.log(
-    `[AI Research] ${musicOrgs.length} music-relevant organizations (${filteredOut} filtered out as non-music)`
+    `[AI Research] ${musicOrgs.length} music-relevant organizations (${filteredOut} filtered out)`
   )
 
-  // Warn if music filter removes everything
-  if (musicOrgs.length === 0 && uniquePlaces.length > 0) {
-    const warnMsg = `Found ${uniquePlaces.length} places but music relevance filter removed all of them. Top place names: ${uniquePlaces.slice(0, 5).map((p: any) => p.name).join(', ')}`
+  if (musicOrgs.length === 0 && scoredResults.length > 0) {
+    const warnMsg = `Found ${scoredResults.length} results but music relevance filter removed all of them. Top titles: ${scoredResults.slice(0, 5).map(p => p.name).join(', ')}`
     diagnostics.errors.push(warnMsg)
     console.warn(`[AI Research] WARNING: ${warnMsg}`)
     return { leads: [], diagnostics }
   }
 
   if (musicOrgs.length === 0) {
-    console.log('[AI Research] No music-relevant places found — returning empty')
+    console.log('[AI Research] No music-relevant results found — returning empty')
     return { leads: [], diagnostics }
   }
 
-  // Sort by combined score (music relevance + proximity)
+  // Sort by combined score
   const sorted = musicOrgs.sort(
     (a, b) => b.musicScore + b.proximityScore - (a.musicScore + a.proximityScore)
   )
 
   // Limit to top candidates for enrichment
-  // Each candidate gets website-scraped (up to 4 pages), so keep this reasonable
   const MAX_ENRICHMENT_CANDIDATES = 50
   const topResults = sorted.slice(0, MAX_ENRICHMENT_CANDIDATES)
 
   console.log(`[AI Research] Top ${topResults.length} music organizations selected for enrichment`)
 
-  // Enrich top results with REAL contact information from Places New API
-  // Process in batches to avoid rate limiting
-  console.log('[AI Research] Using Places New API — fetching details (phone, website, rating, summary)...')
+  // Enrich top results with REAL contact information via Firecrawl scraping
+  console.log('[AI Research] Enriching via Firecrawl website scraping...')
 
-  const ENRICHMENT_BATCH_SIZE = 20
   const enrichedPlaces: any[] = []
+  const ENRICHMENT_BATCH_SIZE = 20
 
   for (let i = 0; i < topResults.length; i += ENRICHMENT_BATCH_SIZE) {
     const batch = topResults.slice(i, i + ENRICHMENT_BATCH_SIZE)
     const batchResults = await Promise.all(
-      batch.map(async (place) => {
-        const details = await fetchPlaceDetails(place.place_id, apiKey)
+      batch.map(async (result) => {
         diagnostics.apiCallsMade++
         return {
-          ...place,
-          phone: details.phone,
-          website: details.website,
-          googleRating: details.googleRating,
-          userRatingCount: details.userRatingCount,
-          editorialSummary: details.editorialSummary,
-          primaryType: details.primaryType,
+          ...result,
+          website: result.url,
+          phone: null, // Firecrawl search doesn't provide phone; enrichment will find it
+          editorialSummary: result.description || null,
+          googleRating: null,
         }
       })
     )
     enrichedPlaces.push(...batchResults)
-
-    // Small delay between batches to respect rate limits
-    if (i + ENRICHMENT_BATCH_SIZE < topResults.length) {
-      await new Promise(resolve => setTimeout(resolve, 500))
-    }
   }
 
   diagnostics.enriched = enrichedPlaces.length
-  console.log(`[AI Research] ${enrichedPlaces.length} places enriched with contact details`)
+  console.log(`[AI Research] ${enrichedPlaces.length} results prepared for contact enrichment`)
 
-  // Batch convert places to leads and CREATE them in database
+  // Convert to leads with website enrichment for real contacts
   const discovered = await placesToLeadsBatch(enrichedPlaces, campaign)
 
   // Deduplicate by organization name
@@ -452,94 +513,7 @@ export async function discoverAIResearch(campaign: Campaign): Promise<AIResearch
 }
 
 /**
- * Search Google Places API using Text Search (legacy)
- *
- * Uses GET https://maps.googleapis.com/maps/api/place/textsearch/json
- * Returns place IDs, names, locations, types, and addresses.
- * This is the most widely-enabled Google Maps API.
- */
-async function searchPlacesByKeyword(
-  lat: number,
-  lng: number,
-  location: string,
-  radius: number,
-  keyword: string,
-  apiKey: string,
-  diagnostics: AIResearchDiagnostics
-): Promise<any[]> {
-  const allPlaces: any[] = []
-  const query = `${keyword} in ${location}`
-
-  // First page
-  const params = new URLSearchParams({
-    query,
-    location: `${lat},${lng}`,
-    radius: String(radius),
-    key: apiKey,
-  })
-
-  let pageUrl: string | null = `https://maps.googleapis.com/maps/api/place/textsearch/json?${params}`
-  let pageNum = 0
-  const MAX_PAGES = 2 // Limit to 2 pages (40 results) to reduce processing time
-
-  while (pageUrl && pageNum < MAX_PAGES) {
-    if (pageNum > 0) {
-      diagnostics.apiCallsMade++ // Count pagination calls
-    }
-
-    const response = await fetch(pageUrl)
-
-    if (!response.ok) {
-      const errorBody = await response.text().catch(() => 'unknown')
-      console.error(`[AI Research] Places Text Search failed for "${query}" page ${pageNum}:`, errorBody)
-      throw new Error(`Places API error: ${response.status} ${response.statusText}`)
-    }
-
-    const data = await response.json()
-
-    if (data.status === 'REQUEST_DENIED') {
-      console.error(`[AI Research] Places API denied for "${query}": ${data.error_message || 'unknown'}`)
-      throw new Error(`Places API denied: ${data.error_message || 'Check API key and enabled APIs'}`)
-    }
-
-    if (data.status !== 'OK' && data.status !== 'ZERO_RESULTS') {
-      console.error(`[AI Research] Places API status "${data.status}" for "${query}": ${data.error_message || ''}`)
-      throw new Error(`Places API error: ${data.status}`)
-    }
-
-    const places = data.results || []
-    allPlaces.push(...places.map((place: any) => ({
-      name: place.name || '',
-      place_id: place.place_id,
-      geometry: {
-        location: {
-          lat: place.geometry?.location?.lat || 0,
-          lng: place.geometry?.location?.lng || 0,
-        },
-      },
-      types: place.types || [],
-      formatted_address: place.formatted_address || '',
-      _searchKeyword: keyword,
-    })))
-
-    // Follow pagination if available
-    if (data.next_page_token) {
-      // Google requires a short delay before the next_page_token becomes valid
-      await new Promise(resolve => setTimeout(resolve, 2000))
-      pageUrl = `https://maps.googleapis.com/maps/api/place/textsearch/json?pagetoken=${data.next_page_token}&key=${apiKey}`
-      pageNum++
-    } else {
-      pageUrl = null
-    }
-  }
-
-  console.log(`[AI Research] "${keyword}" → ${allPlaces.length} results (${pageNum + 1} page${pageNum > 0 ? 's' : ''})`)
-
-  return allPlaces
-}
-
-/**
- * Batch convert Google Places to Leads with REAL enrichment
+ * Batch convert search results to Leads with REAL enrichment
  *
  * Does a single database query to check for existing orgs,
  * then enriches new orgs by scraping their websites for real contact info.
@@ -665,8 +639,6 @@ async function placesToLeadsBatch(places: any[], campaign: Campaign): Promise<Di
   return leads
 }
 
-// Deprecated functions removed - all contact generation now goes through enrichment pipeline
-
 /**
  * Calculate distance between two points using Haversine formula
  *
@@ -731,10 +703,9 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
           ...(lead.emailVerified !== undefined && { emailVerified: lead.emailVerified }),
           ...(lead.needsEnrichment !== undefined && { needsEnrichment: lead.needsEnrichment }),
           ...(lead.enrichmentSource && { enrichmentSource: lead.enrichmentSource }),
-          // New fields from Places New API + scraper
+          // New fields from scraper
           ...(lead.contactTitle && { contactTitle: lead.contactTitle }),
           ...(lead.editorialSummary && { editorialSummary: lead.editorialSummary }),
-          ...(lead.googleRating && { googleRating: lead.googleRating }),
         },
         create: {
           firstName: lead.firstName,
@@ -752,7 +723,7 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
           emailVerified: lead.emailVerified || false,
           needsEnrichment: lead.needsEnrichment || false,
           enrichmentSource: lead.enrichmentSource || null,
-          // New fields from Places New API + scraper
+          // New fields from scraper
           contactTitle: lead.contactTitle || null,
           editorialSummary: lead.editorialSummary || null,
           googleRating: lead.googleRating || null,

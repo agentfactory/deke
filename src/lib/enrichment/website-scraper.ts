@@ -1,7 +1,7 @@
 /**
- * Website Scraper for Contact Enrichment
+ * Website Scraper for Contact Enrichment (Firecrawl)
  *
- * Scrapes organization websites to find real contact information.
+ * Scrapes organization websites via Firecrawl API to find real contact information.
  * Two-pass approach:
  *   Pass 1: Title-email pairs — find leadership titles, then name+email nearby
  *   Pass 2: Email-name pairs — email regex → nearby names (improved context)
@@ -140,9 +140,8 @@ function extractNameNearEmail(text: string, emailIndex: number): { name: string 
  * Patterns:
  *   - "Music Director: Jane Smith" (title: name)
  *   - "Jane Smith, Music Director" (name, title)
- *   - "<strong>Jane Smith</strong> - Music Director"
+ *   - "**Jane Smith** - Music Director"
  *   - "Jane Smith | Music Director | jane@org.com"
- *   - Table rows: <td>Jane Smith</td><td>Music Director</td><td>jane@</td>
  */
 function extractTitleEmailPairs(text: string): ScrapedEmail[] {
   const results: ScrapedEmail[] = []
@@ -209,55 +208,49 @@ function extractTitleEmailPairs(text: string): ScrapedEmail[] {
 }
 
 /**
- * Fetch a page with timeout
+ * Scrape a URL using Firecrawl API
+ * Returns markdown content, or null on failure
  */
-async function fetchPage(url: string, timeoutMs: number = 5000): Promise<string | null> {
-  try {
-    const controller = new AbortController()
-    const timeout = setTimeout(() => controller.abort(), timeoutMs)
+async function firecrawlScrape(url: string): Promise<string | null> {
+  const apiKey = process.env.FIRECRAWL_API_KEY
+  if (!apiKey) return null
 
-    const response = await fetch(url, {
-      signal: controller.signal,
+  try {
+    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
+      method: 'POST',
       headers: {
-        'User-Agent': 'Mozilla/5.0 (compatible; DekeBot/1.0; contact enrichment)',
-        'Accept': 'text/html',
+        'Authorization': `Bearer ${apiKey}`,
+        'Content-Type': 'application/json',
       },
+      body: JSON.stringify({
+        url,
+        formats: ['markdown'],
+        onlyMainContent: true,
+        timeout: 10000,
+      }),
     })
 
-    clearTimeout(timeout)
-
-    if (!response.ok) return null
-
-    const contentType = response.headers.get('content-type') || ''
-    if (!contentType.includes('text/html') && !contentType.includes('text/plain')) {
+    if (!response.ok) {
+      console.error(`[Scraper] Firecrawl scrape failed for ${url}: ${response.status}`)
       return null
     }
 
-    const text = await response.text()
+    const data = await response.json()
+
+    if (!data.success) {
+      console.error(`[Scraper] Firecrawl scrape unsuccessful for ${url}:`, data.error || 'unknown')
+      return null
+    }
+
+    const markdown = data.data?.markdown
+    if (!markdown) return null
+
     // Limit to first 100KB to avoid processing huge pages
-    return text.substring(0, 100_000)
-  } catch {
+    return markdown.substring(0, 100_000)
+  } catch (error) {
+    console.error(`[Scraper] Firecrawl scrape error for ${url}:`, error)
     return null
   }
-}
-
-/**
- * Strip HTML tags to get plain text (preserving separators for table parsing)
- */
-function stripHtml(html: string): string {
-  return html
-    .replace(/<script[^>]*>[\s\S]*?<\/script>/gi, ' ')
-    .replace(/<style[^>]*>[\s\S]*?<\/style>/gi, ' ')
-    .replace(/<\/td>/gi, ' | ')  // Preserve table cell boundaries
-    .replace(/<\/th>/gi, ' | ')
-    .replace(/<br\s*\/?>/gi, ' ')
-    .replace(/<[^>]+>/g, ' ')
-    .replace(/&nbsp;/g, ' ')
-    .replace(/&amp;/g, '&')
-    .replace(/&lt;/g, '<')
-    .replace(/&gt;/g, '>')
-    .replace(/\s+/g, ' ')
-    .trim()
 }
 
 // Simple in-memory cache for scrape results
@@ -265,7 +258,7 @@ const scrapeCache = new Map<string, { result: ScrapeResult; timestamp: number }>
 const CACHE_TTL = 24 * 60 * 60 * 1000 // 24 hours
 
 /**
- * Scrape a website for contact information
+ * Scrape a website for contact information using Firecrawl
  *
  * Two-pass approach:
  *   Pass 1: Find leadership titles → look for name+email nearby
@@ -300,11 +293,10 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
   for (const pageUrl of pagesToScrape) {
     if (pagesScraped >= maxPages) break
 
-    const html = await fetchPage(pageUrl)
-    if (!html) continue
+    const text = await firecrawlScrape(pageUrl)
+    if (!text) continue
 
     pagesScraped++
-    const text = stripHtml(html)
 
     // === PASS 1: Title-email pairs (leadership-focused) ===
     const titlePairs = extractTitleEmailPairs(text)
@@ -322,28 +314,7 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
 
     // === PASS 2: Email-name pairs (broader search) ===
 
-    // Search mailto: links in raw HTML
-    const mailtoRegex = /mailto:([a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,})/g
-    let mailtoMatch
-    while ((mailtoMatch = mailtoRegex.exec(html)) !== null) {
-      const email = mailtoMatch[1].toLowerCase()
-      if (!allEmails.has(email)) {
-        // Find the position in text to look for nearby context
-        const textIndex = text.toLowerCase().indexOf(email)
-        const { name, title } = textIndex >= 0
-          ? extractNameNearEmail(text, textIndex)
-          : { name: null, title: null }
-
-        allEmails.set(email, {
-          email,
-          name,
-          title,
-          type: classifyEmail(email),
-        })
-      }
-    }
-
-    // Extract emails from plain text
+    // Extract emails from markdown text
     let emailMatch
     const emailRegex = new RegExp(EMAIL_REGEX.source, 'g')
     while ((emailMatch = emailRegex.exec(text)) !== null) {

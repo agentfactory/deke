@@ -119,9 +119,9 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     warnings.push(`${totalLeads - leadsWithCoords} of ${totalLeads} leads have no coordinates — run backfill at /api/admin/leads/backfill-coords`)
   }
 
-  // Check Google Places API key
-  if (!process.env.GOOGLE_PLACES_API_KEY) {
-    warnings.push('GOOGLE_PLACES_API_KEY not configured — AI Research source will be skipped')
+  // Check Firecrawl API key
+  if (!process.env.FIRECRAWL_API_KEY) {
+    warnings.push('FIRECRAWL_API_KEY not configured — AI Research source will be skipped')
   }
 
   // Run all discovery sources in parallel, each wrapped in individual try/catch
