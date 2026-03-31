@@ -167,7 +167,7 @@ export default async function EventsPage() {
                 aria-hidden="true"
               />
 
-              <div className="space-y-12 sm:space-y-16">
+              <div>
                 {events.map((event, index) => (
                   <EventCard
                     key={event.id}
@@ -228,7 +228,8 @@ function EventCard({
 
   return (
     <div
-      className={`relative flex ${past ? "opacity-60" : ""}`}
+      className={`relative flex mt-8 sm:-mt-24 sm:first:mt-0 ${past ? "opacity-60" : ""}`}
+      style={{ zIndex: index + 1 }}
       role="article"
       aria-label={`${serviceLabel(event.serviceType)}${event.location ? ` in ${event.location}` : ""}`}
     >
