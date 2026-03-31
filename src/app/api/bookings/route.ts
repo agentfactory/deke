@@ -64,11 +64,20 @@ export async function POST(request: NextRequest) {
       }
     }
 
+    // Check if trip exists (if provided)
+    if (validatedData.tripId) {
+      const trip = await prisma.trip.findUnique({ where: { id: validatedData.tripId } })
+      if (!trip) {
+        throw new ApiError(404, 'Trip not found', 'TRIP_NOT_FOUND')
+      }
+    }
+
     // Create booking
     const booking = await prisma.booking.create({
       data: {
         contactId: validatedData.contactId,
         inquiryId: validatedData.inquiryId ?? null,
+        tripId: validatedData.tripId ?? null,
         serviceType: validatedData.serviceType,
         startDate: validatedData.startDate ? new Date(validatedData.startDate) : null,
         endDate: validatedData.endDate ? new Date(validatedData.endDate) : null,
