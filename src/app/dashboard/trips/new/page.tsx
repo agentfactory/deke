@@ -104,6 +104,7 @@ export default function NewTripPage() {
                     name="startDate"
                     type="date"
                     required
+                    autoComplete="off"
                     disabled={isSubmitting}
                   />
                 </div>
@@ -114,6 +115,7 @@ export default function NewTripPage() {
                     name="endDate"
                     type="date"
                     required
+                    autoComplete="off"
                     disabled={isSubmitting}
                   />
                 </div>
