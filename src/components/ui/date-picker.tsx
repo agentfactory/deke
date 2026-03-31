@@ -15,6 +15,8 @@ interface DatePickerProps {
   placeholder?: string
   enableTime?: boolean
   disabled?: boolean
+  /** Month to show when the calendar opens (falls back to value, then today) */
+  defaultMonth?: Date
 }
 
 export function DatePicker({
@@ -23,9 +25,11 @@ export function DatePicker({
   placeholder = "Pick a date",
   enableTime = false,
   disabled = false,
+  defaultMonth,
 }: DatePickerProps) {
   const [showTime, setShowTime] = React.useState(false)
   const [open, setOpen] = React.useState(false)
+  const [calendarMonth, setCalendarMonth] = React.useState<Date>(new Date())
 
   // Parse value to Date
   const date = React.useMemo(() => {
@@ -48,6 +52,14 @@ export function DatePicker({
       }
     }
   }, []) // only on mount
+
+  // Reset calendar month when popover opens
+  const handleOpenChange = (isOpen: boolean) => {
+    if (isOpen) {
+      setCalendarMonth(defaultMonth ?? date ?? new Date())
+    }
+    setOpen(isOpen)
+  }
 
   const hours = date ? date.getHours() : 9
   const minutes = date ? date.getMinutes() : 0
@@ -122,7 +134,7 @@ export function DatePicker({
   }
 
   return (
-    <Popover open={open} onOpenChange={setOpen}>
+    <Popover open={open} onOpenChange={handleOpenChange}>
       <PopoverTrigger asChild>
         <Button
           type="button"
@@ -142,6 +154,8 @@ export function DatePicker({
           mode="single"
           selected={date}
           onSelect={handleDateSelect}
+          month={calendarMonth}
+          onMonthChange={setCalendarMonth}
           initialFocus
         />
 

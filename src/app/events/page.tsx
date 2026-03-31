@@ -1,7 +1,7 @@
 import { Metadata } from "next";
 import Link from "next/link";
 import { MapPin, Music, ArrowRight, Mic2, Calendar, Download } from "lucide-react";
-import { format, isPast } from "date-fns";
+import { format, isPast, isSameDay } from "date-fns";
 import { prisma } from "@/lib/db";
 import { generateGoogleCalendarUrl } from "@/lib/utils/ical";
 
@@ -223,6 +223,8 @@ function EventCard({
   const past = event.startDate ? isPast(event.startDate) : false;
   const accentBorder =
     SERVICE_ACCENT[event.serviceType] ?? "border-[#C05A3C]";
+  const isMultiDay =
+    event.startDate && event.endDate && !isSameDay(event.startDate, event.endDate);
 
   return (
     <div
@@ -252,22 +254,43 @@ function EventCard({
           {/* Date badge */}
           {event.startDate && (
             <div
-              className={`mb-3 inline-flex flex-col items-center rounded-md bg-[#1a1a1a] px-3 py-2 leading-none ${
+              className={`mb-3 inline-flex items-center gap-1 rounded-md bg-[#1a1a1a] px-3 py-2 leading-none ${
                 isLeft ? "sm:float-right sm:ml-4" : ""
               }`}
             >
-              <span
-                className="text-[10px] font-semibold uppercase tracking-widest text-[#C9A96E]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {format(event.startDate, "MMM")}
-              </span>
-              <span
-                className="text-xl font-bold text-[#F5F3EF]"
-                style={{ fontFamily: "'Space Grotesk', sans-serif" }}
-              >
-                {format(event.startDate, "d")}
-              </span>
+              <div className="flex flex-col items-center">
+                <span
+                  className="text-[10px] font-semibold uppercase tracking-widest text-[#C9A96E]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {format(event.startDate, "MMM")}
+                </span>
+                <span
+                  className="text-xl font-bold text-[#F5F3EF]"
+                  style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                >
+                  {format(event.startDate, "d")}
+                </span>
+              </div>
+              {isMultiDay && event.endDate && (
+                <>
+                  <span className="text-[#C9A96E]/50 text-xs font-medium px-0.5">&ndash;</span>
+                  <div className="flex flex-col items-center">
+                    <span
+                      className="text-[10px] font-semibold uppercase tracking-widest text-[#C9A96E]"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {format(event.endDate, "MMM")}
+                    </span>
+                    <span
+                      className="text-xl font-bold text-[#F5F3EF]"
+                      style={{ fontFamily: "'Space Grotesk', sans-serif" }}
+                    >
+                      {format(event.endDate, "d")}
+                    </span>
+                  </div>
+                </>
+              )}
             </div>
           )}
 

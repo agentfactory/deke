@@ -4,12 +4,13 @@ import { useEffect, useState } from 'react';
 import { useForm } from 'react-hook-form';
 import { zodResolver } from '@hookform/resolvers/zod';
 import { z } from 'zod';
-import { parseISO, addDays } from 'date-fns';
+import { parseISO, addDays, isSameDay } from 'date-fns';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Textarea } from '@/components/ui/textarea';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Switch } from '@/components/ui/switch';
+import { CalendarRange, CalendarDays as CalendarDaysIcon } from 'lucide-react';
 import { Form, FormControl, FormDescription, FormField, FormItem, FormLabel, FormMessage } from '@/components/ui/form';
 import { DatePicker } from '@/components/ui/date-picker';
 import {
@@ -179,20 +180,56 @@ export function BookingForm({
   const isPublic = form.watch('isPublic');
   const startDateValue = form.watch('startDate');
 
-  // Auto-fill end date to startDate + 1 day
+  // Detect single-day from initial values
+  const [isSingleDay, setIsSingleDay] = useState(() => {
+    if (initialValues?.startDate && initialValues?.endDate) {
+      try {
+        return isSameDay(parseISO(initialValues.startDate), parseISO(initialValues.endDate));
+      } catch {
+        return false;
+      }
+    }
+    return false;
+  });
+
+  // Auto-fill end date based on single-day toggle
   useEffect(() => {
     if (startDateValue) {
-      const currentEnd = form.getValues('endDate');
       try {
         const start = parseISO(startDateValue);
-        if (!currentEnd || parseISO(currentEnd) <= start) {
+        if (isSingleDay) {
+          form.setValue('endDate', startDateValue);
+        } else {
+          const currentEnd = form.getValues('endDate');
+          if (!currentEnd || parseISO(currentEnd) <= start) {
+            form.setValue('endDate', addDays(start, 1).toISOString());
+          }
+        }
+      } catch {
+        // ignore parse errors
+      }
+    }
+  }, [startDateValue, isSingleDay, form]);
+
+  // When toggling single-day mode, sync end date immediately
+  const handleSingleDayToggle = (checked: boolean) => {
+    setIsSingleDay(checked);
+    const currentStart = form.getValues('startDate');
+    if (currentStart) {
+      try {
+        const start = parseISO(currentStart);
+        if (checked) {
+          form.setValue('endDate', currentStart);
+        } else {
           form.setValue('endDate', addDays(start, 1).toISOString());
         }
       } catch {
         // ignore parse errors
       }
     }
-  }, [startDateValue, form]);
+  };
+
+  const parsedStartDate = startDateValue ? (() => { try { return parseISO(startDateValue); } catch { return undefined; } })() : undefined;
 
   const handleCreateContact = async () => {
     if (!newContact.firstName) return;
@@ -414,44 +451,68 @@ export function BookingForm({
         />
 
         {/* Dates */}
-        <div className="grid grid-cols-2 gap-4">
-          <FormField
-            control={form.control}
-            name="startDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>Start Date</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value ? parseISO(field.value) : null}
-                    onChange={(date) => field.onChange(date ? date.toISOString() : '')}
-                    enableTime
-                    placeholder="Select start date"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
-            )}
-          />
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <FormLabel className="text-sm font-medium">Event Dates</FormLabel>
+            <div className="flex items-center gap-2">
+              {isSingleDay ? (
+                <CalendarDaysIcon className="h-3.5 w-3.5 text-muted-foreground" />
+              ) : (
+                <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
+              )}
+              <span className="text-xs text-muted-foreground">
+                {isSingleDay ? 'Single day' : 'Multi-day'}
+              </span>
+              <Switch
+                checked={isSingleDay}
+                onCheckedChange={handleSingleDayToggle}
+                aria-label="Toggle single day event"
+              />
+            </div>
+          </div>
 
-          <FormField
-            control={form.control}
-            name="endDate"
-            render={({ field }) => (
-              <FormItem>
-                <FormLabel>End Date</FormLabel>
-                <FormControl>
-                  <DatePicker
-                    value={field.value ? parseISO(field.value) : null}
-                    onChange={(date) => field.onChange(date ? date.toISOString() : '')}
-                    enableTime
-                    placeholder="Select end date"
-                  />
-                </FormControl>
-                <FormMessage />
-              </FormItem>
+          <div className={`grid gap-4 ${isSingleDay ? 'grid-cols-1' : 'grid-cols-2'}`}>
+            <FormField
+              control={form.control}
+              name="startDate"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>{isSingleDay ? 'Date' : 'Start Date'}</FormLabel>
+                  <FormControl>
+                    <DatePicker
+                      value={field.value ? parseISO(field.value) : null}
+                      onChange={(date) => field.onChange(date ? date.toISOString() : '')}
+                      enableTime
+                      placeholder={isSingleDay ? 'Select date' : 'Select start date'}
+                    />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+
+            {!isSingleDay && (
+              <FormField
+                control={form.control}
+                name="endDate"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel>End Date</FormLabel>
+                    <FormControl>
+                      <DatePicker
+                        value={field.value ? parseISO(field.value) : null}
+                        onChange={(date) => field.onChange(date ? date.toISOString() : '')}
+                        enableTime
+                        placeholder="Select end date"
+                        defaultMonth={parsedStartDate}
+                      />
+                    </FormControl>
+                    <FormMessage />
+                  </FormItem>
+                )}
+              />
             )}
-          />
+          </div>
         </div>
 
         {/* Location & Timezone */}

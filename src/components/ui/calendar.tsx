@@ -16,20 +16,20 @@ function Calendar({
   return (
     <DayPicker
       showOutsideDays={showOutsideDays}
-      className={cn("p-3", className)}
+      className={cn("p-3 px-5", className)}
       classNames={{
         months: "flex flex-col sm:flex-row gap-2",
         month: "flex flex-col gap-4",
-        month_caption: "flex justify-center pt-1 relative items-center w-full",
+        month_caption: "flex justify-center pt-1 relative items-center w-full px-10",
         caption_label: "text-sm font-medium",
         nav: "flex items-center gap-1",
         button_previous: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute left-1"
+          "h-9 w-9 bg-transparent p-0 opacity-50 hover:opacity-100 absolute -left-1"
         ),
         button_next: cn(
           buttonVariants({ variant: "outline" }),
-          "h-7 w-7 bg-transparent p-0 opacity-50 hover:opacity-100 absolute right-1"
+          "h-9 w-9 bg-transparent p-0 opacity-50 hover:opacity-100 absolute -right-1"
         ),
         month_grid: "w-full border-collapse space-x-1",
         weekdays: "flex",
@@ -59,7 +59,7 @@ function Calendar({
       components={{
         Chevron: ({ orientation }) => {
           const Icon = orientation === "left" ? ChevronLeft : ChevronRight
-          return <Icon className="h-4 w-4" />
+          return <Icon className="h-5 w-5" />
         },
       }}
       {...props}

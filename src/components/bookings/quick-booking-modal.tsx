@@ -9,7 +9,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { DatePicker } from '@/components/ui/date-picker';
 import { Switch } from '@/components/ui/switch';
 import { Textarea } from '@/components/ui/textarea';
-import { Loader2, Save, CheckCircle2, Globe } from 'lucide-react';
+import { Loader2, Save, CheckCircle2, Globe, CalendarRange, CalendarDays as CalendarDaysIcon } from 'lucide-react';
 import {
   Dialog,
   DialogContent,
@@ -48,6 +48,8 @@ export function QuickBookingModal({
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState(false);
 
+  const [isSingleDay, setIsSingleDay] = useState(false);
+
   const [form, setForm] = useState({
     clientName: '',
     clientEmail: '',
@@ -65,6 +67,7 @@ export function QuickBookingModal({
   // Reset form when modal opens with a new date
   const handleOpenChange = (isOpen: boolean) => {
     if (isOpen) {
+      setIsSingleDay(false);
       setForm({
         clientName: '',
         clientEmail: '',
@@ -82,6 +85,16 @@ export function QuickBookingModal({
       setSuccess(false);
     }
     onOpenChange(isOpen);
+  };
+
+  const handleSingleDayToggle = (checked: boolean) => {
+    setIsSingleDay(checked);
+    if (checked && form.startDate) {
+      setForm(prev => ({ ...prev, endDate: prev.startDate }));
+    } else if (!checked && form.startDate) {
+      const start = parseISO(form.startDate);
+      setForm(prev => ({ ...prev, endDate: addDays(start, 1).toISOString() }));
+    }
   };
 
   const handleChange = (field: string, value: string | boolean) => {
@@ -213,34 +226,60 @@ export function QuickBookingModal({
             </div>
 
             {/* Scheduling */}
-            <div className="grid grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label>Start Date</Label>
-                <DatePicker
-                  value={form.startDate ? parseISO(form.startDate) : null}
-                  onChange={(date) => {
-                    const iso = date ? date.toISOString() : '';
-                    handleChange('startDate', iso);
-                    // Auto-fill end date to +1 day
-                    if (date) {
-                      const currentEnd = form.endDate ? parseISO(form.endDate) : null;
-                      if (!currentEnd || currentEnd <= date) {
-                        handleChange('endDate', addDays(date, 1).toISOString());
-                      }
-                    }
-                  }}
-                  enableTime
-                  placeholder="Start date"
-                />
+            <div className="space-y-2">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Dates</Label>
+                <div className="flex items-center gap-2">
+                  {isSingleDay ? (
+                    <CalendarDaysIcon className="h-3.5 w-3.5 text-muted-foreground" />
+                  ) : (
+                    <CalendarRange className="h-3.5 w-3.5 text-muted-foreground" />
+                  )}
+                  <span className="text-xs text-muted-foreground">
+                    {isSingleDay ? 'Single day' : 'Multi-day'}
+                  </span>
+                  <Switch
+                    checked={isSingleDay}
+                    onCheckedChange={handleSingleDayToggle}
+                    aria-label="Toggle single day event"
+                  />
+                </div>
               </div>
-              <div className="space-y-1.5">
-                <Label>End Date</Label>
-                <DatePicker
-                  value={form.endDate ? parseISO(form.endDate) : null}
-                  onChange={(date) => handleChange('endDate', date ? date.toISOString() : '')}
-                  enableTime
-                  placeholder="End date"
-                />
+              <div className={`grid gap-3 ${isSingleDay ? 'grid-cols-1' : 'grid-cols-2'}`}>
+                <div className="space-y-1.5">
+                  <Label>{isSingleDay ? 'Date' : 'Start Date'}</Label>
+                  <DatePicker
+                    value={form.startDate ? parseISO(form.startDate) : null}
+                    onChange={(date) => {
+                      const iso = date ? date.toISOString() : '';
+                      handleChange('startDate', iso);
+                      if (date) {
+                        if (isSingleDay) {
+                          handleChange('endDate', iso);
+                        } else {
+                          const currentEnd = form.endDate ? parseISO(form.endDate) : null;
+                          if (!currentEnd || currentEnd <= date) {
+                            handleChange('endDate', addDays(date, 1).toISOString());
+                          }
+                        }
+                      }
+                    }}
+                    enableTime
+                    placeholder={isSingleDay ? 'Select date' : 'Start date'}
+                  />
+                </div>
+                {!isSingleDay && (
+                  <div className="space-y-1.5">
+                    <Label>End Date</Label>
+                    <DatePicker
+                      value={form.endDate ? parseISO(form.endDate) : null}
+                      onChange={(date) => handleChange('endDate', date ? date.toISOString() : '')}
+                      enableTime
+                      placeholder="End date"
+                      defaultMonth={form.startDate ? parseISO(form.startDate) : undefined}
+                    />
+                  </div>
+                )}
               </div>
             </div>
 
