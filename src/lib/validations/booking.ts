@@ -37,6 +37,7 @@ export const paymentStatusSchema = z.enum([
 export const createBookingSchema = z.object({
   contactId: z.string().min(1, 'Contact ID is required'),
   inquiryId: z.string().optional().nullable(),
+  tripId: z.string().optional().nullable(),
   serviceType: serviceTypeSchema,
   startDate: z.string().optional().nullable(),
   endDate: z.string().optional().nullable(),

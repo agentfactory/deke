@@ -55,6 +55,7 @@ export function QuickBookingModal({
         paymentStatus: values.paymentStatus,
         internalNotes: values.internalNotes || null,
         clientNotes: values.clientNotes || null,
+        tripId: values.tripId || null,
         isPublic: values.isPublic ?? false,
         publicTitle: values.publicTitle || null,
         publicDescription: values.publicDescription || null,

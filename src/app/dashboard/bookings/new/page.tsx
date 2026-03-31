@@ -11,11 +11,16 @@ function NewBookingForm() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const preselectedDate = searchParams.get('date');
+  const preselectedTripId = searchParams.get('tripId');
   const [error, setError] = useState<string | null>(null);
 
-  const initialValues = preselectedDate
-    ? { startDate: new Date(`${preselectedDate}T09:00:00`).toISOString() }
-    : undefined;
+  const initialValues: Record<string, string> = {};
+  if (preselectedDate) {
+    initialValues.startDate = new Date(`${preselectedDate}T09:00:00`).toISOString();
+  }
+  if (preselectedTripId) {
+    initialValues.tripId = preselectedTripId;
+  }
 
   const handleSubmit = async (values: BookingFormValues) => {
     setError(null);
@@ -34,6 +39,7 @@ function NewBookingForm() {
         paymentStatus: values.paymentStatus,
         internalNotes: values.internalNotes || null,
         clientNotes: values.clientNotes || null,
+        tripId: values.tripId || null,
         isPublic: values.isPublic ?? false,
         publicTitle: values.publicTitle || null,
         publicDescription: values.publicDescription || null,
@@ -75,7 +81,7 @@ function NewBookingForm() {
             </div>
           )}
           <BookingForm
-            initialValues={initialValues}
+            initialValues={Object.keys(initialValues).length > 0 ? initialValues : undefined}
             onSubmit={async (values) => {
               try {
                 await handleSubmit(values);
