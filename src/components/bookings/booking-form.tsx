@@ -77,7 +77,7 @@ const bookingFormSchema = z.object({
   organization: z.string().optional(),
 });
 
-type BookingFormValues = z.infer<typeof bookingFormSchema>;
+export type BookingFormValues = z.infer<typeof bookingFormSchema>;
 
 interface Contact {
   id: string;
