@@ -177,14 +177,19 @@ export default function CalendarPage() {
     return eachDayOfInterval({ start: calStart, end: calEnd });
   }, [currentMonth]);
 
-  // Map bookings by date string for fast lookup
+  // Map bookings by date string for fast lookup — multi-day bookings appear on every day they span
   const bookingsByDate = useMemo(() => {
     const map: Record<string, CalendarBooking[]> = {};
     for (const booking of bookings) {
       if (!booking.startDate) continue;
-      const dateKey = format(parseISO(booking.startDate), "yyyy-MM-dd");
-      if (!map[dateKey]) map[dateKey] = [];
-      map[dateKey].push(booking);
+      const start = parseISO(booking.startDate);
+      const end = booking.endDate ? parseISO(booking.endDate) : start;
+      const days = eachDayOfInterval({ start, end });
+      for (const day of days) {
+        const dateKey = format(day, "yyyy-MM-dd");
+        if (!map[dateKey]) map[dateKey] = [];
+        map[dateKey].push(booking);
+      }
     }
     return map;
   }, [bookings]);
@@ -216,24 +221,53 @@ export default function CalendarPage() {
   // Render: Booking pill
   // ------------------------------------------------------------------
 
-  function BookingPill({ booking }: { booking: CalendarBooking }) {
+  type BookingPosition = "single" | "start" | "middle" | "end";
+
+  function getBookingPosition(booking: CalendarBooking, day: Date): BookingPosition {
+    const start = parseISO(booking.startDate);
+    const end = booking.endDate ? parseISO(booking.endDate) : start;
+    if (isSameDay(start, end)) return "single";
+    if (isSameDay(day, start)) return "start";
+    if (isSameDay(day, end)) return "end";
+    return "middle";
+  }
+
+  function BookingPill({ booking, position = "single" }: { booking: CalendarBooking; position?: BookingPosition }) {
     const style = getStatusStyle(booking.status);
+
+    const roundingClass =
+      position === "single" ? "rounded" :
+      position === "start" ? "rounded-l rounded-r-none" :
+      position === "end" ? "rounded-r rounded-l-none" :
+      "rounded-none";
+
+    const isMiddle = position === "middle";
+
     return (
       <button
         onClick={(e) => {
           e.stopPropagation();
           handleBookingClick(booking.id);
         }}
-        className={`w-full truncate rounded border px-1.5 py-0.5 text-left text-[11px] font-medium leading-tight transition-opacity hover:opacity-80 ${style.bg} ${style.text} ${style.border}`}
-        title={`${serviceLabel(booking.serviceType)} - ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''} (${booking.status})`}
+        className={`w-full truncate border px-1.5 py-0.5 text-left text-[11px] font-medium leading-tight transition-opacity hover:opacity-80 ${roundingClass} ${style.bg} ${style.text} ${style.border} ${isMiddle ? "opacity-60 border-x-0" : ""}`}
+        title={`${serviceLabel(booking.serviceType)} - ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''} (${booking.status})${position !== "single" ? ` [${position}]` : ""}`}
         aria-label={`${serviceLabel(booking.serviceType)} with ${booking.contact?.firstName ?? 'Unknown'} ${booking.contact?.lastName ?? ''}, status ${booking.status}`}
       >
-        <span className="block truncate">
-          {serviceLabel(booking.serviceType)}
-        </span>
-        <span className="block truncate opacity-75">
-          {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName?.charAt(0) ?? ''}.
-        </span>
+        {position === "middle" ? (
+          <span className="block truncate text-[10px]">&nbsp;</span>
+        ) : (
+          <>
+            <span className="block truncate">
+              {position === "end" ? `\u2190 ${serviceLabel(booking.serviceType)}` : serviceLabel(booking.serviceType)}
+              {position === "start" ? " \u2192" : ""}
+            </span>
+            {position !== "end" && (
+              <span className="block truncate opacity-75">
+                {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName?.charAt(0) ?? ''}.
+              </span>
+            )}
+          </>
+        )}
       </button>
     );
   }
@@ -243,9 +277,11 @@ export default function CalendarPage() {
   // ------------------------------------------------------------------
 
   function ListView() {
+    // In list view, only show bookings on their start date to avoid duplication
     const daysWithBookings = calendarDays.filter((day) => {
       const key = format(day, "yyyy-MM-dd");
-      return bookingsByDate[key] && bookingsByDate[key].length > 0;
+      const dayBookings = bookingsByDate[key] || [];
+      return dayBookings.some((b) => isSameDay(parseISO(b.startDate), day));
     });
 
     if (daysWithBookings.length === 0) {
@@ -261,7 +297,9 @@ export default function CalendarPage() {
       <div className="space-y-4">
         {daysWithBookings.map((day) => {
           const key = format(day, "yyyy-MM-dd");
-          const dayBookings = bookingsByDate[key] || [];
+          const dayBookings = (bookingsByDate[key] || []).filter((b) =>
+            isSameDay(parseISO(b.startDate), day)
+          );
           return (
             <div key={key} className="rounded-lg border border-[#e5e2dc] bg-white p-4">
               <div className="mb-2 flex items-center justify-between">
@@ -289,6 +327,9 @@ export default function CalendarPage() {
               <div className="space-y-1.5">
                 {dayBookings.map((booking) => {
                   const style = getStatusStyle(booking.status);
+                  const start = parseISO(booking.startDate);
+                  const end = booking.endDate ? parseISO(booking.endDate) : start;
+                  const isMultiDay = !isSameDay(start, end);
                   return (
                     <button
                       key={booking.id}
@@ -299,17 +340,29 @@ export default function CalendarPage() {
                       <div className="min-w-0 flex-1">
                         <p className={`text-sm font-medium ${style.text}`}>
                           {serviceLabel(booking.serviceType)}
+                          {isMultiDay && (
+                            <span className="ml-2 text-[10px] font-normal opacity-70">
+                              {format(start, "MMM d")} – {format(end, "MMM d")}
+                            </span>
+                          )}
                         </p>
                         <p className="truncate text-xs text-[#666]">
                           {booking.contact?.firstName ?? 'Unknown'} {booking.contact?.lastName ?? ''}
                           {booking.location ? ` - ${booking.location}` : ""}
                         </p>
                       </div>
-                      <span
-                        className={`shrink-0 rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${style.bg} ${style.text}`}
-                      >
-                        {booking.status.replace("_", " ")}
-                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        {isMultiDay && (
+                          <span className="rounded bg-[#1a1a1a]/10 px-1.5 py-0.5 text-[10px] font-medium text-[#666]">
+                            Multi-day
+                          </span>
+                        )}
+                        <span
+                          className={`rounded px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide ${style.bg} ${style.text}`}
+                        >
+                          {booking.status.replace("_", " ")}
+                        </span>
+                      </div>
                     </button>
                   );
                 })}
@@ -388,7 +441,7 @@ export default function CalendarPage() {
                 {/* Booking pills */}
                 <div className="space-y-0.5">
                   {dayBookings.slice(0, 3).map((booking) => (
-                    <BookingPill key={booking.id} booking={booking} />
+                    <BookingPill key={booking.id} booking={booking} position={getBookingPosition(booking, day)} />
                   ))}
                   {dayBookings.length > 3 && (
                     <p className="px-1 text-[10px] font-medium text-[#999]">
