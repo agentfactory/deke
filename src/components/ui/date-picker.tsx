@@ -170,6 +170,7 @@ export function DatePicker({
                   max={12}
                   value={displayHour}
                   onChange={handleHourChange}
+                  autoComplete="off"
                   className="w-12 rounded-md border bg-transparent px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-label="Hour"
                 />
@@ -180,6 +181,7 @@ export function DatePicker({
                   max={59}
                   value={minutes.toString().padStart(2, "0")}
                   onChange={handleMinuteChange}
+                  autoComplete="off"
                   className="w-12 rounded-md border bg-transparent px-2 py-1 text-sm text-center focus:outline-none focus:ring-2 focus:ring-ring"
                   aria-label="Minute"
                 />
