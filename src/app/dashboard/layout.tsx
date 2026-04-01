@@ -38,16 +38,9 @@ const primaryNav = [
   { href: "/dashboard/leads", label: "LEADS", icon: "Target" as const, badgeKey: "leads" as const },
   { href: "/dashboard/contacts", label: "CONTACTS", icon: "Users" as const },
   { href: "/dashboard/calendar", label: "CALENDAR", icon: "CalendarDays" as const },
-  { href: "/dashboard/newsletters", label: "NEWSLETTER", icon: "Newspaper" as const },
 ];
 
-const insightNav = [
-  { href: "/dashboard/analytics", label: "Analytics", icon: "BarChart3" as const },
-  { href: "/dashboard/pipeline", label: "Pipeline", icon: "GitBranch" as const },
-  { href: "/dashboard/orders", label: "Orders", icon: "Package" as const },
-  { href: "/dashboard/trips", label: "Trips", icon: "Plane" as const },
-  { href: "/dashboard/engagements", label: "Engagements", icon: "Briefcase" as const },
-];
+const insightNav: typeof primaryNav = [];
 
 export default async function DashboardLayout({
   children,
