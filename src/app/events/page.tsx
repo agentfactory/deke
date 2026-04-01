@@ -228,7 +228,7 @@ function EventCard({
 
   return (
     <div
-      className={`relative flex mt-8 sm:-mt-24 sm:first:mt-0 ${past ? "opacity-60" : ""}`}
+      className={`relative flex mt-8 sm:-mt-12 sm:first:mt-0 ${past ? "opacity-60" : ""}`}
       style={{ zIndex: index + 1 }}
       role="article"
       aria-label={`${serviceLabel(event.serviceType)}${event.location ? ` in ${event.location}` : ""}`}
