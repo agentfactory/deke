@@ -35,7 +35,7 @@ const books: Book[] = [
     authors: "Frizzell, Hackel, Sharon & more",
     year: "2023",
     purchaseUrl: "https://www.giamusic.com/store/resource/teaching-music-through-performance-in-contemporary-a-cappella-book-g10098",
-    coverImage: "https://covers.openlibrary.org/b/isbn/1622774876-L.jpg?default=false",
+    coverImage: "/images/books/teaching-music-contemporary-acappella.svg",
   },
   {
     id: "arranging-1",
