@@ -142,6 +142,7 @@ export async function sendSignupNotification(
     const result = await resend.emails.send({
       from: fromEmail,
       to: NOTIFICATION_EMAILS,
+      replyTo: data.email,
       subject: `${config.emoji} ${config.label}: ${data.name} — ${data.email}`,
       html: generateAdminEmailHtml(data),
       tags: [
