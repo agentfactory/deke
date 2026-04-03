@@ -166,10 +166,23 @@ function extractContactsFromMarkdown(markdown: string, baseUrl: string): Scraped
   for (const email of emailMatches) {
     const lowerEmail = email.toLowerCase()
 
-    // Skip obvious non-emails
+    // Skip obvious non-emails and image artifacts
     if (lowerEmail.endsWith('.png') || lowerEmail.endsWith('.jpg') || lowerEmail.endsWith('.gif')) continue
     if (lowerEmail.includes('example.com') || lowerEmail.includes('sentry.io')) continue
     if (seenEmails.has(lowerEmail)) continue
+
+    // Skip third-party platform emails (not the org's own contacts)
+    const skipDomains = [
+      'mymusicstaff.com', 'groupanizer.com', 'wixpress.com',
+      'squarespace.com', 'wordpress.com', 'mailchimp.com',
+      'constantcontact.com', 'google.com', 'googleapis.com',
+      'w3.org', 'schema.org', 'cloudflare.com', 'jquery.com',
+      'bootstrapcdn.com', 'github.com', 'sentry.io',
+      'placeholder.local',
+    ]
+    const emailDomain = lowerEmail.split('@')[1] || ''
+    if (skipDomains.some(d => emailDomain.includes(d))) continue
+
     seenEmails.add(lowerEmail)
 
     // Determine if personal or generic

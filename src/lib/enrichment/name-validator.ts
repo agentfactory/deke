@@ -44,6 +44,19 @@ export function isValidContactName(name: string): boolean {
   if (!name || name.trim().length === 0) return false
 
   const trimmed = name.trim()
+
+  // Reject URLs and domain-like strings
+  if (trimmed.includes('http://') || trimmed.includes('https://')) return false
+  if (trimmed.includes('www.')) return false
+  if (/\.[a-z]{2,4}\//.test(trimmed)) return false // domain.com/ pattern
+  if (/\.com$|\.org$|\.ca$|\.net$|\.edu$/i.test(trimmed)) return false
+
+  // Reject strings starting with "org" prefix (data corruption artifact)
+  if (/^org[A-Z]/.test(trimmed)) return false
+
+  // Reject strings that look like page titles (contain colons, pipes, etc.)
+  if (trimmed.includes('|') || trimmed.includes(':')) return false
+
   const words = trimmed.split(/\s+/)
 
   // Too many words — likely nav/menu text
@@ -52,7 +65,14 @@ export function isValidContactName(name: string): boolean {
   // Single word — check against blocklist
   if (words.length === 1) {
     if (SINGLE_WORD_BLOCKLIST.has(words[0].toLowerCase())) return false
+    // Single words that are clearly not first names (e.g. "Diversity", "Allegro")
+    const notFirstNames = ['diversity', 'equity', 'inclusion', 'allegro', 'andante', 'crescendo']
+    if (notFirstNames.includes(words[0].toLowerCase())) return false
   }
+
+  // Reject if any word is a common non-name word
+  const nonNameWords = new Set(['diversity', 'equity', 'inclusion', 'accessibility', 'sustainability'])
+  if (words.some(w => nonNameWords.has(w.toLowerCase()))) return false
 
   const lowerWords = words.map(w => w.toLowerCase())
 

@@ -183,6 +183,18 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
       diagnostics.enriched++
 
       if (enrichment.email) {
+        // Filter out third-party SaaS/platform emails that aren't the org's own
+        const thirdPartyDomains = [
+          'mymusicstaff.com', 'groupanizer.com', 'placeholder.local',
+          'wixpress.com', 'squarespace.com', 'wordpress.com',
+          'mailchimp.com', 'constantcontact.com',
+        ]
+        const emailDomain = enrichment.email.split('@')[1]?.toLowerCase() || ''
+        if (thirdPartyDomains.some(d => emailDomain.includes(d))) {
+          console.log(`[Firecrawl Research] Skipping third-party email ${enrichment.email} for "${orgName}"`)
+          continue
+        }
+
         leads.push({
           firstName: enrichment.firstName || 'Contact',
           lastName: enrichment.lastName || `at ${orgName}`,
@@ -192,7 +204,7 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
           source: 'AI_RESEARCH',
           latitude: campaign.latitude, // Use campaign center (no precise geo from Firecrawl)
           longitude: campaign.longitude,
-          score: 30,
+          score: enrichment.firstName && enrichment.firstName !== 'Contact' ? 40 : 30,
           distance: 0, // Unknown — will be scored by proximity to campaign center
           website: candidate.url,
           emailVerified: enrichment.emailVerified,
@@ -202,27 +214,8 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
           editorialSummary: candidate.description.substring(0, 200) || null,
         })
       } else {
-        // No email found — create with needsEnrichment flag
-        const placeholderEmail = `needs-enrichment+${orgName.toLowerCase().replace(/[^a-z0-9]/g, '-').substring(0, 40)}@placeholder.local`
-
-        leads.push({
-          firstName: 'Contact',
-          lastName: `at ${orgName}`,
-          email: placeholderEmail,
-          phone: enrichment.phone,
-          organization: orgName,
-          source: 'AI_RESEARCH',
-          latitude: campaign.latitude,
-          longitude: campaign.longitude,
-          score: 20,
-          distance: 0,
-          website: candidate.url,
-          emailVerified: false,
-          needsEnrichment: true,
-          enrichmentSource: null,
-          contactTitle: enrichment.contactTitle,
-          editorialSummary: candidate.description.substring(0, 200) || null,
-        })
+        // No email found — skip this lead entirely instead of creating garbage
+        console.log(`[Firecrawl Research] No email found for "${orgName}" — skipping (not creating placeholder)`)
       }
     } catch (error) {
       console.error(`[Firecrawl Research] Failed to enrich ${candidate.url}:`, error instanceof Error ? error.message : error)
@@ -243,10 +236,31 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
 }
 
 /**
- * Check if a search result is music-relevant
+ * Check if a search result is music-relevant AND is an actual organization page
+ * (not a PDF, news article, directory listing, or generic info page)
  */
 function isMusicRelevant(title: string, description: string): boolean {
   const text = `${title} ${description}`.toLowerCase()
+  const lowerTitle = title.toLowerCase()
+
+  // Reject non-organization content types
+  if (lowerTitle.startsWith('[pdf]')) return false
+  if (lowerTitle.startsWith('[doc]')) return false
+
+  // Reject news articles (has article-like patterns)
+  const newsPatterns = [
+    'changing shape', 'new member spotlight', 'member profile',
+    'article_', '/article/', '/news/', 'featured artist',
+  ]
+  if (newsPatterns.some(p => text.includes(p))) return false
+
+  // Reject generic directory/listing pages (not the org's own site)
+  const directoryPatterns = [
+    'chapter directory', 'our regions', 'find a choir',
+    'member directory', 'listing/', 'safe space alliance',
+    'dirchap.asp',
+  ]
+  if (directoryPatterns.some(p => text.includes(p))) return false
 
   // Positive signals
   const musicKeywords = [
@@ -274,18 +288,55 @@ function isMusicRelevant(title: string, description: string): boolean {
 /**
  * Extract a clean org name from a search result title
  * "Ottawa Choral Society - Home" → "Ottawa Choral Society"
+ * "Home — Harmony Northshore" → "Harmony Northshore"
  */
 function extractOrgName(title: string): string {
-  // Remove common suffixes
+  // Remove [PDF] and similar prefixes
   let name = title
-    .replace(/\s*[-–—|]\s*(Home|About|Contact|Welcome|Official).*$/i, '')
+    .replace(/^\[PDF\]\s*/i, '')
+    .replace(/^\[DOC\]\s*/i, '')
+
+  // Remove common suffixes (after separators)
+  name = name
+    .replace(/\s*[-–—|:]\s*(Home|About|Contact|Welcome|Official|Overview|Website|Site|Page).*$/i, '')
     .replace(/\s*[-–—|]\s*Facebook$/i, '')
     .replace(/\s*[-–—|]\s*LinkedIn$/i, '')
     .replace(/\s*[-–—|]\s*YouTube$/i, '')
     .replace(/\s*[-–—|]\s*X$/i, '')
+    .replace(/\s*[-–—|]\s*Rackcdn\.com$/i, '')
+    .replace(/\s*[-–—|]\s*Safe Space Alliance$/i, '')
     .trim()
 
-  // If name is too short after cleaning, use original
+  // Remove leading "Home —", "Welcome to ", "About —" etc.
+  name = name
+    .replace(/^(?:Home|Welcome|About|Contact)\s*[-–—|:]\s*/i, '')
+    .replace(/^Welcome\s+to\s+(?:the\s+)?/i, '')
+    .trim()
+
+  // Remove trailing location/context after pipes/dashes (e.g. "Chorus | Ottawa, ON | Community Choir of the ...")
+  // Keep only the first segment if it looks like a real org name
+  const segments = name.split(/\s*[|]\s*/)
+  if (segments.length > 1) {
+    // Use first segment if it's substantial, otherwise try combining first two
+    const first = segments[0].trim()
+    if (first.length >= 5) {
+      name = first
+    }
+  }
+
+  // Remove trailing " - City, ST" or " - Province" patterns
+  name = name.replace(/\s*[-–—]\s*[A-Z][a-z]+(?:,\s*[A-Z]{2})?\s*$/, '').trim()
+
+  // Remove trailing ellipsis and truncated text
+  name = name.replace(/\s*\.{3}\s*$/, '').replace(/\s*…\s*$/, '').trim()
+
+  // Remove "New Member Spotlight:" and similar article prefixes
+  name = name.replace(/^(?:New Member Spotlight|Member Profile|Featured|Spotlight|Article|News):\s*/i, '').trim()
+
+  // Remove " changing shape" and similar news article suffixes
+  name = name.replace(/\s+changing\s+.*$/i, '').trim()
+
+  // If name is too short after cleaning, use original first segment
   if (name.length < 3) name = title.split(/[-–—|]/)[0].trim()
 
   return name || title
@@ -301,13 +352,20 @@ function deduplicateByDomain(results: Array<{ title: string; url: string; descri
     try {
       const domain = new URL(result.url).hostname.replace('www.', '')
 
-      // Skip social media, directories, and generic sites
+      // Skip social media, directories, generic sites, and non-org domains
       const skipDomains = [
         'facebook.com', 'instagram.com', 'twitter.com', 'x.com',
         'linkedin.com', 'youtube.com', 'tiktok.com',
         'yelp.com', 'yellowpages.com', 'bbb.org',
         'wikipedia.org', 'reddit.com',
         'eventbrite.com', 'meetup.com',
+        // News/media sites
+        'gloucestertimes.com', 'cbc.ca', 'ottawacitizen.com',
+        // PDF/CDN hosts
+        'rackcdn.com', 'cloudfront.net',
+        // Generic directories
+        'safespacealliance.com', 'nac-cna.ca',
+        'northshorechamber.org', // Chamber of commerce listings
       ]
       if (skipDomains.some(sd => domain.includes(sd))) continue
 
