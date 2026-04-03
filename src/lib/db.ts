@@ -9,7 +9,8 @@ const globalForPrisma = globalThis as unknown as {
 // Prisma 7 runtime configuration with adapter
 // Note: This is separate from prisma.config.ts (used by CLI)
 // Use DATABASE_URL for pooled connections, fall back to DIRECT_URL
-const connectionString = process.env.DATABASE_URL || process.env.DIRECT_URL
+// Use DIRECT_URL for direct connections (more reliable), fall back to DATABASE_URL (pooled)
+const connectionString = process.env.DIRECT_URL || process.env.DATABASE_URL
 
 if (!connectionString) {
   console.error('[DB] DATABASE_URL environment variable is not set. All database operations will fail.')

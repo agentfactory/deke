@@ -11,6 +11,7 @@ import { discoverPastClients } from './past-clients'
 import { discoverDormantLeads } from './dormant-leads'
 import { discoverSimilarOrgs } from './similar-orgs'
 import { discoverAIResearch, type AIResearchDiagnostics } from './ai-research'
+import { discoverWithFirecrawl } from './firecrawl-research'
 import { calculateScore, calculateScoreStats } from './scorer'
 import { deduplicate, getDeduplicationStats } from './deduplicator'
 import { classifyOrganization } from './org-classifier'
@@ -157,7 +158,18 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     runSource('Dormant Leads', () => discoverDormantLeads(campaign)),
     runSource('Similar Orgs', () => discoverSimilarOrgs(campaign)),
     runSource('AI Research', async () => {
-      const result = await discoverAIResearch(campaign)
+      // Prefer Firecrawl over Google Places (better extraction, no billing setup)
+      const useFirecrawl = !!process.env.FIRECRAWL_API_KEY
+      let result: { leads: any[]; diagnostics: AIResearchDiagnostics }
+
+      if (useFirecrawl) {
+        console.log('[Discovery:Orchestrator] Using Firecrawl for AI Research (FIRECRAWL_API_KEY set)')
+        result = await discoverWithFirecrawl(campaign)
+      } else {
+        console.log('[Discovery:Orchestrator] Using Google Places for AI Research (no FIRECRAWL_API_KEY)')
+        result = await discoverAIResearch(campaign)
+      }
+
       aiResearchDiagnostics = result.diagnostics
       // Surface AI Research errors as warnings
       if (result.diagnostics.errors.length > 0) {

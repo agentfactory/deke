@@ -7,6 +7,7 @@
  */
 
 import { scrapeWebsite, type ScrapedEmail } from './website-scraper'
+import { firecrawlScrape, isFirecrawlAvailable } from './firecrawl-scraper'
 import { isValidContactName, stripTitlePrefix } from './name-validator'
 
 export interface EnrichmentResult {
@@ -55,7 +56,34 @@ export async function enrichOrganization(
   }
 
   try {
-    const scrapeResult = await scrapeWebsite(websiteUrl)
+    // Try Firecrawl first (better at JS-rendered sites + diverse layouts)
+    // Falls back to custom scraper if Firecrawl unavailable or fails
+    let scrapeResult: { emails: ScrapedEmail[] }
+
+    if (isFirecrawlAvailable()) {
+      try {
+        scrapeResult = await firecrawlScrape(websiteUrl)
+        if (scrapeResult.emails.length > 0) {
+          console.log(`[Enrichment] Firecrawl found ${scrapeResult.emails.length} emails for "${orgName}"`)
+        }
+      } catch (fcError) {
+        console.warn(`[Enrichment] Firecrawl failed for "${orgName}", falling back to custom scraper:`, fcError instanceof Error ? fcError.message : fcError)
+        scrapeResult = await scrapeWebsite(websiteUrl)
+      }
+    } else {
+      scrapeResult = await scrapeWebsite(websiteUrl)
+    }
+
+    // If Firecrawl found nothing, try custom scraper as backup
+    if (scrapeResult.emails.length === 0 && isFirecrawlAvailable()) {
+      try {
+        const fallbackResult = await scrapeWebsite(websiteUrl)
+        if (fallbackResult.emails.length > 0) {
+          console.log(`[Enrichment] Custom scraper found ${fallbackResult.emails.length} emails (Firecrawl missed them) for "${orgName}"`)
+          scrapeResult = fallbackResult
+        }
+      } catch { /* ignore fallback failure */ }
+    }
 
     if (scrapeResult.emails.length === 0) {
       console.log(`[Enrichment] No emails found on website for "${orgName}"`)
