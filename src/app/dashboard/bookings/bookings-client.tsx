@@ -236,13 +236,23 @@ export function BookingsClient({ initialBookings }: BookingsClientProps) {
                 {/* Right section: campaign indicator + action */}
                 <div className="flex items-center justify-end shrink-0">
                   {booking.campaignCount > 0 ? (
-                    <div className="flex items-center gap-2 text-sm">
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        if (booking.campaignId) {
+                          router.push(`/dashboard/campaigns/${booking.campaignId}`);
+                        }
+                      }}
+                      className="text-green-700 border-green-300 hover:bg-green-50 gap-2"
+                    >
                       <span className="relative flex h-2.5 w-2.5">
                         <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75" />
                         <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500" />
                       </span>
-                      <span className="text-green-700 font-medium">Campaign Active</span>
-                    </div>
+                      View Campaign
+                    </Button>
                   ) : canCreateCampaign(booking) ? (
                     <Button
                       size="sm"

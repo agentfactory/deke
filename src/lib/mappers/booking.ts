@@ -32,6 +32,7 @@ export type ComponentBooking = {
 
   // Related counts
   campaignCount: number;
+  campaignId: string | null;
 
   // Timestamps
   createdAt: string;
@@ -63,6 +64,7 @@ export function mapBookingToComponent(
 
     // Counts
     campaignCount: booking.campaigns.length,
+    campaignId: booking.campaigns.length > 0 ? booking.campaigns[0].id : null,
 
     // Timestamps
     createdAt: booking.createdAt.toISOString(),
