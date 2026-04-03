@@ -59,18 +59,74 @@ const SEARCH_QUERIES = [
 ]
 
 // Max searches to prevent runaway costs (each search ≈ 1 credit)
-const MAX_SEARCHES = 4
+// Budget: ~50 credits per campaign. 4 queries × up to 3 location variants = 12 search credits max
+const MAX_SEARCHES = 12
 // Max orgs to enrich (each enrichment ≈ 1-3 credits, cap at ~15 = 15-45 credits)
 const MAX_ENRICHMENT_CANDIDATES = 15
+
+/**
+ * Build search location strings from campaign data.
+ *
+ * Problem: "Endicott College, Massachusetts" is too specific — Firecrawl
+ * searches for choirs AT the college, not choirs NEAR the college.
+ *
+ * Solution: Extract the city/state/region and search more broadly.
+ * For larger radii, add nearby major city searches.
+ */
+function buildSearchLocations(campaign: Campaign): string[] {
+  const base = campaign.baseLocation.trim()
+  const locations: string[] = []
+
+  // Venue/institution keywords — if the first part contains these, it's a venue not a city
+  const venueKeywords = /\b(college|university|school|church|hall|center|centre|theatre|theater|arena|stadium|hotel|resort|club|academy|institute|auditorium|pavilion)\b/i
+
+  const parts = base.split(',').map(p => p.trim())
+
+  if (parts.length >= 3) {
+    // "Venue, City, State" → use "City, State" and "near City State"
+    const cityState = parts.slice(-2).join(', ')
+    locations.push(cityState)
+    locations.push(`near ${parts[parts.length - 2]} ${parts[parts.length - 1]}`)
+  } else if (parts.length === 2) {
+    const firstPart = parts[0]
+    const secondPart = parts[1]
+
+    if (venueKeywords.test(firstPart)) {
+      // "Endicott College, Massachusetts" → venue + state, search state broadly
+      // Use "near [state]" for broader results
+      locations.push(secondPart)
+      locations.push(`near ${firstPart} ${secondPart}`)
+    } else {
+      // "Beverly, Massachusetts" → city + state, use as-is
+      locations.push(`${firstPart}, ${secondPart}`)
+      locations.push(`near ${firstPart} ${secondPart}`)
+    }
+  } else {
+    // Single string — use as-is
+    locations.push(base)
+  }
+
+  // For larger radii (50+ miles), add state-level search for broader coverage
+  if (campaign.radius >= 50) {
+    const state = parts[parts.length - 1]
+    if (state && state.length > 1 && !locations.includes(state)) {
+      locations.push(state)
+    }
+  }
+
+  // Deduplicate
+  return [...new Set(locations)]
+}
 
 /**
  * Discover leads using Firecrawl search + scrape
  *
  * Flow:
- * 1. Search for music orgs near the campaign location
- * 2. Deduplicate by domain
- * 3. Scrape top candidates for contact info via enrichment pipeline
- * 4. Create leads in database
+ * 1. Build smart search locations from campaign (city/region, not venue)
+ * 2. Search for music orgs across location variants
+ * 3. Deduplicate by domain
+ * 4. Scrape top candidates for contact info via enrichment pipeline
+ * 5. Create leads in database
  */
 export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResearchResult> {
   const apiKey = process.env.FIRECRAWL_API_KEY
@@ -97,17 +153,20 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
   const client = new FirecrawlApp({ apiKey })
   const allResults: Array<{ title: string; url: string; description: string }> = []
 
-  console.log(`[Firecrawl Research] Starting search: ${SEARCH_QUERIES.length} queries for "${campaign.baseLocation}"`)
+  // Build smart search locations (city/region, not venue name)
+  const searchLocations = buildSearchLocations(campaign)
+  console.log(`[Firecrawl Research] Starting search: ${SEARCH_QUERIES.length} queries × ${searchLocations.length} locations (${searchLocations.join(' | ')})`)
 
-  // Search for each music keyword
+  // Search for each music keyword × location variant
   for (const query of SEARCH_QUERIES) {
-    if (diagnostics.apiCallsMade >= MAX_SEARCHES) {
-      console.warn(`[Firecrawl Research] Reached max searches (${MAX_SEARCHES}), stopping`)
-      break
-    }
+    for (const location of searchLocations) {
+      if (diagnostics.apiCallsMade >= MAX_SEARCHES) {
+        console.warn(`[Firecrawl Research] Reached max searches (${MAX_SEARCHES}), stopping`)
+        break
+      }
 
-    diagnostics.apiCallsMade++
-    const searchQuery = `${query} ${campaign.baseLocation}`
+      diagnostics.apiCallsMade++
+      const searchQuery = `${query} ${location}`
 
     try {
       const searchResult = await client.search(searchQuery, {
@@ -142,6 +201,8 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
       diagnostics.errors.push(`Search "${query}": ${errMsg}`)
       console.error(`[Firecrawl Research] Error searching "${query}":`, errMsg)
     }
+    } // end location loop
+    if (diagnostics.apiCallsMade >= MAX_SEARCHES) break
   }
 
   diagnostics.rawPlaces = allResults.length
