@@ -35,6 +35,7 @@ async function getPendingInquiryCount(): Promise<number> {
 const primaryNav = [
   { href: "/dashboard", label: "TODAY", icon: "Zap" as const, badgeKey: "today" as const },
   { href: "/dashboard/bookings", label: "BOOKINGS", icon: "Calendar" as const },
+  { href: "/dashboard/campaigns", label: "CAMPAIGNS", icon: "Megaphone" as const },
   { href: "/dashboard/leads", label: "LEADS", icon: "Target" as const, badgeKey: "leads" as const },
   { href: "/dashboard/contacts", label: "CONTACTS", icon: "Users" as const },
   { href: "/dashboard/calendar", label: "CALENDAR", icon: "CalendarDays" as const },

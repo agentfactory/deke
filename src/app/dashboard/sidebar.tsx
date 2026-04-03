@@ -17,6 +17,7 @@ import {
   BarChart3,
   Target,
   Newspaper,
+  Megaphone,
   LogOut,
 } from "lucide-react";
 
@@ -33,6 +34,7 @@ const iconMap = {
   BarChart3,
   Target,
   Newspaper,
+  Megaphone,
 } as const;
 
 type BadgeCounts = Record<string, number>;
