@@ -45,23 +45,23 @@ interface DiscoveredLead {
 }
 
 // Music-specific search queries for Firecrawl
+// BUDGET: 300 credits/month. Each search ≈ 1 credit, each enrichment ≈ 1-3 credits.
+// Target: ~50 credits per campaign run max (allows ~6 campaigns/month).
+//
+// Strategy: Use fewer, broader searches that cast a wide net.
+// "choir" alone catches choir, community choir, youth choir, gospel choir, etc.
+// "a cappella" catches a cappella groups, barbershop, etc.
 const SEARCH_QUERIES = [
   'choir',
   'a cappella group',
-  'community chorus',
-  'barbershop chorus',
-  'Sweet Adelines chapter',
-  'vocal ensemble',
-  'youth choir',
-  'music school',
   'choral society',
-  'gospel choir',
+  'barbershop chorus',
 ]
 
-// Max searches to prevent runaway costs (each search ≈ 1-5 credits)
-const MAX_SEARCHES = 10
-// Max orgs to enrich (each enrichment ≈ 1-3 credits)
-const MAX_ENRICHMENT_CANDIDATES = 40
+// Max searches to prevent runaway costs (each search ≈ 1 credit)
+const MAX_SEARCHES = 4
+// Max orgs to enrich (each enrichment ≈ 1-3 credits, cap at ~15 = 15-45 credits)
+const MAX_ENRICHMENT_CANDIDATES = 15
 
 /**
  * Discover leads using Firecrawl search + scrape

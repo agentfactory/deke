@@ -97,7 +97,7 @@ export async function firecrawlScrape(websiteUrl: string): Promise<FirecrawlScra
     const contactPaths = ['/contact', '/about', '/about-us', '/staff', '/leadership', '/board']
 
     for (const path of contactPaths) {
-      if (creditsUsed >= 3) break // Cap at 3 credits per org
+      if (creditsUsed >= 2) break // Cap at 2 credits per org (homepage + 1 subpage)
 
       try {
         const pageUrl = `${baseUrl}${path}`
