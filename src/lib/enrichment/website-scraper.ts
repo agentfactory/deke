@@ -208,47 +208,44 @@ function extractTitleEmailPairs(text: string): ScrapedEmail[] {
 }
 
 /**
- * Scrape a URL using Firecrawl API
- * Returns markdown content, or null on failure
+ * Scrape a URL using plain HTTP fetch.
+ * Strips HTML to get readable text for email/name extraction.
  */
-async function firecrawlScrape(url: string): Promise<string | null> {
-  const apiKey = process.env.FIRECRAWL_API_KEY
-  if (!apiKey) return null
-
+async function fetchAndConvertToText(url: string): Promise<string | null> {
   try {
-    const response = await fetch('https://api.firecrawl.dev/v1/scrape', {
-      method: 'POST',
+    const controller = new AbortController()
+    const timeout = setTimeout(() => controller.abort(), 8000)
+
+    const response = await fetch(url, {
+      signal: controller.signal,
       headers: {
-        'Authorization': `Bearer ${apiKey}`,
-        'Content-Type': 'application/json',
+        'User-Agent': 'Mozilla/5.0 (compatible; LeadBot/1.0)',
+        'Accept': 'text/html,application/xhtml+xml',
       },
-      body: JSON.stringify({
-        url,
-        formats: ['markdown'],
-        onlyMainContent: true,
-        timeout: 10000,
-      }),
+      redirect: 'follow',
     })
 
-    if (!response.ok) {
-      console.error(`[Scraper] Firecrawl scrape failed for ${url}: ${response.status}`)
-      return null
-    }
+    clearTimeout(timeout)
 
-    const data = await response.json()
+    if (!response.ok) return null
 
-    if (!data.success) {
-      console.error(`[Scraper] Firecrawl scrape unsuccessful for ${url}:`, data.error || 'unknown')
-      return null
-    }
-
-    const markdown = data.data?.markdown
-    if (!markdown) return null
-
-    // Limit to first 100KB to avoid processing huge pages
-    return markdown.substring(0, 100_000)
-  } catch (error) {
-    console.error(`[Scraper] Firecrawl scrape error for ${url}:`, error)
+    const html = await response.text()
+    // Strip HTML to text
+    return html
+      .substring(0, 200_000)
+      .replace(/<script[\s\S]*?<\/script>/gi, ' ')
+      .replace(/<style[\s\S]*?<\/style>/gi, ' ')
+      .replace(/<[^>]+>/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&quot;/g, '"')
+      .replace(/&#39;/g, "'")
+      .replace(/&nbsp;/g, ' ')
+      .replace(/[ \t]+/g, ' ')
+      .replace(/\n\s*\n/g, '\n')
+      .trim()
+  } catch {
     return null
   }
 }
@@ -285,7 +282,7 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
 
   const allEmails = new Map<string, ScrapedEmail>()
   let pagesScraped = 0
-  const maxPages = 4 // Homepage + 3 contact pages (keeps enrichment fast)
+  const maxPages = 3 // Homepage + 2 contact pages (keeps enrichment fast)
 
   // Scrape homepage + contact pages
   const pagesToScrape = [baseUrl, ...CONTACT_PATHS.map(path => `${baseUrl}${path}`)]
@@ -293,7 +290,7 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
   for (const pageUrl of pagesToScrape) {
     if (pagesScraped >= maxPages) break
 
-    const text = await firecrawlScrape(pageUrl)
+    const text = await fetchAndConvertToText(pageUrl)
     if (!text) continue
 
     pagesScraped++

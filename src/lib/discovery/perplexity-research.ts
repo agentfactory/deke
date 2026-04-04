@@ -55,6 +55,8 @@ interface DiscoveredLead {
 interface PerplexityOrg {
   name: string
   website: string | null
+  email: string | null
+  contactName: string | null
   description: string | null
 }
 
@@ -145,20 +147,22 @@ function buildPrompts(campaign: Campaign): string[] {
     : campaign.baseLocation
   const radius = campaign.radius
 
-  const nameRules = `IMPORTANT: Return ONLY the group's official name (e.g. "Vocal Revolution", "The Nor'easters", "Boston Skyline Chorus"). Include the group's website URL. Do NOT include page titles, descriptions, or taglines in the name field.`
+  const nameRules = `IMPORTANT: Return ONLY the group's official name (e.g. "Vocal Revolution", "The Nor'easters", "Boston Skyline Chorus"). Do NOT include page titles, descriptions, or taglines in the name field.`
+  const contactRules = `Include the group's website URL and contact email if you can find it. For the contact email, look for the music director's email, group contact email, or info@ email from their website.`
+  const jsonFormat = `Return as JSON array: [{"name": "...", "website": "...", "email": "...", "contactName": "..."}]. If you can't find an email or contact name, use null for those fields.`
 
   return [
     // Segment 1: College a cappella — Deke's core market
-    `List college and university a cappella groups within ${radius} miles of ${location}. Include groups from all nearby colleges and universities — there are typically many groups per school. These groups hire coaches, arrangers, and workshop leaders. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Be thorough — list at least 15-20 groups.`,
+    `List college and university a cappella groups within ${radius} miles of ${location}. Include groups from all nearby colleges and universities — there are typically many groups per school. These groups hire coaches, arrangers, and workshop leaders. ${nameRules} ${contactRules} ${jsonFormat} Be thorough — list at least 15-20 groups.`,
 
     // Segment 2: Community/semi-pro a cappella
-    `List community a cappella groups, post-collegiate a cappella groups, and semi-professional vocal ensembles within ${radius} miles of ${location}. Include groups that perform pop, rock, jazz, R&B, or contemporary arrangements. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List at least 10-15 groups.`,
+    `List community a cappella groups, post-collegiate a cappella groups, and semi-professional vocal ensembles within ${radius} miles of ${location}. Include groups that perform pop, rock, jazz, R&B, or contemporary arrangements. ${nameRules} ${contactRules} ${jsonFormat} List at least 10-15 groups.`,
 
     // Segment 3: Barbershop / Sweet Adelines / Harmony Inc
-    `List barbershop choruses (BHS chapters), barbershop quartets, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. Check the Barbershop Harmony Society Northeastern District, Sweet Adelines Region 1, and Harmony Inc directories. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List at least 10-15 groups.`,
+    `List barbershop choruses (BHS chapters), barbershop quartets, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. Check the Barbershop Harmony Society Northeastern District, Sweet Adelines Region 1, and Harmony Inc directories. ${nameRules} ${contactRules} ${jsonFormat} List at least 10-15 groups.`,
 
     // Segment 4: Contemporary choruses + festivals
-    `List community choruses and choirs within ${radius} miles of ${location} that perform contemporary, pop, jazz, gospel, or show music (not exclusively classical). Also list any a cappella festivals, vocal competitions, or singing conventions in the area. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List at least 10 groups.`,
+    `List community choruses and choirs within ${radius} miles of ${location} that perform contemporary, pop, jazz, gospel, or show music (not exclusively classical). Also list any a cappella festivals, vocal competitions, or singing conventions in the area. ${nameRules} ${contactRules} ${jsonFormat} List at least 10 groups.`,
   ]
 }
 
@@ -222,6 +226,8 @@ function parseOrgs(responseText: string): PerplexityOrg[] {
       .map((item: any) => ({
         name: cleanOrgName(item.name.trim()),
         website: item.website?.trim() || item.url?.trim() || null,
+        email: item.email?.trim() || null,
+        contactName: item.contactName?.trim() || item.contact_name?.trim() || null,
         description: item.description?.trim() || null,
       }))
       .filter((item: PerplexityOrg) => isValidOrgName(item.name))
@@ -309,52 +315,93 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
 
   const leads: DiscoveredLead[] = []
 
+  // Third-party SaaS email domains to skip
+  const thirdPartyDomains = [
+    'mymusicstaff.com', 'groupanizer.com', 'placeholder.local',
+    'wixpress.com', 'squarespace.com', 'wordpress.com',
+    'mailchimp.com', 'constantcontact.com',
+  ]
+
   for (const org of candidates) {
     try {
-      if (!org.website) {
-        console.log(`[Perplexity Research] No website for "${org.name}" — skipping`)
+      let email: string | null = null
+      let firstName = 'Contact'
+      let lastName = `at ${org.name}`
+      let contactTitle: string | null = null
+      let enrichmentSource: string | null = null
+      let emailVerified = false
+      let phone: string | null = null
+
+      // Step 1: Use Perplexity-provided email if available (free, no scraping)
+      if (org.email && org.email.includes('@')) {
+        const emailDomain = org.email.split('@')[1]?.toLowerCase() || ''
+        if (!thirdPartyDomains.some(d => emailDomain.includes(d))) {
+          email = org.email.toLowerCase()
+          enrichmentSource = 'perplexity'
+          emailVerified = false // Not verified, came from AI
+
+          if (org.contactName) {
+            const nameParts = org.contactName.split(' ')
+            if (nameParts.length >= 2) {
+              firstName = nameParts[0]
+              lastName = nameParts.slice(1).join(' ')
+            } else if (nameParts.length === 1) {
+              firstName = nameParts[0]
+            }
+          }
+          console.log(`[Perplexity Research] Using Perplexity-provided email for "${org.name}": ${email}`)
+        }
+      }
+
+      // Step 2: If no Perplexity email, try website scraping enrichment
+      if (!email && org.website) {
+        const enrichment = await enrichOrganization(org.website, null, org.name)
+        diagnostics.enriched++
+
+        if (enrichment.email) {
+          const emailDomain = enrichment.email.split('@')[1]?.toLowerCase() || ''
+          if (!thirdPartyDomains.some(d => emailDomain.includes(d))) {
+            email = enrichment.email
+            firstName = enrichment.firstName || 'Contact'
+            lastName = enrichment.lastName || `at ${org.name}`
+            contactTitle = enrichment.contactTitle
+            enrichmentSource = enrichment.enrichmentSource || 'website_scrape'
+            emailVerified = enrichment.emailVerified
+            phone = enrichment.phone
+          }
+        }
+      }
+
+      // Step 3: If still no email and no website, skip
+      if (!email) {
+        if (!org.website && !org.email) {
+          console.log(`[Perplexity Research] No website or email for "${org.name}" — skipping`)
+        } else {
+          console.log(`[Perplexity Research] No email found for "${org.name}" — skipping`)
+        }
         continue
       }
 
-      const enrichment = await enrichOrganization(org.website, null, org.name)
-      diagnostics.enriched++
+      const baseScore = firstName !== 'Contact' ? 45 : 35
 
-      if (enrichment.email) {
-        // Filter out third-party SaaS emails
-        const thirdPartyDomains = [
-          'mymusicstaff.com', 'groupanizer.com', 'placeholder.local',
-          'wixpress.com', 'squarespace.com', 'wordpress.com',
-          'mailchimp.com', 'constantcontact.com',
-        ]
-        const emailDomain = enrichment.email.split('@')[1]?.toLowerCase() || ''
-        if (thirdPartyDomains.some(d => emailDomain.includes(d))) {
-          console.log(`[Perplexity Research] Skipping third-party email ${enrichment.email} for "${org.name}"`)
-          continue
-        }
-
-        const baseScore = enrichment.firstName && enrichment.firstName !== 'Contact' ? 45 : 35
-
-        leads.push({
-          firstName: enrichment.firstName || 'Contact',
-          lastName: enrichment.lastName || `at ${org.name}`,
-          email: enrichment.email,
-          phone: enrichment.phone,
-          organization: org.name,
-          source: 'AI_RESEARCH',
-          latitude: campaign.latitude,
-          longitude: campaign.longitude,
-          score: baseScore,
-          distance: 0,
-          website: org.website,
-          emailVerified: enrichment.emailVerified,
-          needsEnrichment: false,
-          enrichmentSource: enrichment.enrichmentSource || 'perplexity+firecrawl',
-          contactTitle: enrichment.contactTitle,
-          editorialSummary: org.description?.substring(0, 200) || null,
-        })
-      } else {
-        console.log(`[Perplexity Research] No email found for "${org.name}" — skipping`)
-      }
+      leads.push({
+        firstName,
+        lastName,
+        email,
+        phone,
+        organization: org.name,
+        source: 'AI_RESEARCH',
+        latitude: campaign.latitude,
+        longitude: campaign.longitude,
+        score: baseScore,
+        distance: 0,
+        website: org.website,
+        emailVerified,
+        needsEnrichment: false,
+        enrichmentSource,
+        contactTitle,
+        editorialSummary: org.description?.substring(0, 200) || null,
+      })
     } catch (error) {
       console.error(`[Perplexity Research] Failed to enrich "${org.name}":`, error instanceof Error ? error.message : error)
     }
