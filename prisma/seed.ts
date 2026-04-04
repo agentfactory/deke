@@ -342,27 +342,33 @@ async function main() {
   // -----------------------------------------------------------
   await prisma.messageTemplate.upsert({
     where: { id: 'seed-template-university' },
-    update: {},
+    update: {
+      subject: 'Coming to {{baseLocation}} — a thought for {{organization}}',
+      body: 'Hi {{firstName}},\n\nI\'m Deke Sharon — I\'ll be in the {{baseLocation}} area{{availabilityDates}} and wanted to reach out to {{organization}} directly.\n\nI\'ve worked with collegiate a cappella groups across the country on everything from arranging and blend to performance and show design. If there\'s a good fit with where your group is right now, I\'d love a quick conversation.\n\nNo pitch, no pressure — just want to see if the timing and format make sense.\n\nWarm regards,\nDeke Sharon\n{{servicesLink}}',
+    },
     create: {
       id: 'seed-template-university',
       name: 'Workshop Inquiry - University',
       serviceType: 'WORKSHOP',
       channel: 'EMAIL',
-      subject: 'A Cappella Workshop Opportunity Near Your Area',
-      body: 'Hi {{firstName}},\n\nI noticed {{organization}} might be interested in elevating your a cappella program. Deke Sharon (Music Director of Pitch Perfect, The Sing-Off) will be in {{location}} on {{dates}} and has availability for a workshop.\n\nTopics can include:\n- Arranging techniques\n- Vocal percussion\n- Blend and tuning\n- Performance skills\n\nInvestment: $3,500-6,000 depending on group size and duration.\n\nWould you be interested in learning more?\n\nBest regards,\nHarmony',
+      subject: 'Coming to {{baseLocation}} — a thought for {{organization}}',
+      body: 'Hi {{firstName}},\n\nI\'m Deke Sharon — I\'ll be in the {{baseLocation}} area{{availabilityDates}} and wanted to reach out to {{organization}} directly.\n\nI\'ve worked with collegiate a cappella groups across the country on everything from arranging and blend to performance and show design. If there\'s a good fit with where your group is right now, I\'d love a quick conversation.\n\nNo pitch, no pressure — just want to see if the timing and format make sense.\n\nWarm regards,\nDeke Sharon\n{{servicesLink}}',
     },
   })
 
   await prisma.messageTemplate.upsert({
     where: { id: 'seed-template-highschool' },
-    update: {},
+    update: {
+      subject: 'A thought for {{organization}} — Deke Sharon in {{baseLocation}}',
+      body: 'Hi {{firstName}},\n\nI\'m Deke Sharon — I\'ll be in {{baseLocation}}{{availabilityDates}} and I wanted to reach out to {{organization}} directly.\n\nI work with high school vocal groups on the things that make the biggest difference: how to listen, how to blend, how to arrange for your specific voices, and how to perform with confidence. Sessions are tailored to where your singers actually are.\n\nIf the timing feels right, I\'d love to have a brief conversation about what might work.\n\nWarm regards,\nDeke Sharon\n{{servicesLink}}',
+    },
     create: {
       id: 'seed-template-highschool',
       name: 'Workshop Inquiry - High School',
       serviceType: 'WORKSHOP',
       channel: 'EMAIL',
-      subject: 'Special Workshop Opportunity for {{organization}}',
-      body: "Hi {{firstName}},\n\nDeke Sharon, the \"father of contemporary a cappella,\" will be in {{location}} on {{dates}}.\n\nWe're offering a limited number of high school workshops at a special rate: $2,500 for a half-day session.\n\nYour singers will learn directly from the Music Director of Pitch Perfect and The Sing-Off.\n\nInterested in reserving a spot?\n\nBest,\nHarmony",
+      subject: 'A thought for {{organization}} — Deke Sharon in {{baseLocation}}',
+      body: 'Hi {{firstName}},\n\nI\'m Deke Sharon — I\'ll be in {{baseLocation}}{{availabilityDates}} and I wanted to reach out to {{organization}} directly.\n\nI work with high school vocal groups on the things that make the biggest difference: how to listen, how to blend, how to arrange for your specific voices, and how to perform with confidence. Sessions are tailored to where your singers actually are.\n\nIf the timing feels right, I\'d love to have a brief conversation about what might work.\n\nWarm regards,\nDeke Sharon\n{{servicesLink}}',
     },
   })
 
