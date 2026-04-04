@@ -241,7 +241,41 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   }
 
   // Merge all leads (Perplexity + Firecrawl both contribute to AI_RESEARCH)
-  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch, ...perplexity]
+  const rawLeads = [...pastClients, ...dormant, ...similar, ...aiResearch, ...perplexity]
+
+  // Filter out college/university and classical groups from ALL sources
+  const allLeads = rawLeads.filter((lead: any) => {
+    const org = (lead.organization || '').toLowerCase()
+
+    // College/university groups
+    const collegePatterns = [
+      'berklee', 'college of music', 'university', ' college',
+      'conservatory', 'institute of', 'endicott ensembles',
+    ]
+    if (collegePatterns.some(p => org.includes(p))) {
+      console.log(`[Discovery:Orchestrator] Filtered college/university group: "${lead.organization}"`)
+      return false
+    }
+
+    // Classical/choral society orgs (without contemporary signals)
+    const classicalPatterns = ['choral international', 'choral society', 'symphony', 'orchestra', 'opera', 'philharmonic']
+    const contemporarySignals = ['a cappella', 'pop', 'rock', 'jazz', 'barbershop', 'contemporary']
+    const isClassical = classicalPatterns.some(p => org.includes(p))
+    const hasContemporary = contemporarySignals.some(p => org.includes(p))
+    if (isClassical && !hasContemporary) {
+      console.log(`[Discovery:Orchestrator] Filtered classical group: "${lead.organization}"`)
+      return false
+    }
+
+    return true
+  })
+
+  if (rawLeads.length > allLeads.length) {
+    const filtered = rawLeads.length - allLeads.length
+    console.log(`[Discovery:Orchestrator] Org type filter removed ${filtered} college/classical leads`)
+    warnings.push(`${filtered} leads filtered out (college/university or classical)`)
+  }
+
   const originalCount = allLeads.length
 
   // Deduplicate by email (keeping highest score per email)

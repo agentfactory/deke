@@ -64,13 +64,21 @@ function cleanOrgName(name: string): string {
     .replace(/\s*[-–—]\s*(singing|group|performing|booking|contemporary|events|calendar).*$/i, '')
     .trim()
 
-  // If a colon remains, take only what's after it (often "Concert Series: Real Group Name")
+  // Handle colons — "Overboard: Boston a cappella group..." → "Overboard"
   if (cleaned.includes(':')) {
-    const parts = cleaned.split(':')
-    const afterColon = parts[parts.length - 1].trim()
-    // Use the after-colon part only if it looks substantial
-    if (afterColon.length >= 5) {
-      cleaned = afterColon
+    const beforeColon = cleaned.split(':')[0].trim()
+    const afterColon = cleaned.split(':').slice(1).join(':').trim().toLowerCase()
+    // If after the colon is descriptive text (city names, genre words), keep only before
+    const descriptiveWords = ['boston', 'new york', 'group', 'singing', 'a cappella', 'vocal', 'pop', 'rock', 'jazz', 'contemporary', 'community', 'greater', 'performing']
+    const isDescriptive = descriptiveWords.some(w => afterColon.includes(w))
+    if (beforeColon.length >= 3 && isDescriptive) {
+      cleaned = beforeColon
+    } else {
+      // Otherwise take the after-colon part (e.g. "Concert Series: Real Group Name")
+      const after = cleaned.split(':').slice(1).join(':').trim()
+      if (after.length >= 5) {
+        cleaned = after
+      }
     }
   }
 
@@ -105,13 +113,20 @@ function isValidOrgName(name: string): boolean {
   ]
   if (searchTermPatterns.some(p => p.test(name))) return false
 
-  // Reject college/university affiliated groups (org name contains institution)
+  // Reject college/university affiliated groups
   const collegePatterns = [
     'berklee', 'college of music', 'university', 'college',
     'school of music', 'conservatory', 'institute',
     'endicott ensembles', 'campus',
   ]
   if (collegePatterns.some(p => lower.includes(p))) return false
+
+  // Reject classical/choral society orgs
+  const classicalPatterns = [
+    'choral international', 'choral society', 'symphony',
+    'orchestra', 'opera', 'philharmonic', 'chamber choir',
+  ]
+  if (classicalPatterns.some(p => lower.includes(p))) return false
 
   // Reject if it looks like a person's name (2 words, both capitalized, no org keywords)
   const words = name.split(/\s+/)
