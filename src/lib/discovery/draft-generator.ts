@@ -41,21 +41,13 @@ function resolveGreeting(firstName: string, lastName: string | null, organizatio
 
 /**
  * Build the fallback email body template when no MessageTemplate record exists.
- *
- * The body is personalized: if editorialSummary is available for this lead, a
- * paragraph acknowledging what the group does is included, making the email feel
- * researched rather than mass-sent.
  */
-function buildFallbackBody(hasEditorialSummary: boolean): string {
-  const editorialParagraph = hasEditorialSummary
-    ? '\nI came across {{organization}} — {{editorialSummary}} That kind of work is exactly what I love getting to be part of.\n'
-    : ''
-
+function buildFallbackBody(): string {
   return `Hi {{firstName}},
 
 I'm Deke Sharon — I'll be in the {{baseLocation}} area{{availabilityDates}} and wanted to reach out directly.
-${editorialParagraph}
-I work with vocal groups of all kinds on workshops, coaching, and masterclasses. If the timing feels right and there's a good fit, I'd love a quick conversation — no pressure either way.
+
+If you'd like to connect about a workshop or coaching session while I'm in town, I'm game — just say the word.
 
 You can see what I offer at {{servicesLink}}
 
@@ -146,14 +138,13 @@ export async function generateDraftsForCampaign(campaignId: string): Promise<Dra
     }
 
     const greeting = resolveGreeting(cl.lead.firstName, cl.lead.lastName, cl.lead.organization)
-    const hasEditorialSummary = Boolean(cl.lead.editorialSummary?.trim())
 
     // Build subject: per-lead personalization using org name
     let templateSubject = defaultTemplate?.subject
       ?? buildDefaultSubject(campaign.baseLocation, campaign.booking?.serviceType, cl.lead.organization)
 
     // Build body: use DB template if available, otherwise the personalized fallback
-    let templateBody = defaultTemplate?.body ?? buildFallbackBody(hasEditorialSummary)
+    let templateBody = defaultTemplate?.body ?? buildFallbackBody()
 
     const vars: Record<string, string> = {
       firstName: greeting,
