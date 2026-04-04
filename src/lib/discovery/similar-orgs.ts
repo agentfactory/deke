@@ -131,6 +131,19 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
         return null
       }
 
+      // Skip college/university and classical groups
+      const org = (lead.organization || '').toLowerCase()
+      const rejectPatterns = [
+        'berklee', 'college of music', 'university', 'college',
+        'conservatory', 'institute of', 'high school', 'middle school',
+        'choral international', 'choral society', 'symphony',
+        'orchestra', 'opera', 'philharmonic',
+      ]
+      if (rejectPatterns.some(p => org.includes(p))) {
+        console.log(`[Discovery:SimilarOrgs] Skipping college/classical: "${lead.organization}"`)
+        return null
+      }
+
       const distance = haversineDistance(
         { lat: campaign.latitude, lon: campaign.longitude },
         { lat: lead.latitude, lon: lead.longitude },
