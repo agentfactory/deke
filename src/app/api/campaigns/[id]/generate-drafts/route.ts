@@ -12,7 +12,7 @@ export async function POST(
   try {
     const { id: campaignId } = await params
     const body = await request.json()
-    const { leadIds, templateId } = generateDraftsSchema.parse(body)
+    const { leadIds, templateId, force } = generateDraftsSchema.parse(body)
 
     // Verify campaign exists
     const campaign = await prisma.campaign.findUnique({
@@ -61,9 +61,9 @@ export async function POST(
       throw new ApiError(400, 'No matching campaign leads found', 'NO_LEADS')
     }
 
-    // Quality gate: filter out leads that shouldn't receive drafts
+    // Quality gate: filter out leads that shouldn't receive drafts (skip when force=true)
     const genericPrefixes = ['info@', 'hello@', 'contact@', 'admin@', 'office@', 'general@']
-    const draftableLeads = campaignLeads.filter((cl: any) => {
+    const draftableLeads = force ? campaignLeads : campaignLeads.filter((cl: any) => {
       // No placeholder emails
       if (cl.lead.email?.includes('@placeholder.local')) return false
       // No fake "Contact at Org" names from unenriched leads

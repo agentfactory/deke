@@ -1,11 +1,18 @@
 import { Resend } from 'resend'
 
+export interface EmailAttachment {
+  filename: string
+  content: Buffer
+}
+
 export interface SendEmailParams {
   to: string
   subject: string
   html: string
   campaignId: string
   leadId: string
+  cc?: string
+  attachments?: EmailAttachment[]
 }
 
 export interface EmailResponse {
@@ -45,6 +52,10 @@ export async function sendEmail(params: SendEmailParams): Promise<EmailResponse>
       to: params.to,
       subject: params.subject,
       html: params.html,
+      ...(params.cc ? { cc: [params.cc] } : {}),
+      ...(params.attachments && params.attachments.length > 0
+        ? { attachments: params.attachments }
+        : {}),
       tags: [
         {
           name: 'campaignId',

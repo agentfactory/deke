@@ -571,6 +571,9 @@ model EmailDraft {
   body            String        // Pre-rendered HTML from template
   status          String        @default("DRAFT") // DRAFT, APPROVED, SENT, FAILED
   editedByUser    Boolean       @default(false)
+  overrideEmail   String?       // User-corrected recipient email (used instead of lead.email)
+  ccEmail         String?       // Optional CC recipient
+  attachments     Json?         // JSON array of { filename, path, size } objects
   sentAt          DateTime?
   errorMessage    String?
 
