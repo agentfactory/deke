@@ -51,6 +51,80 @@ interface PerplexityOrg {
 }
 
 /**
+ * Clean an org name returned by Perplexity.
+ * Strips page title junk, event names, descriptions appended after separators.
+ */
+function cleanOrgName(name: string): string {
+  let cleaned = name
+    // Strip everything after common separators that indicate page title junk
+    .replace(/\s*[-–—|:]\s*(Home|About|Contact|Welcome|Events Calendar|Booking Inquiries|Official|Overview|Website|Page).*$/i, '')
+    // Strip "Upcoming Events", "Friends and Families Concert:" prefixes
+    .replace(/^(?:Upcoming Events|Events|Concert|Friends and Families Concert)\s*[:–—-]\s*/i, '')
+    // Strip trailing descriptions after separators
+    .replace(/\s*[-–—]\s*(singing|group|performing|booking|contemporary|events|calendar).*$/i, '')
+    .trim()
+
+  // If a colon remains, take only what's after it (often "Concert Series: Real Group Name")
+  if (cleaned.includes(':')) {
+    const parts = cleaned.split(':')
+    const afterColon = parts[parts.length - 1].trim()
+    // Use the after-colon part only if it looks substantial
+    if (afterColon.length >= 5) {
+      cleaned = afterColon
+    }
+  }
+
+  return cleaned || name
+}
+
+/**
+ * Validate an org name — reject page titles, search terms, event names,
+ * individual instructor names, and institutional groups.
+ */
+function isValidOrgName(name: string): boolean {
+  const lower = name.toLowerCase()
+
+  // Too short or too long
+  if (name.length < 3 || name.length > 80) return false
+
+  // Reject page titles and web junk
+  const pageTitlePatterns = [
+    'upcoming events', 'events calendar', 'booking inquiries',
+    'friends and families', 'concert:', 'concerts',
+    'bands for hire', 'bands near', 'groups near',
+    'pop vocals with', 'lessons with', 'classes with',
+  ]
+  if (pageTitlePatterns.some(p => lower.includes(p))) return false
+
+  // Reject generic search-like terms
+  const searchTermPatterns = [
+    /^(boston|new york|chicago|los angeles)\s+(a cappella|singing|vocal)\s+(bands|groups|ensembles)$/i,
+    /^(a cappella|singing|vocal)\s+(bands|groups|ensembles)\s+(in|near|around)\b/i,
+    /\bbands for hire\b/i,
+    /\bfor hire\b/i,
+  ]
+  if (searchTermPatterns.some(p => p.test(name))) return false
+
+  // Reject college/university affiliated groups (org name contains institution)
+  const collegePatterns = [
+    'berklee', 'college of music', 'university', 'college',
+    'school of music', 'conservatory', 'institute',
+    'endicott ensembles', 'campus',
+  ]
+  if (collegePatterns.some(p => lower.includes(p))) return false
+
+  // Reject if it looks like a person's name (2 words, both capitalized, no org keywords)
+  const words = name.split(/\s+/)
+  if (words.length === 2) {
+    const bothCapitalized = words.every(w => /^[A-Z][a-z]+$/.test(w))
+    const hasOrgKeyword = /choir|chorus|singers|a cappella|barbershop|vocal|ensemble|blend|harmony|notes|tones|sound/i.test(name)
+    if (bothCapitalized && !hasOrgKeyword) return false
+  }
+
+  return true
+}
+
+/**
  * Build Perplexity prompts tailored to the campaign location.
  *
  * Each prompt asks for a specific slice of the contemporary vocal group market.
@@ -64,12 +138,14 @@ function buildPrompts(campaign: Campaign): string[] {
     : campaign.baseLocation
   const radius = campaign.radius
 
+  const nameRules = `IMPORTANT: "name" must be ONLY the group's proper name (e.g. "Vinyl Street A Cappella", "Northshoremen Barbershop Chorus"). Do NOT include descriptions, page titles, event names, taglines, or instructor names. Do NOT include groups that are part of a college or university.`
+
   return [
-    `List contemporary a cappella groups, pop vocal ensembles, and jazz singing groups within ${radius} miles of ${location}. Focus on community and semi-professional groups that perform pop, rock, R&B, or jazz — NOT classical choirs, school choirs, or church choirs. For each group, provide the name and website URL. Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 15 groups.`,
+    `List contemporary a cappella groups and pop/rock/jazz vocal ensembles within ${radius} miles of ${location}. Focus on community and semi-professional groups — NOT college a cappella, NOT classical choirs, NOT school programs, NOT church choirs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 15 groups.`,
 
-    `List barbershop choruses, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. For each group, provide the name and website URL. Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 10 groups.`,
+    `List barbershop choruses, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 10 groups.`,
 
-    `List community singing groups, vocal bands, and show choirs within ${radius} miles of ${location} that focus on contemporary music (pop, rock, jazz, soul, R&B). Exclude classical choral societies, university music departments, and K-12 school programs. For each group, provide the name and website URL. Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 10 groups.`,
+    `List community singing groups, vocal bands, and show choirs within ${radius} miles of ${location} that focus on contemporary music (pop, rock, jazz, soul, R&B). Exclude classical choral societies, university/college groups, and K-12 school programs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 10 groups.`,
   ]
 }
 
@@ -134,10 +210,11 @@ function parseOrgs(responseText: string): PerplexityOrg[] {
     return parsed
       .filter((item: any) => item.name && typeof item.name === 'string')
       .map((item: any) => ({
-        name: item.name.trim(),
+        name: cleanOrgName(item.name.trim()),
         website: item.website?.trim() || item.url?.trim() || null,
         description: item.description?.trim() || null,
       }))
+      .filter((item: PerplexityOrg) => isValidOrgName(item.name))
   } catch (error) {
     console.warn('[Perplexity] Failed to parse JSON:', error instanceof Error ? error.message : error)
     return []
