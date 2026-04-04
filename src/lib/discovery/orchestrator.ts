@@ -12,6 +12,7 @@ import { discoverDormantLeads } from './dormant-leads'
 import { discoverSimilarOrgs } from './similar-orgs'
 import { discoverAIResearch, type AIResearchDiagnostics } from './ai-research'
 import { discoverWithFirecrawl } from './firecrawl-research'
+import { discoverWithPerplexity } from './perplexity-research'
 import { calculateScore, calculateScoreStats } from './scorer'
 import { deduplicate, getDeduplicationStats } from './deduplicator'
 import { classifyOrganization } from './org-classifier'
@@ -125,6 +126,11 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
     warnings.push('FIRECRAWL_API_KEY not configured — AI Research source will be skipped')
   }
 
+  // Check Perplexity API key
+  if (!process.env.PERPLEXITY_API_KEY) {
+    warnings.push('PERPLEXITY_API_KEY not configured — Perplexity discovery will be skipped')
+  }
+
   // Run all discovery sources in parallel, each wrapped in individual try/catch
   const sourceDiagnostics: SourceDiagnostic[] = []
   const sourceErrors: string[] = []
@@ -152,8 +158,9 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
 
   // AI Research needs special handling for its richer result type
   let aiResearchDiagnostics: AIResearchDiagnostics | undefined
+  let perplexityDiagnostics: AIResearchDiagnostics | undefined
 
-  const [pastClientsResult, dormantResult, similarResult, aiResearchResult] = await Promise.all([
+  const [pastClientsResult, dormantResult, similarResult, aiResearchResult, perplexityResult] = await Promise.all([
     runSource('Past Clients', () => discoverPastClients(campaign)),
     runSource('Dormant Leads', () => discoverDormantLeads(campaign)),
     runSource('Similar Orgs', () => discoverSimilarOrgs(campaign)),
@@ -179,6 +186,21 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       }
       return result.leads
     }),
+    runSource('Perplexity Research', async () => {
+      if (!process.env.PERPLEXITY_API_KEY) {
+        return []
+      }
+      console.log('[Discovery:Orchestrator] Running Perplexity discovery (PERPLEXITY_API_KEY set)')
+      const result = await discoverWithPerplexity(campaign)
+
+      perplexityDiagnostics = result.diagnostics
+      if (result.diagnostics.errors.length > 0) {
+        for (const err of result.diagnostics.errors) {
+          warnings.push(`Perplexity: ${err}`)
+        }
+      }
+      return result.leads
+    }),
   ])
 
   // Attach AI Research detailed diagnostics after runSource has pushed its entry
@@ -188,29 +210,38 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       aiDiag.details = aiResearchDiagnostics
     }
   }
+  if (perplexityDiagnostics) {
+    const pDiag = sourceDiagnostics.find(d => d.source === 'Perplexity Research')
+    if (pDiag) {
+      pDiag.details = perplexityDiagnostics
+    }
+  }
 
   const pastClients = pastClientsResult || []
   const dormant = dormantResult || []
   const similar = similarResult || []
   const aiResearch = aiResearchResult || []
+  const perplexity = perplexityResult || []
 
   console.log('[Discovery:Orchestrator] Source results', {
     pastClients: pastClients.length,
     dormant: dormant.length,
     similar: similar.length,
     aiResearch: aiResearch.length,
+    perplexity: perplexity.length,
   })
 
   // Track counts by source before deduplication
+  // Perplexity leads are tagged AI_RESEARCH for compatibility with existing schema
   const bySource = {
     PAST_CLIENT: pastClients.length,
     DORMANT: dormant.length,
     SIMILAR_ORG: similar.length,
-    AI_RESEARCH: aiResearch.length,
+    AI_RESEARCH: aiResearch.length + perplexity.length,
   }
 
-  // Merge all leads
-  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch]
+  // Merge all leads (Perplexity + Firecrawl both contribute to AI_RESEARCH)
+  const allLeads = [...pastClients, ...dormant, ...similar, ...aiResearch, ...perplexity]
   const originalCount = allLeads.length
 
   // Deduplicate by email (keeping highest score per email)
