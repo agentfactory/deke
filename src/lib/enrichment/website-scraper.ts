@@ -342,12 +342,17 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
     }
   }
 
-  // Filter: keep emails from org's own domain or common providers
-  const websiteDomain = new URL(baseUrl).hostname.replace(/^www\./, '')
+  // Filter: reject known platform/SaaS emails, keep everything else
+  const platformDomains = [
+    'mymusicstaff.com', 'groupanizer.com', 'wixpress.com',
+    'squarespace.com', 'wordpress.com', 'mailchimp.com',
+    'constantcontact.com', 'google.com', 'googleapis.com',
+    'w3.org', 'schema.org', 'cloudflare.com', 'sentry.io',
+    'placeholder.local', 'example.com',
+  ]
   const filteredEmails = Array.from(allEmails.values()).filter(e => {
     const emailDomain = e.email.split('@')[1]
-    return emailDomain === websiteDomain ||
-      ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com'].includes(emailDomain)
+    return !platformDomains.some(d => emailDomain.includes(d))
   })
 
   // Sort by priority:
