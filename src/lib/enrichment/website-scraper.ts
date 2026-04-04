@@ -282,7 +282,7 @@ export async function scrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
 
   const allEmails = new Map<string, ScrapedEmail>()
   let pagesScraped = 0
-  const maxPages = 3 // Homepage + 2 contact pages (keeps enrichment fast)
+  const maxPages = 6 // Homepage + 5 contact pages — self-hosted Firecrawl is free
 
   // Scrape homepage + contact pages
   const pagesToScrape = [baseUrl, ...CONTACT_PATHS.map(path => `${baseUrl}${path}`)]

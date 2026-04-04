@@ -95,10 +95,10 @@ export async function firecrawlScrape(websiteUrl: string): Promise<FirecrawlScra
   // Phase 2: If no personal emails found, try contact/about pages
   const hasPersonalEmail = allEmails.some(e => e.type === 'personal')
   if (!hasPersonalEmail) {
-    const contactPaths = ['/contact', '/about', '/about-us', '/staff', '/leadership', '/board']
+    const contactPaths = ['/contact', '/about', '/about-us', '/staff', '/leadership', '/board', '/team', '/our-team', '/directors', '/people', '/who-we-are', '/connect', '/get-in-touch', '/board-of-directors']
 
     for (const path of contactPaths) {
-      if (creditsUsed >= 2) break // Cap at 2 credits per org (homepage + 1 subpage)
+      if (creditsUsed >= 6) break // Self-hosted Firecrawl is free — scrape more pages
 
       try {
         const pageUrl = `${baseUrl}${path}`

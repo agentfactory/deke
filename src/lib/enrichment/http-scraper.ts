@@ -12,8 +12,8 @@
 import { isValidContactName, stripTitlePrefix } from './name-validator'
 import type { ScrapedEmail, ScrapeResult } from './website-scraper'
 
-// Pages most likely to contain contact info
-const CONTACT_PATHS = ['/contact', '/about', '/about-us', '/staff', '/leadership']
+// Pages most likely to contain contact info — expanded for thorough scraping
+const CONTACT_PATHS = ['/contact', '/about', '/about-us', '/staff', '/leadership', '/board', '/team', '/our-team', '/directors', '/people', '/who-we-are', '/connect', '/get-in-touch', '/board-of-directors']
 
 // Generic email prefixes
 const GENERIC_PREFIXES = [
@@ -197,8 +197,8 @@ function extractContacts(text: string, orgDomain: string): ScrapedEmail[] {
 /**
  * Scrape a website using plain HTTP fetch (no Firecrawl API needed)
  *
- * Tries homepage + up to 2 subpages (/contact, /about, etc.)
- * Max 3 HTTP requests per org.
+ * Tries homepage + up to 5 subpages (/contact, /about, /staff, etc.)
+ * Max 6 HTTP requests per org — HTTP is free so we can be thorough.
  */
 export async function httpScrapeWebsite(websiteUrl: string): Promise<ScrapeResult> {
   let baseUrl: string
@@ -243,7 +243,7 @@ export async function httpScrapeWebsite(websiteUrl: string): Promise<ScrapeResul
   if (!hasGoodEmail) {
     // Try contact/about pages (max 2 more)
     for (const path of CONTACT_PATHS) {
-      if (pagesScraped >= 3) break
+      if (pagesScraped >= 6) break
 
       // Small delay between requests to be polite
       await new Promise(resolve => setTimeout(resolve, 200))

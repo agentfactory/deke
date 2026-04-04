@@ -20,7 +20,7 @@ import {
   SheetTitle,
   SheetDescription,
 } from '@/components/ui/sheet'
-import { ArrowUpDown, UserMinus, UserPlus, CheckCircle, AlertCircle, ExternalLink, Phone, Mail, Globe, Building2, MapPin, Star } from 'lucide-react'
+import { ArrowUpDown, UserMinus, UserPlus, CheckCircle, AlertCircle, ExternalLink, Phone, Mail, Globe, Building2, MapPin, Star, RotateCw } from 'lucide-react'
 
 interface CampaignLead {
   id: string
@@ -73,7 +73,24 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
   const [rowSelection, setRowSelection] = useState({})
   const [sorting, setSorting] = useState<SortingState>([])
   const [updatingLeadId, setUpdatingLeadId] = useState<string | null>(null)
+  const [enrichingLeadId, setEnrichingLeadId] = useState<string | null>(null)
   const [previewLead, setPreviewLead] = useState<CampaignLead | null>(null)
+
+  const handleReEnrich = useCallback(async (leadId: string) => {
+    setEnrichingLeadId(leadId)
+    try {
+      const response = await fetch(`/api/leads/${leadId}/enrich`, {
+        method: 'POST',
+      })
+      if (response.ok && onLeadStatusChange) {
+        onLeadStatusChange() // Refresh the table
+      }
+    } catch (err) {
+      console.error('Failed to re-enrich lead:', err)
+    } finally {
+      setEnrichingLeadId(null)
+    }
+  }, [onLeadStatusChange])
 
   const handleToggleStatus = useCallback(async (leadId: string, currentStatus: string) => {
     if (!campaignId) return
@@ -247,17 +264,35 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
       cell: ({ row }) => {
         const isRemoved = row.original.status === 'REMOVED'
         const isUpdating = updatingLeadId === row.original.id
-        return campaignId ? (
-          <Button
-            variant="ghost"
-            size="icon"
-            className={`h-6 w-6 ${isRemoved ? 'text-emerald-500 hover:text-emerald-400' : 'text-destructive hover:text-destructive'}`}
-            onClick={() => handleToggleStatus(row.original.id, row.original.status)}
-            disabled={isUpdating}
-          >
-            {isRemoved ? <UserPlus className="h-3.5 w-3.5" /> : <UserMinus className="h-3.5 w-3.5" />}
-          </Button>
-        ) : null
+        const isEnriching = enrichingLeadId === row.original.lead.id
+        const needsEnrich = row.original.lead.needsEnrichment || row.original.lead.email?.includes('@placeholder.local')
+        return (
+          <div className="flex items-center gap-0.5">
+            {needsEnrich && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className="h-6 w-6 text-amber-500 hover:text-amber-400"
+                onClick={() => handleReEnrich(row.original.lead.id)}
+                disabled={isEnriching}
+                title="Re-enrich: find email"
+              >
+                <RotateCw className={`h-3.5 w-3.5 ${isEnriching ? 'animate-spin' : ''}`} />
+              </Button>
+            )}
+            {campaignId && (
+              <Button
+                variant="ghost"
+                size="icon"
+                className={`h-6 w-6 ${isRemoved ? 'text-emerald-500 hover:text-emerald-400' : 'text-destructive hover:text-destructive'}`}
+                onClick={() => handleToggleStatus(row.original.id, row.original.status)}
+                disabled={isUpdating}
+              >
+                {isRemoved ? <UserPlus className="h-3.5 w-3.5" /> : <UserMinus className="h-3.5 w-3.5" />}
+              </Button>
+            )}
+          </div>
+        )
       },
       size: 36,
     },
@@ -459,34 +494,50 @@ export function LeadsTableSelectable({ leads, campaignId, onSelectionChange, onL
                 )}
 
                 {/* Actions */}
-                <div className="border-t pt-4 flex gap-2">
-                  {campaignId && (
+                <div className="border-t pt-4 flex flex-col gap-2">
+                  {(previewLead.lead.needsEnrichment || previewLead.lead.email?.includes('@placeholder.local')) && (
                     <Button
-                      variant={previewLead.status === 'REMOVED' ? 'default' : 'destructive'}
+                      variant="default"
                       size="sm"
+                      className="w-full bg-amber-600 hover:bg-amber-500"
                       onClick={() => {
-                        handleToggleStatus(previewLead.id, previewLead.status)
-                        setPreviewLead(null)
+                        handleReEnrich(previewLead.lead.id)
                       }}
-                      className="flex-1"
+                      disabled={enrichingLeadId === previewLead.lead.id}
                     >
-                      {previewLead.status === 'REMOVED' ? (
-                        <><UserPlus className="h-3.5 w-3.5 mr-1.5" />Re-add to Campaign</>
-                      ) : (
-                        <><UserMinus className="h-3.5 w-3.5 mr-1.5" />Remove from Campaign</>
-                      )}
+                      <RotateCw className={`h-3.5 w-3.5 mr-1.5 ${enrichingLeadId === previewLead.lead.id ? 'animate-spin' : ''}`} />
+                      {enrichingLeadId === previewLead.lead.id ? 'Searching for email...' : 'Re-enrich: Find Email'}
                     </Button>
                   )}
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    asChild
-                  >
-                    <a href={`/dashboard/leads/${previewLead.lead.id}`}>
-                      Full Profile
-                      <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
-                    </a>
-                  </Button>
+                  <div className="flex gap-2">
+                    {campaignId && (
+                      <Button
+                        variant={previewLead.status === 'REMOVED' ? 'default' : 'destructive'}
+                        size="sm"
+                        onClick={() => {
+                          handleToggleStatus(previewLead.id, previewLead.status)
+                          setPreviewLead(null)
+                        }}
+                        className="flex-1"
+                      >
+                        {previewLead.status === 'REMOVED' ? (
+                          <><UserPlus className="h-3.5 w-3.5 mr-1.5" />Re-add to Campaign</>
+                        ) : (
+                          <><UserMinus className="h-3.5 w-3.5 mr-1.5" />Remove from Campaign</>
+                        )}
+                      </Button>
+                    )}
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      asChild
+                    >
+                      <a href={`/dashboard/leads/${previewLead.lead.id}`}>
+                        Full Profile
+                        <ExternalLink className="h-3.5 w-3.5 ml-1.5" />
+                      </a>
+                    </Button>
+                  </div>
                 </div>
               </div>
             </>
