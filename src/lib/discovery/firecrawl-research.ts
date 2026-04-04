@@ -151,7 +151,8 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
     return { leads: [], diagnostics }
   }
 
-  const client = new FirecrawlApp({ apiKey })
+  const apiUrl = process.env.FIRECRAWL_API_URL || undefined
+  const client = new FirecrawlApp({ apiKey, ...(apiUrl && { apiUrl }) })
   const allResults: Array<{ title: string; url: string; description: string }> = []
 
   // Build smart search locations (city/region, not venue name)

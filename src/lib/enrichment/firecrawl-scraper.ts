@@ -38,7 +38,8 @@ function getClient(): FirecrawlApp | null {
   if (firecrawlClient) return firecrawlClient
   const apiKey = process.env.FIRECRAWL_API_KEY
   if (!apiKey) return null
-  firecrawlClient = new FirecrawlApp({ apiKey })
+  const apiUrl = process.env.FIRECRAWL_API_URL || undefined
+  firecrawlClient = new FirecrawlApp({ apiKey, ...(apiUrl && { apiUrl }) })
   return firecrawlClient
 }
 
