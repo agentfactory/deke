@@ -15,6 +15,55 @@ export interface DraftGenerationResult {
 }
 
 /**
+ * Determine a sensible greeting name for the lead.
+ *
+ * Handles three cases:
+ *  1. A real person name is available → use firstName
+ *  2. firstName is the placeholder pattern "Contact at Org" → fall back to org or "there"
+ *  3. firstName looks like an institution/org name (capitalized single word like "MIT",
+ *     "Harvard") → fall back to org team or "there"
+ */
+function resolveGreeting(firstName: string, lastName: string | null, organization: string | null): string {
+  // Placeholder pattern used by discovery when no contact is found
+  if (firstName === 'Contact' && lastName?.startsWith('at ')) {
+    return organization ? `${organization} team` : 'there'
+  }
+
+  // Institution name used as firstName (e.g. "MIT", "Harvard", "Tufts")
+  // Heuristic: single capitalized word that matches common institution patterns
+  const looksLikeInstitution = /^[A-Z][A-Za-z]+$/.test(firstName) && firstName.length >= 3
+  if (looksLikeInstitution && organization && organization.startsWith(firstName)) {
+    return organization ? `${organization} team` : 'there'
+  }
+
+  return firstName
+}
+
+/**
+ * Build the fallback email body template when no MessageTemplate record exists.
+ *
+ * The body is personalized: if editorialSummary is available for this lead, a
+ * paragraph acknowledging what the group does is included, making the email feel
+ * researched rather than mass-sent.
+ */
+function buildFallbackBody(hasEditorialSummary: boolean): string {
+  const editorialParagraph = hasEditorialSummary
+    ? '\nI came across {{organization}} — {{editorialSummary}} That kind of work is exactly what I love getting to be part of.\n'
+    : ''
+
+  return `Hi {{firstName}},
+
+I'm Deke Sharon — I'll be in the {{baseLocation}} area{{availabilityDates}} and wanted to reach out directly.
+${editorialParagraph}
+I work with vocal groups of all kinds on workshops, coaching, and masterclasses. If the timing feels right and there's a good fit, I'd love a quick conversation — no pressure either way.
+
+You can see what I offer at {{servicesLink}}
+
+Warm regards,
+Deke Sharon`
+}
+
+/**
  * Generate email drafts for all leads in a campaign that have usable emails.
  *
  * @param campaignId - The campaign to generate drafts for
@@ -64,28 +113,11 @@ export async function generateDraftsForCampaign(campaignId: string): Promise<Dra
   const workshopLink = `${baseUrl}/workshops`
   const servicesLink = `${baseUrl}/services`
 
-  // Find template
-  let templateSubject = buildDefaultSubject(campaign.baseLocation, campaign.booking?.serviceType)
-  let templateBody = `Hi {{firstName}},
-
-I'm Deke Sharon, and I'll be in the {{baseLocation}} area{{availabilityDates}} — I'd love to explore working with {{organization}}.
-
-I offer workshops, coaching, and masterclasses tailored to vocal groups of all levels. You can see the full list of what I offer here: {{workshopLink}}
-
-Would you be open to a quick conversation about what might be a good fit?
-
-Best,
-Deke Sharon
-{{servicesLink}}`
-
+  // Find the most recent EMAIL template to use as default
   const defaultTemplate = await prisma.messageTemplate.findFirst({
     where: { channel: 'EMAIL' },
     orderBy: { createdAt: 'desc' },
   })
-  if (defaultTemplate) {
-    templateSubject = defaultTemplate.subject || templateSubject
-    templateBody = defaultTemplate.body
-  }
 
   // Get campaign leads that have real emails
   const campaignLeads = await prisma.campaignLead.findMany({
@@ -113,15 +145,19 @@ Deke Sharon
       continue
     }
 
-    // Use org-based greeting when no real person name is available
-    let greeting = cl.lead.firstName
-    if (cl.lead.firstName === 'Contact' && cl.lead.lastName?.startsWith('at ')) {
-      greeting = cl.lead.organization ? `${cl.lead.organization} team` : 'there'
-    }
+    const greeting = resolveGreeting(cl.lead.firstName, cl.lead.lastName, cl.lead.organization)
+    const hasEditorialSummary = Boolean(cl.lead.editorialSummary?.trim())
+
+    // Build subject: per-lead personalization using org name
+    let templateSubject = defaultTemplate?.subject
+      ?? buildDefaultSubject(campaign.baseLocation, campaign.booking?.serviceType, cl.lead.organization)
+
+    // Build body: use DB template if available, otherwise the personalized fallback
+    let templateBody = defaultTemplate?.body ?? buildFallbackBody(hasEditorialSummary)
 
     const vars: Record<string, string> = {
       firstName: greeting,
-      lastName: cl.lead.lastName,
+      lastName: cl.lead.lastName ?? '',
       organization: cl.lead.organization || '',
       contactTitle: cl.lead.contactTitle || '',
       editorialSummary: cl.lead.editorialSummary || '',
