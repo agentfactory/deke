@@ -265,23 +265,46 @@ export default function CampaignDetailPage({
     return () => stopPolling();
   }, [stopPolling]);
 
-  // Auto-resume polling if discovery is already running when page loads
+  // Auto-resume polling if discovery is running, or auto-start if fresh campaign with 0 leads
+  const hasAutoStarted = useRef(false);
   useEffect(() => {
     if (!campaign) return;
 
-    const checkRunning = async () => {
+    const checkAndAutoStart = async () => {
       try {
+        // Check if discovery is already running
         const response = await fetch(`/api/campaigns/${id}/discover`);
         if (!response.ok) return;
         const data = await response.json();
+
         if (data.status === "running") {
           startPolling();
+          return;
+        }
+
+        // Auto-start discovery for fresh campaigns (0 leads, DRAFT status, never started)
+        if (
+          !hasAutoStarted.current &&
+          campaign.leads.length === 0 &&
+          (campaign.status === "DRAFT" || campaign.status === "ACTIVE") &&
+          data.status !== "completed" &&
+          data.status !== "failed"
+        ) {
+          hasAutoStarted.current = true;
+          // Kick off discovery automatically
+          const startRes = await fetch(`/api/campaigns/${campaign.id}/discover`, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+          });
+          if (startRes.ok || startRes.status === 409) {
+            startPolling();
+          }
         }
       } catch {
         // Ignore
       }
     };
-    checkRunning();
+    checkAndAutoStart();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [campaign?.id]);
 
