@@ -242,6 +242,13 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
   for (const candidate of candidates) {
     try {
       const orgName = extractOrgName(candidate.title)
+
+      // Validate org name — skip page titles, event names, search terms, college groups
+      if (!isValidOrgName(orgName)) {
+        console.log(`[Firecrawl Research] Skipping invalid org name: "${orgName}"`)
+        continue
+      }
+
       const enrichment = await enrichOrganization(candidate.url, null, orgName)
 
       diagnostics.enriched++
@@ -398,7 +405,7 @@ function extractOrgName(title: string): string {
 
   // Remove common suffixes (after separators)
   name = name
-    .replace(/\s*[-–—|:]\s*(Home|About|Contact|Welcome|Official|Overview|Website|Site|Page).*$/i, '')
+    .replace(/\s*[-–—|:]\s*(Home|About|Contact|Welcome|Official|Overview|Website|Site|Page|Events Calendar|Booking Inquiries|Upcoming Events).*$/i, '')
     .replace(/\s*[-–—|]\s*Facebook$/i, '')
     .replace(/\s*[-–—|]\s*LinkedIn$/i, '')
     .replace(/\s*[-–—|]\s*YouTube$/i, '')
@@ -440,6 +447,48 @@ function extractOrgName(title: string): string {
   if (name.length < 3) name = title.split(/[-–—|]/)[0].trim()
 
   return name || title
+}
+
+/**
+ * Validate an org name — reject page titles, event names, search terms,
+ * individual names, and college/university groups.
+ */
+function isValidOrgName(name: string): boolean {
+  const lower = name.toLowerCase()
+
+  if (name.length < 3 || name.length > 80) return false
+
+  // Reject page titles and web junk
+  const pageTitlePatterns = [
+    'upcoming events', 'events calendar', 'booking inquiries',
+    'friends and families', 'concert:', 'concerts',
+    'bands for hire', 'bands near', 'groups near',
+    'pop vocals with', 'lessons with', 'classes with',
+  ]
+  if (pageTitlePatterns.some(p => lower.includes(p))) return false
+
+  // Reject generic search-like terms
+  if (/^(boston|new york|chicago|los angeles)\s+(a cappella|singing|vocal)\s+(bands|groups|ensembles)$/i.test(name)) return false
+  if (/^(a cappella|singing|vocal)\s+(bands|groups|ensembles)\s+(in|near|around)\b/i.test(name)) return false
+  if (/\bfor hire\b/i.test(name)) return false
+
+  // Reject college/university groups
+  const collegePatterns = [
+    'berklee', 'college of music', 'university', 'college',
+    'school of music', 'conservatory', 'institute',
+    'endicott ensembles', 'campus',
+  ]
+  if (collegePatterns.some(p => lower.includes(p))) return false
+
+  // Reject if it looks like a person's name (2 capitalized words, no org keywords)
+  const words = name.split(/\s+/)
+  if (words.length === 2) {
+    const bothCapitalized = words.every(w => /^[A-Z][a-z]+$/.test(w))
+    const hasOrgKeyword = /choir|chorus|singers|a cappella|barbershop|vocal|ensemble|blend|harmony|notes|tones|sound/i.test(name)
+    if (bothCapitalized && !hasOrgKeyword) return false
+  }
+
+  return true
 }
 
 /**
