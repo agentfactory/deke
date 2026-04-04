@@ -8,7 +8,12 @@
 
 import { scrapeWebsite, type ScrapedEmail } from './website-scraper'
 import { firecrawlScrape, isFirecrawlAvailable } from './firecrawl-scraper'
+import { httpScrapeWebsite } from './http-scraper'
 import { isValidContactName, stripTitlePrefix } from './name-validator'
+
+// Track Firecrawl credit exhaustion across the session
+let firecrawlDisabled = false
+let firecrawlFailCount = 0
 
 export interface EnrichmentResult {
   email: string | null
@@ -56,33 +61,44 @@ export async function enrichOrganization(
   }
 
   try {
-    // Try Firecrawl first (better at JS-rendered sites + diverse layouts)
-    // Falls back to custom scraper if Firecrawl unavailable or fails
+    // Strategy: Use plain HTTP scraper first (free, no API credits).
+    // Only try Firecrawl if HTTP scraper finds nothing AND Firecrawl has credits.
     let scrapeResult: { emails: ScrapedEmail[] }
 
-    if (isFirecrawlAvailable()) {
-      try {
-        scrapeResult = await firecrawlScrape(websiteUrl)
-        if (scrapeResult.emails.length > 0) {
-          console.log(`[Enrichment] Firecrawl found ${scrapeResult.emails.length} emails for "${orgName}"`)
-        }
-      } catch (fcError) {
-        console.warn(`[Enrichment] Firecrawl failed for "${orgName}", falling back to custom scraper:`, fcError instanceof Error ? fcError.message : fcError)
-        scrapeResult = await scrapeWebsite(websiteUrl)
+    // Step 1: Plain HTTP scraper (always available, no API dependency)
+    try {
+      scrapeResult = await httpScrapeWebsite(websiteUrl)
+      if (scrapeResult.emails.length > 0) {
+        console.log(`[Enrichment] HTTP scraper found ${scrapeResult.emails.length} emails for "${orgName}"`)
       }
-    } else {
-      scrapeResult = await scrapeWebsite(websiteUrl)
+    } catch (httpError) {
+      console.warn(`[Enrichment] HTTP scraper failed for "${orgName}":`, httpError instanceof Error ? httpError.message : httpError)
+      scrapeResult = { emails: [] }
     }
 
-    // If Firecrawl found nothing, try custom scraper as backup
-    if (scrapeResult.emails.length === 0 && isFirecrawlAvailable()) {
+    // Step 2: If no emails found and Firecrawl available (with credits), try it as upgrade
+    if (scrapeResult.emails.length === 0 && isFirecrawlAvailable() && !firecrawlDisabled) {
       try {
-        const fallbackResult = await scrapeWebsite(websiteUrl)
-        if (fallbackResult.emails.length > 0) {
-          console.log(`[Enrichment] Custom scraper found ${fallbackResult.emails.length} emails (Firecrawl missed them) for "${orgName}"`)
-          scrapeResult = fallbackResult
+        const fcResult = await firecrawlScrape(websiteUrl)
+        if (fcResult.emails.length > 0) {
+          console.log(`[Enrichment] Firecrawl found ${fcResult.emails.length} emails for "${orgName}" (HTTP scraper missed)`)
+          scrapeResult = fcResult
+          firecrawlFailCount = 0 // Reset on success
         }
-      } catch { /* ignore fallback failure */ }
+      } catch (fcError) {
+        firecrawlFailCount++
+        const errMsg = fcError instanceof Error ? fcError.message : String(fcError)
+        console.warn(`[Enrichment] Firecrawl failed for "${orgName}": ${errMsg}`)
+
+        // Detect credit exhaustion — disable Firecrawl for rest of session
+        if (errMsg.includes('402') || errMsg.includes('Insufficient credits') || errMsg.includes('429')) {
+          firecrawlDisabled = true
+          console.warn('[Enrichment] Firecrawl credits exhausted — disabling for this session')
+        } else if (firecrawlFailCount >= 3) {
+          firecrawlDisabled = true
+          console.warn('[Enrichment] Firecrawl failed 3 times — disabling for this session')
+        }
+      }
     }
 
     if (scrapeResult.emails.length === 0) {
