@@ -244,19 +244,19 @@ export default function BookingDetailPage({
         </div>
       </div>
 
-      {/* Lead Discovery Banner — shown when booking is confirmed, has location, no campaigns */}
-      {booking.status === 'CONFIRMED' && booking.location && booking.campaigns.length === 0 && (
+      {/* Lead Discovery Banner — shown when booking has location */}
+      {booking.location && booking.campaigns.length === 0 && (
         <Card className="border-2 border-[#C05A3C]/30 bg-[#C05A3C]/5">
           <CardContent className="py-5">
             <div className="flex items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-[#C05A3C]/10">
-                  <MapPin className="h-5 w-5 text-[#C05A3C]" />
+                  <Target className="h-5 w-5 text-[#C05A3C]" />
                 </div>
                 <div>
-                  <p className="font-semibold text-sm">Heading to {booking.location}?</p>
+                  <p className="font-semibold text-sm">Find groups near {booking.location}</p>
                   <p className="text-xs text-muted-foreground">
-                    Find nearby leads and generate personalized outreach emails
+                    Scan for a cappella groups, choirs, and music orgs nearby — then send personalized outreach
                   </p>
                 </div>
               </div>
@@ -264,19 +264,49 @@ export default function BookingDetailPage({
                 onClick={handleLaunchCampaign}
                 disabled={isLaunchingCampaign}
                 className="bg-[#C05A3C] hover:bg-[#a84d33] shrink-0"
+                size="lg"
               >
                 {isLaunchingCampaign ? (
                   <>
                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                    Discovering...
+                    Setting up...
                   </>
                 ) : (
                   <>
                     <Rocket className="mr-2 h-4 w-4" />
-                    Find Leads Nearby
+                    Discover Groups
                   </>
                 )}
               </Button>
+            </div>
+          </CardContent>
+        </Card>
+      )}
+
+      {/* Campaign results banner — shown when campaign exists */}
+      {booking.campaigns.length > 0 && (
+        <Card className="border-2 border-emerald-200 bg-emerald-50">
+          <CardContent className="py-4">
+            <div className="flex items-center justify-between gap-4">
+              <div className="flex items-center gap-3">
+                <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-emerald-100">
+                  <Users className="h-5 w-5 text-emerald-600" />
+                </div>
+                <div>
+                  <p className="font-semibold text-sm text-emerald-900">
+                    {booking.campaigns[0]._count?.leads ?? 0} groups discovered near {booking.location}
+                  </p>
+                  <p className="text-xs text-emerald-700">
+                    {booking.campaigns[0]._count?.outreachLogs ?? 0} outreach emails sent
+                  </p>
+                </div>
+              </div>
+              <Link href={`/dashboard/campaigns/${booking.campaigns[0].id}`}>
+                <Button className="bg-emerald-600 hover:bg-emerald-500 shrink-0" size="lg">
+                  <Target className="mr-2 h-4 w-4" />
+                  View Leads & Send Outreach
+                </Button>
+              </Link>
             </div>
           </CardContent>
         </Card>
@@ -515,65 +545,46 @@ export default function BookingDetailPage({
             <CardHeader>
               <CardTitle className="flex items-center gap-2">
                 <Target className="h-4 w-4" />
-                Campaign
+                Lead Discovery
               </CardTitle>
             </CardHeader>
             <CardContent>
               {booking.campaigns.length > 0 ? (
                 <div className="space-y-3">
                   {booking.campaigns.map((campaign) => (
-                    <div key={campaign.id} className="space-y-2">
-                      <Link href={`/dashboard/campaigns/${campaign.id}`}>
-                        <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer space-y-2">
-                          <div className="flex items-center justify-between">
-                            <p className="font-medium text-sm">{campaign.name}</p>
-                            <Badge variant={campaign.status === 'ACTIVE' ? 'default' : campaign.status === 'DRAFT' ? 'secondary' : 'outline'}>
-                              {campaign.status}
-                            </Badge>
-                          </div>
-                          {campaign._count && (
-                            <div className="flex gap-4 text-xs text-muted-foreground">
-                              <span className="flex items-center gap-1">
-                                <Users className="h-3 w-3" />
-                                {campaign._count.leads} leads
-                              </span>
-                              <span className="flex items-center gap-1">
-                                <Mail className="h-3 w-3" />
-                                {campaign._count.outreachLogs} sent
-                              </span>
-                            </div>
-                          )}
+                    <Link key={campaign.id} href={`/dashboard/campaigns/${campaign.id}`}>
+                      <div className="p-3 rounded-lg border hover:bg-muted/50 cursor-pointer space-y-2">
+                        <div className="flex items-center justify-between">
+                          <Badge variant={campaign.status === 'ACTIVE' ? 'default' : campaign.status === 'DRAFT' ? 'secondary' : 'outline'}>
+                            {campaign.status}
+                          </Badge>
                         </div>
-                      </Link>
-                    </div>
+                        {campaign._count && (
+                          <div className="flex gap-4 text-xs text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Users className="h-3 w-3" />
+                              {campaign._count.leads} groups found
+                            </span>
+                            <span className="flex items-center gap-1">
+                              <Mail className="h-3 w-3" />
+                              {campaign._count.outreachLogs} emails sent
+                            </span>
+                          </div>
+                        )}
+                        <p className="text-xs text-[#C05A3C] font-medium">View leads & send outreach →</p>
+                      </div>
+                    </Link>
                   ))}
                 </div>
               ) : (
-                <div className="text-center space-y-3 py-2">
-                  <p className="text-sm text-muted-foreground">
-                    No campaign linked yet
-                  </p>
-                  <Button
-                    onClick={handleLaunchCampaign}
-                    disabled={isLaunchingCampaign || !booking.location}
-                    className="w-full"
-                    variant="outline"
-                  >
-                    {isLaunchingCampaign ? (
-                      <>
-                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                        Creating...
-                      </>
-                    ) : (
-                      <>
-                        <Rocket className="mr-2 h-4 w-4" />
-                        Launch Campaign
-                      </>
-                    )}
-                  </Button>
-                  {!booking.location && (
-                    <p className="text-xs text-muted-foreground">
-                      Add a location to enable campaign creation
+                <div className="text-center space-y-2 py-2">
+                  {booking.location ? (
+                    <p className="text-sm text-muted-foreground">
+                      Use the banner above to discover groups near {booking.location}
+                    </p>
+                  ) : (
+                    <p className="text-sm text-muted-foreground">
+                      Add a location to this booking to discover nearby groups
                     </p>
                   )}
                 </div>
