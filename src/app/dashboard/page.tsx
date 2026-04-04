@@ -176,6 +176,10 @@ async function getTodayData() {
               lastName: true,
             },
           },
+          campaigns: {
+            select: { id: true },
+            take: 1,
+          },
         },
         orderBy: { startDate: "asc" },
         take: 5,
@@ -412,7 +416,9 @@ export default async function DashboardPage() {
                 {nextUpBookings.map((booking) => (
                   <Link
                     key={booking.id}
-                    href={`/dashboard/bookings/${booking.id}`}
+                    href={booking.campaigns?.[0]?.id
+                      ? `/dashboard/campaigns/${booking.campaigns[0].id}`
+                      : `/dashboard/bookings/${booking.id}`}
                     className="flex items-center gap-4 px-5 py-3 text-sm transition-colors hover:bg-[#FAFAF8]"
                   >
                     <span className="w-16 shrink-0 text-[#999999]">
@@ -454,6 +460,9 @@ export default async function DashboardPage() {
                           }
                           label={booking.engagementStatus.replace(/_/g, " ")}
                         />
+                      )}
+                      {booking.campaigns?.[0] && (
+                        <StatusDot color="green" label="Campaign" />
                       )}
                     </div>
                   </Link>
