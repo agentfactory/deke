@@ -131,16 +131,12 @@ export async function discoverSimilarOrgs(campaign: Campaign) {
         return null
       }
 
-      // Skip college/university and classical groups
+      // Skip non-vocal, K-12, and classical-only orgs
       const org = (lead.organization || '').toLowerCase()
-      const rejectPatterns = [
-        'berklee', 'college of music', 'university', 'college',
-        'conservatory', 'institute of', 'high school', 'middle school',
-        'choral international', 'choral society', 'symphony',
-        'orchestra', 'opera', 'philharmonic',
-      ]
-      if (rejectPatterns.some(p => org.includes(p))) {
-        console.log(`[Discovery:SimilarOrgs] Skipping college/classical: "${lead.organization}"`)
+      const nonVocalPatterns = ['symphony', 'philharmonic', 'orchestra', 'opera company', 'marching band']
+      const k12Patterns = ['high school', 'middle school', 'elementary school', 'school district']
+      if ([...nonVocalPatterns, ...k12Patterns].some(p => org.includes(p))) {
+        console.log(`[Discovery:SimilarOrgs] Skipping non-target: "${lead.organization}"`)
         return null
       }
 

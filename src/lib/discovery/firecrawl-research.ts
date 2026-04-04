@@ -44,21 +44,19 @@ interface DiscoveredLead {
   googleRating?: number | null
 }
 
-// Music-specific search queries for Firecrawl
+// Search queries targeting Deke Sharon's market segments.
 // BUDGET: 300 credits/month. Each search ≈ 1 credit, each enrichment ≈ 1-3 credits.
-// Target: ~50 credits per campaign run max (allows ~6 campaigns/month).
 //
-// Strategy: Target contemporary vocal groups (pop, rock, jazz, a cappella).
-// Avoid generic "choir" which drowns results in classical/scholastic noise.
-// Boston area alone has hundreds of singing groups — these queries zero in on
-// the ones most likely to book contemporary vocal coaching/arranging.
+// Deke's clients: college a cappella, community a cappella, barbershop/SA/HI,
+// contemporary choruses, festivals. We search for each segment.
 const SEARCH_QUERIES = [
+  'college a cappella group',
+  'university a cappella',
   'a cappella group',
-  'pop a cappella',
-  'contemporary a cappella',
-  'vocal group pop rock jazz',
-  'barbershop chorus',
-  'community singing group',
+  'community a cappella',
+  'barbershop chorus BHS chapter',
+  'Sweet Adelines chapter chorus',
+  'contemporary vocal ensemble',
 ]
 
 // Max searches to prevent runaway costs (each search ≈ 1 credit)
@@ -340,46 +338,35 @@ function isMusicRelevant(title: string, description: string): boolean {
   ]
   if (directoryPatterns.some(p => text.includes(p))) return false
 
-  // Strong positive signals — contemporary/performance vocal groups
-  const strongSignals = [
+  // Vocal group signals — Deke's market
+  const vocalSignals = [
     'a cappella', 'acappella', 'a-cappella',
     'barbershop', 'sweet adelines', 'harmony inc',
-    'pop', 'rock', 'jazz', 'contemporary',
     'vocal group', 'vocal ensemble', 'vocal band',
     'singing group', 'show choir',
-  ]
-
-  // Moderate positive signals — could be good leads, but need vetting
-  const moderateSignals = [
     'chorus', 'chorale', 'singers', 'singing',
-    'community choir', 'gospel choir', 'gospel',
-    'music director', 'artistic director',
+    'choir', 'gospel choir', 'gospel',
+    'music director', 'artistic director', 'conductor',
+    'pop', 'rock', 'jazz', 'contemporary',
   ]
 
-  const hasStrong = strongSignals.some(kw => text.includes(kw))
-  const hasModerate = moderateSignals.some(kw => text.includes(kw))
-  if (!hasStrong && !hasModerate) return false
+  const hasVocal = vocalSignals.some(kw => text.includes(kw))
+  if (!hasVocal) return false
 
-  // Scholastic/institutional — reject unless they have a strong contemporary signal
-  const scholasticKeywords = [
-    'high school choir', 'middle school choir', 'elementary choir',
+  // Hard reject: non-vocal music orgs
+  const nonVocalPatterns = [
+    'symphony', 'philharmonic', 'orchestra', 'opera company',
+    'marching band', 'drum corps', 'jazz band', 'concert band',
+  ]
+  if (nonVocalPatterns.some(kw => text.includes(kw))) return false
+
+  // Hard reject: K-12 school programs (not college/university)
+  const k12Patterns = [
+    'high school music', 'middle school music', 'elementary music',
     'school music department', 'school district',
-    'university choir', 'college choir', 'collegiate choir',
-    'conservatory', 'music school',
-    'youth orchestra', 'marching band',
+    'youth orchestra',
   ]
-  const isScholastic = scholasticKeywords.some(kw => text.includes(kw))
-  if (isScholastic && !hasStrong) return false
-
-  // Classical/traditional — reject unless they have a strong contemporary signal
-  const classicalKeywords = [
-    'classical', 'symphony', 'orchestra', 'opera',
-    'choral society', 'bach', 'handel', 'mozart',
-    'sacred music', 'hymn', 'liturgical',
-    'early music', 'chamber choir', 'madrigal',
-  ]
-  const isClassical = classicalKeywords.some(kw => text.includes(kw))
-  if (isClassical && !hasStrong) return false
+  if (k12Patterns.some(kw => text.includes(kw))) return false
 
   // Hard exclude — non-music businesses
   const excludeKeywords = [
@@ -484,19 +471,15 @@ function isValidOrgName(name: string): boolean {
   if (/^(a cappella|singing|vocal)\s+(bands|groups|ensembles)\s+(in|near|around)\b/i.test(name)) return false
   if (/\bfor hire\b/i.test(name)) return false
 
-  // Reject college/university groups
-  const collegePatterns = [
-    'berklee', 'college of music', 'university', 'college',
-    'school of music', 'conservatory', 'institute',
-    'endicott ensembles', 'campus',
-  ]
-  if (collegePatterns.some(p => lower.includes(p))) return false
+  // Reject non-vocal music orgs
+  const nonVocalPatterns = ['symphony', 'philharmonic', 'orchestra', 'opera company', 'marching band']
+  if (nonVocalPatterns.some(p => lower.includes(p))) return false
 
   // Reject if it looks like a person's name (2 capitalized words, no org keywords)
   const words = name.split(/\s+/)
   if (words.length === 2) {
     const bothCapitalized = words.every(w => /^[A-Z][a-z]+$/.test(w))
-    const hasOrgKeyword = /choir|chorus|singers|a cappella|barbershop|vocal|ensemble|blend|harmony|notes|tones|sound/i.test(name)
+    const hasOrgKeyword = /choir|chorus|singers|a cappella|barbershop|vocal|ensemble|blend|harmony|notes|tones|sound|voices|adelines|tracks/i.test(name)
     if (bothCapitalized && !hasOrgKeyword) return false
   }
 

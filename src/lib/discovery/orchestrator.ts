@@ -243,35 +243,40 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
   // Merge all leads (Perplexity + Firecrawl both contribute to AI_RESEARCH)
   const rawLeads = [...pastClients, ...dormant, ...similar, ...aiResearch, ...perplexity]
 
-  // Filter out college/university and classical groups from ALL sources
+  // Filter out orgs that are NOT Deke's market.
+  // Deke's market: college a cappella, community a cappella, barbershop/SA/HI,
+  // contemporary choruses, festivals. NOT: classical-only choirs, K-12 school
+  // music departments, orchestras, bands, opera companies.
   const allLeads = rawLeads.filter((lead: any) => {
     const org = (lead.organization || '').toLowerCase()
 
-    // College/university groups
-    const collegePatterns = [
-      'berklee', 'college of music', 'university', ' college',
-      'conservatory', 'institute of', 'endicott ensembles',
+    // Hard reject: non-vocal music (orchestras, bands, opera)
+    const nonVocalPatterns = [
+      'symphony', 'philharmonic', 'orchestra', 'opera company',
+      'marching band', 'drum corps', 'jazz band', 'concert band',
     ]
-    if (collegePatterns.some(p => org.includes(p))) {
-      console.log(`[Discovery:Orchestrator] Filtered college/university group: "${lead.organization}"`)
+    if (nonVocalPatterns.some(p => org.includes(p))) {
+      console.log(`[Discovery:Orchestrator] Filtered non-vocal: "${lead.organization}"`)
       return false
     }
 
-    // Classical/choral society orgs — hard reject for orgs that are clearly classical institutions
-    // even if they happen to have "a cappella" in a program name
-    const hardClassicalPatterns = ['choral international', 'philharmonic', 'symphony orchestra']
-    if (hardClassicalPatterns.some(p => org.includes(p))) {
-      console.log(`[Discovery:Orchestrator] Filtered classical institution: "${lead.organization}"`)
+    // Hard reject: K-12 school programs (not college)
+    const k12Patterns = [
+      'high school', 'middle school', 'elementary school',
+      'school district', 'grade school', 'junior high',
+    ]
+    if (k12Patterns.some(p => org.includes(p))) {
+      console.log(`[Discovery:Orchestrator] Filtered K-12: "${lead.organization}"`)
       return false
     }
 
-    // Soft classical — reject unless they have genuine contemporary signals
-    const classicalPatterns = ['choral society', 'symphony', 'orchestra', 'opera']
-    const contemporarySignals = ['pop', 'rock', 'jazz', 'barbershop', 'contemporary']
+    // Soft reject: classical-only choral orgs (unless they also do contemporary)
+    const classicalPatterns = ['choral society', 'choral international', 'bach', 'handel society', 'early music', 'madrigal']
+    const contemporarySignals = ['a cappella', 'pop', 'rock', 'jazz', 'barbershop', 'contemporary', 'gospel', 'show']
     const isClassical = classicalPatterns.some(p => org.includes(p))
     const hasContemporary = contemporarySignals.some(p => org.includes(p))
     if (isClassical && !hasContemporary) {
-      console.log(`[Discovery:Orchestrator] Filtered classical group: "${lead.organization}"`)
+      console.log(`[Discovery:Orchestrator] Filtered classical-only: "${lead.organization}"`)
       return false
     }
 

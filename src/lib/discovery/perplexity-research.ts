@@ -1,13 +1,21 @@
 /**
  * Perplexity-powered Lead Discovery
  *
- * Uses Perplexity's Sonar API to intelligently find contemporary vocal groups.
- * Unlike keyword search (Firecrawl), Perplexity understands context:
- * "contemporary a cappella groups near Boston" returns curated results,
- * not classical choirs or school music departments.
+ * Uses Perplexity's Sonar API to find leads for Deke Sharon's services:
+ * workshops, coaching, masterclasses, and arranging for vocal groups.
+ *
+ * Deke's market segments:
+ * 1. College/university a cappella groups (his bread and butter)
+ * 2. Community/semi-pro a cappella groups
+ * 3. Barbershop choruses, Sweet Adelines, Harmony Inc chapters
+ * 4. Contemporary community choruses (pop, jazz, show choir)
+ * 5. A cappella festivals and competitions
+ *
+ * NOT his market: classical-only choirs, K-12 school music departments,
+ * church choirs, orchestras, bands
  *
  * Flow:
- * 1. Ask Perplexity targeted questions about vocal groups near campaign location
+ * 1. Ask Perplexity targeted questions per market segment
  * 2. Parse structured response for org names + websites
  * 3. Feed URLs into existing Firecrawl enrichment pipeline for contact scraping
  */
@@ -56,11 +64,8 @@ interface PerplexityOrg {
  */
 function cleanOrgName(name: string): string {
   let cleaned = name
-    // Strip everything after common separators that indicate page title junk
     .replace(/\s*[-–—|:]\s*(Home|About|Contact|Welcome|Events Calendar|Booking Inquiries|Official|Overview|Website|Page).*$/i, '')
-    // Strip "Upcoming Events", "Friends and Families Concert:" prefixes
     .replace(/^(?:Upcoming Events|Events|Concert|Friends and Families Concert)\s*[:–—-]\s*/i, '')
-    // Strip trailing descriptions after separators
     .replace(/\s*[-–—]\s*(singing|group|performing|booking|contemporary|events|calendar).*$/i, '')
     .trim()
 
@@ -68,13 +73,11 @@ function cleanOrgName(name: string): string {
   if (cleaned.includes(':')) {
     const beforeColon = cleaned.split(':')[0].trim()
     const afterColon = cleaned.split(':').slice(1).join(':').trim().toLowerCase()
-    // If after the colon is descriptive text (city names, genre words), keep only before
     const descriptiveWords = ['boston', 'new york', 'group', 'singing', 'a cappella', 'vocal', 'pop', 'rock', 'jazz', 'contemporary', 'community', 'greater', 'performing']
     const isDescriptive = descriptiveWords.some(w => afterColon.includes(w))
     if (beforeColon.length >= 3 && isDescriptive) {
       cleaned = beforeColon
     } else {
-      // Otherwise take the after-colon part (e.g. "Concert Series: Real Group Name")
       const after = cleaned.split(':').slice(1).join(':').trim()
       if (after.length >= 5) {
         cleaned = after
@@ -86,53 +89,39 @@ function cleanOrgName(name: string): string {
 }
 
 /**
- * Validate an org name — reject page titles, search terms, event names,
- * individual instructor names, and institutional groups.
+ * Validate an org name — reject page titles, search terms, and non-org names.
+ * NOTE: We do NOT reject college a cappella groups — they're Deke's core market.
  */
 function isValidOrgName(name: string): boolean {
   const lower = name.toLowerCase()
 
-  // Too short or too long
-  if (name.length < 3 || name.length > 80) return false
+  if (name.length < 3 || name.length > 100) return false
 
   // Reject page titles and web junk
   const pageTitlePatterns = [
     'upcoming events', 'events calendar', 'booking inquiries',
-    'friends and families', 'concert:', 'concerts',
-    'bands for hire', 'bands near', 'groups near',
-    'pop vocals with', 'lessons with', 'classes with',
+    'friends and families', 'bands for hire', 'bands near',
+    'groups near', 'pop vocals with', 'lessons with', 'classes with',
   ]
   if (pageTitlePatterns.some(p => lower.includes(p))) return false
 
-  // Reject generic search-like terms
-  const searchTermPatterns = [
-    /^(boston|new york|chicago|los angeles)\s+(a cappella|singing|vocal)\s+(bands|groups|ensembles)$/i,
-    /^(a cappella|singing|vocal)\s+(bands|groups|ensembles)\s+(in|near|around)\b/i,
-    /\bbands for hire\b/i,
-    /\bfor hire\b/i,
-  ]
-  if (searchTermPatterns.some(p => p.test(name))) return false
+  // Reject generic search terms
+  if (/^(boston|new york|chicago)\s+(a cappella|singing|vocal)\s+(bands|groups|ensembles)$/i.test(name)) return false
+  if (/\bfor hire\b/i.test(name)) return false
 
-  // Reject college/university affiliated groups
-  const collegePatterns = [
-    'berklee', 'college of music', 'university', 'college',
-    'school of music', 'conservatory', 'institute',
-    'endicott ensembles', 'campus',
+  // Reject things that are clearly NOT vocal groups
+  const hardReject = [
+    'symphony', 'philharmonic', 'opera company',
+    'marching band', 'drum corps', 'orchestra',
+    'guitar', 'piano', 'violin',
   ]
-  if (collegePatterns.some(p => lower.includes(p))) return false
-
-  // Reject classical/choral society orgs
-  const classicalPatterns = [
-    'choral international', 'choral society', 'symphony',
-    'orchestra', 'opera', 'philharmonic', 'chamber choir',
-  ]
-  if (classicalPatterns.some(p => lower.includes(p))) return false
+  if (hardReject.some(p => lower.includes(p))) return false
 
   // Reject if it looks like a person's name (2 words, both capitalized, no org keywords)
   const words = name.split(/\s+/)
   if (words.length === 2) {
     const bothCapitalized = words.every(w => /^[A-Z][a-z]+$/.test(w))
-    const hasOrgKeyword = /choir|chorus|singers|a cappella|barbershop|vocal|ensemble|blend|harmony|notes|tones|sound/i.test(name)
+    const hasOrgKeyword = /choir|chorus|singers|a cappella|barbershop|vocal|ensemble|blend|harmony|notes|tones|sound|voices|adelines/i.test(name)
     if (bothCapitalized && !hasOrgKeyword) return false
   }
 
@@ -140,27 +129,36 @@ function isValidOrgName(name: string): boolean {
 }
 
 /**
- * Build Perplexity prompts tailored to the campaign location.
+ * Build Perplexity prompts for Deke Sharon's market segments.
  *
- * Each prompt asks for a specific slice of the contemporary vocal group market.
- * We ask for JSON output to make parsing reliable.
+ * Deke is the father of contemporary a cappella. His clients are:
+ * - College a cappella groups (workshops, coaching, arranging)
+ * - Community/semi-pro a cappella (workshops, performances)
+ * - Barbershop/Sweet Adelines/Harmony Inc (workshops, coaching)
+ * - Contemporary choruses doing pop/jazz (not classical-only)
+ * - Festivals and competitions
  */
 function buildPrompts(campaign: Campaign): string[] {
-  // Extract city/region from baseLocation
   const parts = campaign.baseLocation.split(',').map(p => p.trim())
   const location = parts.length >= 2
     ? `${parts[parts.length - 2]}, ${parts[parts.length - 1]}`
     : campaign.baseLocation
   const radius = campaign.radius
 
-  const nameRules = `IMPORTANT: "name" must be ONLY the group's proper name including its full type (e.g. "Vinyl Street A Cappella", "Northshoremen Barbershop Chorus", "SoundBites A Cappella"). Do NOT include descriptions, page titles, event names, taglines, or instructor names. Do NOT include groups that are part of a college or university. Include the group's website URL if known.`
+  const nameRules = `IMPORTANT: Return ONLY the group's official name (e.g. "Vocal Revolution", "The Nor'easters", "Boston Skyline Chorus"). Include the group's website URL. Do NOT include page titles, descriptions, or taglines in the name field.`
 
   return [
-    `List ALL contemporary a cappella groups, pop/rock/jazz vocal ensembles, and vocal harmony groups within ${radius} miles of ${location}. There are hundreds of singing groups in the area — be thorough. Focus on community and semi-professional groups — NOT college a cappella, NOT classical choirs, NOT school programs, NOT church choirs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List as many as you can find, at least 15-20.`,
+    // Segment 1: College a cappella — Deke's core market
+    `List college and university a cappella groups within ${radius} miles of ${location}. Include groups from all nearby colleges and universities — there are typically many groups per school. These groups hire coaches, arrangers, and workshop leaders. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Be thorough — list at least 15-20 groups.`,
 
-    `List ALL barbershop choruses, barbershop quartets, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. Be thorough — check BHS, SAI, and HI directories. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List as many as you can find, at least 10-15.`,
+    // Segment 2: Community/semi-pro a cappella
+    `List community a cappella groups, post-collegiate a cappella groups, and semi-professional vocal ensembles within ${radius} miles of ${location}. Include groups that perform pop, rock, jazz, R&B, or contemporary arrangements. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List at least 10-15 groups.`,
 
-    `List community singing groups, vocal bands, show choirs, and pop/jazz choirs within ${radius} miles of ${location} that focus on contemporary music (pop, rock, jazz, soul, funk, R&B). Also include any adult community choruses that perform contemporary repertoire. Exclude classical-only choral societies, university/college groups, and K-12 school programs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List as many as you can find, at least 10-15.`,
+    // Segment 3: Barbershop / Sweet Adelines / Harmony Inc
+    `List barbershop choruses (BHS chapters), barbershop quartets, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. Check the Barbershop Harmony Society Northeastern District, Sweet Adelines Region 1, and Harmony Inc directories. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List at least 10-15 groups.`,
+
+    // Segment 4: Contemporary choruses + festivals
+    `List community choruses and choirs within ${radius} miles of ${location} that perform contemporary, pop, jazz, gospel, or show music (not exclusively classical). Also list any a cappella festivals, vocal competitions, or singing conventions in the area. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List at least 10 groups.`,
   ]
 }
 
@@ -179,7 +177,7 @@ async function queryPerplexity(prompt: string, apiKey: string): Promise<string> 
       messages: [
         {
           role: 'system',
-          content: 'You are a research assistant helping find singing groups and vocal ensembles. Always respond with valid JSON arrays. If you cannot find groups matching the criteria, return an empty array [].',
+          content: 'You are a research assistant helping find singing groups and vocal ensembles for Deke Sharon, the father of contemporary a cappella. He offers workshops, coaching, masterclasses, and arranging services. Find groups that would benefit from his services. Always respond with valid JSON arrays. If you cannot find groups matching the criteria, return an empty array [].',
         },
         {
           role: 'user',
@@ -187,7 +185,7 @@ async function queryPerplexity(prompt: string, apiKey: string): Promise<string> 
         },
       ],
       temperature: 0.1,
-      max_tokens: 2000,
+      max_tokens: 4000,
     }),
   })
 
@@ -202,16 +200,13 @@ async function queryPerplexity(prompt: string, apiKey: string): Promise<string> 
 
 /**
  * Parse Perplexity response into structured org list.
- * Handles markdown code fences, partial JSON, etc.
  */
 function parseOrgs(responseText: string): PerplexityOrg[] {
-  // Strip markdown code fences if present
   let cleaned = responseText
     .replace(/```json\s*/gi, '')
     .replace(/```\s*/g, '')
     .trim()
 
-  // Try to extract JSON array from the response
   const arrayMatch = cleaned.match(/\[[\s\S]*\]/)
   if (!arrayMatch) {
     console.warn('[Perplexity] No JSON array found in response')
@@ -238,13 +233,6 @@ function parseOrgs(responseText: string): PerplexityOrg[] {
 
 /**
  * Discover leads using Perplexity AI search + Firecrawl enrichment
- *
- * Flow:
- * 1. Ask Perplexity 3 targeted questions about vocal groups near campaign
- * 2. Parse structured responses for org names + websites
- * 3. Deduplicate by name
- * 4. Enrich top candidates via existing Firecrawl scraping pipeline
- * 5. Create leads in database
  */
 export async function discoverWithPerplexity(campaign: Campaign): Promise<AIResearchResult> {
   const apiKey = process.env.PERPLEXITY_API_KEY
@@ -273,10 +261,11 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
 
   console.log(`[Perplexity Research] Starting: ${prompts.length} queries for "${campaign.baseLocation}" (${campaign.radius}mi)`)
 
-  // Query Perplexity for each prompt
+  const labels = ['college a cappella', 'community a cappella', 'barbershop/SA/HI', 'contemporary chorus/festivals']
+
   for (let i = 0; i < prompts.length; i++) {
     diagnostics.apiCallsMade++
-    const label = ['a cappella/pop/jazz', 'barbershop/SA/HI', 'community/vocal bands'][i]
+    const label = labels[i]
 
     try {
       const response = await queryPerplexity(prompts[i], apiKey)
@@ -297,7 +286,6 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
   diagnostics.rawPlaces = allOrgs.length
   console.log(`[Perplexity Research] Found ${allOrgs.length} total orgs from ${diagnostics.apiCallsMade} queries`)
 
-  // If ALL queries failed, throw
   if (diagnostics.apiCallsFailed === diagnostics.apiCallsMade && diagnostics.apiCallsMade > 0) {
     const msg = `All ${diagnostics.apiCallsMade} Perplexity queries failed. First error: ${diagnostics.errors[0] || 'unknown'}`
     throw new Error(msg)
@@ -306,7 +294,7 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
   // Deduplicate by normalized org name
   const uniqueOrgs = deduplicateByName(allOrgs)
   diagnostics.uniquePlaces = uniqueOrgs.length
-  diagnostics.musicRelevant = uniqueOrgs.length // Perplexity already filtered for relevance
+  diagnostics.musicRelevant = uniqueOrgs.length
   console.log(`[Perplexity Research] ${uniqueOrgs.length} unique orgs (removed ${allOrgs.length - uniqueOrgs.length} dupes)`)
 
   if (uniqueOrgs.length === 0) {
@@ -314,10 +302,10 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
     return { leads: [], diagnostics }
   }
 
-  // Enrich each org with contact info via existing pipeline
-  const MAX_ENRICHMENT = 40
+  // Enrich each org with contact info
+  const MAX_ENRICHMENT = 50
   const candidates = uniqueOrgs.slice(0, MAX_ENRICHMENT)
-  console.log(`[Perplexity Research] Enriching top ${candidates.length} orgs for contacts...`)
+  console.log(`[Perplexity Research] Enriching ${candidates.length} orgs for contacts...`)
 
   const leads: DiscoveredLead[] = []
 
@@ -344,7 +332,6 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
           continue
         }
 
-        // Score boost: Perplexity leads are pre-vetted for genre relevance
         const baseScore = enrichment.firstName && enrichment.firstName !== 'Contact' ? 45 : 35
 
         leads.push({
@@ -373,11 +360,9 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
     }
   }
 
-  // Deduplicate leads by org name
   const uniqueLeads = deduplicateLeadsByOrg(leads)
   console.log(`[Perplexity Research] ${uniqueLeads.length} leads after dedup`)
 
-  // Create in database
   const createdLeads = await createLeadsInDatabase(uniqueLeads)
   diagnostics.leadsCreated = createdLeads.length
 
@@ -386,50 +371,35 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
   return { leads: createdLeads, diagnostics }
 }
 
-/**
- * Deduplicate orgs by normalized name
- */
 function deduplicateByName(orgs: PerplexityOrg[]): PerplexityOrg[] {
   const seen = new Map<string, PerplexityOrg>()
-
   for (const org of orgs) {
     const key = org.name.toLowerCase().replace(/[^a-z0-9]/g, '')
     if (!seen.has(key)) {
       seen.set(key, org)
     } else {
-      // Prefer the one with a website
       const existing = seen.get(key)!
       if (!existing.website && org.website) {
         seen.set(key, org)
       }
     }
   }
-
   return Array.from(seen.values())
 }
 
-/**
- * Deduplicate leads by org name
- */
 function deduplicateLeadsByOrg(leads: DiscoveredLead[]): DiscoveredLead[] {
   const orgMap = new Map<string, DiscoveredLead>()
-
   for (const lead of leads) {
     const key = lead.organization.toLowerCase()
     if (!orgMap.has(key)) {
       orgMap.set(key, lead)
     }
   }
-
   return Array.from(orgMap.values())
 }
 
-/**
- * Create leads in database (upsert by email)
- */
 async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
   const created = []
-
   for (const lead of leads) {
     try {
       const dbLead = await prisma.lead.upsert({
@@ -462,7 +432,6 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
           editorialSummary: lead.editorialSummary || null,
         },
       })
-
       created.push({
         ...dbLead,
         distance: lead.distance,
@@ -474,6 +443,5 @@ async function createLeadsInDatabase(leads: DiscoveredLead[]): Promise<any[]> {
       console.error(`[Perplexity Research] Failed to create lead ${lead.email}:`, error)
     }
   }
-
   return created
 }
