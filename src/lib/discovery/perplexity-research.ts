@@ -372,22 +372,23 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
         }
       }
 
-      // Step 3: If still no email and no website, skip
-      if (!email) {
-        if (!org.website && !org.email) {
-          console.log(`[Perplexity Research] No website or email for "${org.name}" — skipping`)
-        } else {
-          console.log(`[Perplexity Research] No email found for "${org.name}" — skipping`)
-        }
-        continue
+      // Create lead even without email — org name + website is still a valuable lead
+      const hasEmail = !!email
+      const baseScore = hasEmail
+        ? (firstName !== 'Contact' ? 45 : 35)
+        : (org.website ? 20 : 10) // Lower score for leads needing enrichment
+
+      if (!hasEmail) {
+        console.log(`[Perplexity Research] No email for "${org.name}" — creating lead with needsEnrichment=true`)
       }
 
-      const baseScore = firstName !== 'Contact' ? 45 : 35
+      // Generate a placeholder email for leads without one (required by DB unique constraint)
+      const leadEmail = email || `needs-enrichment+${org.name.toLowerCase().replace(/[^a-z0-9]/g, '-')}@placeholder.local`
 
       leads.push({
         firstName,
         lastName,
-        email,
+        email: leadEmail,
         phone,
         organization: org.name,
         source: 'AI_RESEARCH',
@@ -396,9 +397,9 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
         score: baseScore,
         distance: 0,
         website: org.website,
-        emailVerified,
-        needsEnrichment: false,
-        enrichmentSource,
+        emailVerified: hasEmail ? emailVerified : false,
+        needsEnrichment: !hasEmail,
+        enrichmentSource: hasEmail ? enrichmentSource : null,
         contactTitle,
         editorialSummary: org.description?.substring(0, 200) || null,
       })

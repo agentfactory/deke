@@ -177,10 +177,8 @@ function extractContacts(text: string, orgDomain: string): ScrapedEmail[] {
     const emailDomain = email.split('@')[1] || ''
     if (SKIP_DOMAINS.some(d => emailDomain.includes(d))) continue
 
-    // Keep emails from org's domain or common providers
-    const isOrgDomain = emailDomain === orgDomain || emailDomain === `www.${orgDomain}`
-    const isCommonProvider = ['gmail.com', 'yahoo.com', 'outlook.com', 'hotmail.com', 'aol.com', 'icloud.com', 'comcast.net', 'verizon.net'].includes(emailDomain)
-    if (!isOrgDomain && !isCommonProvider) continue
+    // Accept any non-junk email domain (org domain, personal providers, etc.)
+    // The SKIP_DOMAINS list already filters out platform/SaaS emails above
 
     seenEmails.add(email)
 
