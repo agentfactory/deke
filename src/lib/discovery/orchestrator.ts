@@ -257,9 +257,17 @@ export async function discoverLeads(campaignId: string): Promise<DiscoveryResult
       return false
     }
 
-    // Classical/choral society orgs (without contemporary signals)
-    const classicalPatterns = ['choral international', 'choral society', 'symphony', 'orchestra', 'opera', 'philharmonic']
-    const contemporarySignals = ['a cappella', 'pop', 'rock', 'jazz', 'barbershop', 'contemporary']
+    // Classical/choral society orgs — hard reject for orgs that are clearly classical institutions
+    // even if they happen to have "a cappella" in a program name
+    const hardClassicalPatterns = ['choral international', 'philharmonic', 'symphony orchestra']
+    if (hardClassicalPatterns.some(p => org.includes(p))) {
+      console.log(`[Discovery:Orchestrator] Filtered classical institution: "${lead.organization}"`)
+      return false
+    }
+
+    // Soft classical — reject unless they have genuine contemporary signals
+    const classicalPatterns = ['choral society', 'symphony', 'orchestra', 'opera']
+    const contemporarySignals = ['pop', 'rock', 'jazz', 'barbershop', 'contemporary']
     const isClassical = classicalPatterns.some(p => org.includes(p))
     const hasContemporary = contemporarySignals.some(p => org.includes(p))
     if (isClassical && !hasContemporary) {
