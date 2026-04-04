@@ -153,14 +153,14 @@ function buildPrompts(campaign: Campaign): string[] {
     : campaign.baseLocation
   const radius = campaign.radius
 
-  const nameRules = `IMPORTANT: "name" must be ONLY the group's proper name (e.g. "Vinyl Street A Cappella", "Northshoremen Barbershop Chorus"). Do NOT include descriptions, page titles, event names, taglines, or instructor names. Do NOT include groups that are part of a college or university.`
+  const nameRules = `IMPORTANT: "name" must be ONLY the group's proper name including its full type (e.g. "Vinyl Street A Cappella", "Northshoremen Barbershop Chorus", "SoundBites A Cappella"). Do NOT include descriptions, page titles, event names, taglines, or instructor names. Do NOT include groups that are part of a college or university. Include the group's website URL if known.`
 
   return [
-    `List contemporary a cappella groups and pop/rock/jazz vocal ensembles within ${radius} miles of ${location}. Focus on community and semi-professional groups — NOT college a cappella, NOT classical choirs, NOT school programs, NOT church choirs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 15 groups.`,
+    `List ALL contemporary a cappella groups, pop/rock/jazz vocal ensembles, and vocal harmony groups within ${radius} miles of ${location}. There are hundreds of singing groups in the area — be thorough. Focus on community and semi-professional groups — NOT college a cappella, NOT classical choirs, NOT school programs, NOT church choirs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List as many as you can find, at least 15-20.`,
 
-    `List barbershop choruses, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 10 groups.`,
+    `List ALL barbershop choruses, barbershop quartets, Sweet Adelines chapters, and Harmony Inc chapters within ${radius} miles of ${location}. Be thorough — check BHS, SAI, and HI directories. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List as many as you can find, at least 10-15.`,
 
-    `List community singing groups, vocal bands, and show choirs within ${radius} miles of ${location} that focus on contemporary music (pop, rock, jazz, soul, R&B). Exclude classical choral societies, university/college groups, and K-12 school programs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. Include up to 10 groups.`,
+    `List community singing groups, vocal bands, show choirs, and pop/jazz choirs within ${radius} miles of ${location} that focus on contemporary music (pop, rock, jazz, soul, funk, R&B). Also include any adult community choruses that perform contemporary repertoire. Exclude classical-only choral societies, university/college groups, and K-12 school programs. ${nameRules} Return as JSON array: [{"name": "...", "website": "..."}]. List as many as you can find, at least 10-15.`,
   ]
 }
 
@@ -315,7 +315,7 @@ export async function discoverWithPerplexity(campaign: Campaign): Promise<AIRese
   }
 
   // Enrich each org with contact info via existing pipeline
-  const MAX_ENRICHMENT = 25
+  const MAX_ENRICHMENT = 40
   const candidates = uniqueOrgs.slice(0, MAX_ENRICHMENT)
   console.log(`[Perplexity Research] Enriching top ${candidates.length} orgs for contacts...`)
 
