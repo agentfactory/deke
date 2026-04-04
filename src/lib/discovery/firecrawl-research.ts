@@ -48,21 +48,24 @@ interface DiscoveredLead {
 // BUDGET: 300 credits/month. Each search ≈ 1 credit, each enrichment ≈ 1-3 credits.
 // Target: ~50 credits per campaign run max (allows ~6 campaigns/month).
 //
-// Strategy: Use fewer, broader searches that cast a wide net.
-// "choir" alone catches choir, community choir, youth choir, gospel choir, etc.
-// "a cappella" catches a cappella groups, barbershop, etc.
+// Strategy: Target contemporary vocal groups (pop, rock, jazz, a cappella).
+// Avoid generic "choir" which drowns results in classical/scholastic noise.
+// Boston area alone has hundreds of singing groups — these queries zero in on
+// the ones most likely to book contemporary vocal coaching/arranging.
 const SEARCH_QUERIES = [
-  'choir',
   'a cappella group',
-  'choral society',
+  'pop a cappella',
+  'contemporary a cappella',
+  'vocal group pop rock jazz',
   'barbershop chorus',
+  'community singing group',
 ]
 
 // Max searches to prevent runaway costs (each search ≈ 1 credit)
-// Budget: ~50 credits per campaign. 4 queries × up to 3 location variants = 12 search credits max
-const MAX_SEARCHES = 12
-// Max orgs to enrich (each enrichment ≈ 1-3 credits, cap at ~15 = 15-45 credits)
-const MAX_ENRICHMENT_CANDIDATES = 15
+// Budget: ~50 credits per campaign. 6 queries × up to 3 location variants = 18 search credits max
+const MAX_SEARCHES = 18
+// Max orgs to enrich (each enrichment ≈ 1-3 credits, cap at ~20 = 20-60 credits)
+const MAX_ENRICHMENT_CANDIDATES = 20
 
 /**
  * Build search location strings from campaign data.
@@ -256,6 +259,13 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
           continue
         }
 
+        // Boost score for contemporary/performance groups
+        const descText = `${orgName} ${candidate.description}`.toLowerCase()
+        const genreSignals = ['a cappella', 'acappella', 'pop', 'rock', 'jazz', 'contemporary', 'barbershop', 'vocal band', 'show choir']
+        const hasGenreBoost = genreSignals.some(s => descText.includes(s))
+        const baseScore = enrichment.firstName && enrichment.firstName !== 'Contact' ? 40 : 30
+        const score = hasGenreBoost ? baseScore + 10 : baseScore
+
         leads.push({
           firstName: enrichment.firstName || 'Contact',
           lastName: enrichment.lastName || `at ${orgName}`,
@@ -265,7 +275,7 @@ export async function discoverWithFirecrawl(campaign: Campaign): Promise<AIResea
           source: 'AI_RESEARCH',
           latitude: campaign.latitude, // Use campaign center (no precise geo from Firecrawl)
           longitude: campaign.longitude,
-          score: enrichment.firstName && enrichment.firstName !== 'Contact' ? 40 : 30,
+          score,
           distance: 0, // Unknown — will be scored by proximity to campaign center
           website: candidate.url,
           emailVerified: enrichment.emailVerified,
@@ -323,19 +333,48 @@ function isMusicRelevant(title: string, description: string): boolean {
   ]
   if (directoryPatterns.some(p => text.includes(p))) return false
 
-  // Positive signals
-  const musicKeywords = [
-    'choir', 'choral', 'chorus', 'chorale', 'a cappella', 'acappella',
-    'barbershop', 'sweet adelines', 'harmony', 'vocal ensemble',
-    'singers', 'singing', 'music school', 'conservatory',
-    'gospel choir', 'youth choir', 'community choir',
-    'music director', 'artistic director', 'conductor',
+  // Strong positive signals — contemporary/performance vocal groups
+  const strongSignals = [
+    'a cappella', 'acappella', 'a-cappella',
+    'barbershop', 'sweet adelines', 'harmony inc',
+    'pop', 'rock', 'jazz', 'contemporary',
+    'vocal group', 'vocal ensemble', 'vocal band',
+    'singing group', 'show choir',
   ]
 
-  const hasMusic = musicKeywords.some(kw => text.includes(kw))
-  if (!hasMusic) return false
+  // Moderate positive signals — could be good leads, but need vetting
+  const moderateSignals = [
+    'chorus', 'chorale', 'singers', 'singing',
+    'community choir', 'gospel choir', 'gospel',
+    'music director', 'artistic director',
+  ]
 
-  // Negative signals (filter out noise)
+  const hasStrong = strongSignals.some(kw => text.includes(kw))
+  const hasModerate = moderateSignals.some(kw => text.includes(kw))
+  if (!hasStrong && !hasModerate) return false
+
+  // Scholastic/institutional — reject unless they have a strong contemporary signal
+  const scholasticKeywords = [
+    'high school choir', 'middle school choir', 'elementary choir',
+    'school music department', 'school district',
+    'university choir', 'college choir', 'collegiate choir',
+    'conservatory', 'music school',
+    'youth orchestra', 'marching band',
+  ]
+  const isScholastic = scholasticKeywords.some(kw => text.includes(kw))
+  if (isScholastic && !hasStrong) return false
+
+  // Classical/traditional — reject unless they have a strong contemporary signal
+  const classicalKeywords = [
+    'classical', 'symphony', 'orchestra', 'opera',
+    'choral society', 'bach', 'handel', 'mozart',
+    'sacred music', 'hymn', 'liturgical',
+    'early music', 'chamber choir', 'madrigal',
+  ]
+  const isClassical = classicalKeywords.some(kw => text.includes(kw))
+  if (isClassical && !hasStrong) return false
+
+  // Hard exclude — non-music businesses
   const excludeKeywords = [
     'haircut', 'barber shop', 'salon', 'grooming', 'shave',
     'restaurant', 'pizza', 'bar & grill',
