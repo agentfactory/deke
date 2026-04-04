@@ -147,8 +147,9 @@ export default function BookingDetailPage({
         throw new Error(data.error || 'Failed to create campaign');
       }
 
-      // Stay on this page — refresh to show the new campaign inline
-      await fetchBooking();
+      const data = await response.json();
+      // Navigate directly to the new campaign page
+      router.push(`/dashboard/campaigns/${data.campaign.id}`);
     } catch (err) {
       console.error('Error creating campaign:', err);
       alert(

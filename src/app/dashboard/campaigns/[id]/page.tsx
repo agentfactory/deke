@@ -20,6 +20,7 @@ import {
   Loader2,
   AlertTriangle,
   CheckCircle,
+  RotateCw,
 } from "lucide-react";
 import { Badge } from "@/components/ui/badge";
 import {
@@ -182,6 +183,37 @@ export default function CampaignDetailPage({
       console.error("Error launching campaign:", err);
       alert(err instanceof Error ? err.message : "Failed to launch campaign");
     }
+  };
+
+  const [isReEnriching, setIsReEnriching] = useState(false);
+  const [reEnrichResult, setReEnrichResult] = useState<{ enriched: number; total: number } | null>(null);
+
+  const handleReEnrichAll = async () => {
+    if (!campaign) return;
+    const needsEnrich = campaign.leads.filter(
+      l => l.lead.needsEnrichment || l.lead.email?.includes('@placeholder.local')
+    );
+    if (needsEnrich.length === 0) return;
+
+    setIsReEnriching(true);
+    setReEnrichResult(null);
+    let enriched = 0;
+
+    for (const cl of needsEnrich) {
+      try {
+        const res = await fetch(`/api/leads/${cl.lead.id}/enrich`, { method: 'POST' });
+        if (res.ok) {
+          const data = await res.json();
+          if (data.enriched) enriched++;
+        }
+      } catch {
+        // continue with next lead
+      }
+    }
+
+    setReEnrichResult({ enriched, total: needsEnrich.length });
+    setIsReEnriching(false);
+    await fetchCampaign();
   };
 
   const [isDiscovering, setIsDiscovering] = useState(false);
@@ -826,16 +858,52 @@ export default function CampaignDetailPage({
                 </CardContent>
               </Card>
             ) : (
-              <Card>
-                <CardContent className="p-0">
-                  <LeadsTableSelectable
-                    leads={campaign.leads}
-                    campaignId={campaign.id}
-                    onSelectionChange={setSelectedLeads}
-                    onLeadStatusChange={fetchCampaign}
-                  />
-                </CardContent>
-              </Card>
+              <>
+                {/* Re-enrich banner for leads missing emails */}
+                {(() => {
+                  const needsEnrich = campaign.leads.filter(
+                    l => l.lead.needsEnrichment || l.lead.email?.includes('@placeholder.local')
+                  );
+                  if (needsEnrich.length === 0) return null;
+                  return (
+                    <Card className="border-amber-200 bg-amber-50">
+                      <CardContent className="py-3 px-4 flex items-center justify-between">
+                        <div className="flex items-center gap-2">
+                          <AlertTriangle className="h-4 w-4 text-amber-600" />
+                          <span className="text-sm text-amber-800">
+                            <strong>{needsEnrich.length}</strong> lead{needsEnrich.length !== 1 ? 's' : ''} missing email
+                            {reEnrichResult && (
+                              <span className="ml-2 text-emerald-700">
+                                — found {reEnrichResult.enriched} of {reEnrichResult.total}
+                              </span>
+                            )}
+                          </span>
+                        </div>
+                        <Button
+                          size="sm"
+                          variant="outline"
+                          className="border-amber-300 text-amber-800 hover:bg-amber-100"
+                          onClick={handleReEnrichAll}
+                          disabled={isReEnriching}
+                        >
+                          <RotateCw className={`h-3.5 w-3.5 mr-1.5 ${isReEnriching ? 'animate-spin' : ''}`} />
+                          {isReEnriching ? 'Searching...' : 'Re-enrich All'}
+                        </Button>
+                      </CardContent>
+                    </Card>
+                  );
+                })()}
+                <Card>
+                  <CardContent className="p-0">
+                    <LeadsTableSelectable
+                      leads={campaign.leads}
+                      campaignId={campaign.id}
+                      onSelectionChange={setSelectedLeads}
+                      onLeadStatusChange={fetchCampaign}
+                    />
+                  </CardContent>
+                </Card>
+              </>
             )}
           </div>
         </TabsContent>
