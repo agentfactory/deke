@@ -13,7 +13,15 @@ import {
   Trash2,
   FileText,
   Mail,
+  Paperclip,
+  AlertTriangle,
 } from 'lucide-react'
+
+interface AttachmentInfo {
+  filename: string
+  path: string
+  size: number
+}
 
 interface Draft {
   id: string
@@ -21,6 +29,9 @@ interface Draft {
   body: string
   status: string
   editedByUser: boolean
+  overrideEmail: string | null
+  ccEmail: string | null
+  attachments: AttachmentInfo[] | null
   lead: {
     firstName: string
     lastName: string
@@ -54,6 +65,7 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
   const [drafts, setDrafts] = useState<Draft[]>([])
   const [isLoading, setIsLoading] = useState(true)
   const [isGenerating, setIsGenerating] = useState(false)
+  const [isForceGenerating, setIsForceGenerating] = useState(false)
   const [isSending, setIsSending] = useState(false)
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set())
   const [editingDraft, setEditingDraft] = useState<Draft | null>(null)
@@ -102,6 +114,41 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
       setError(err instanceof Error ? err.message : 'Failed to generate drafts')
     } finally {
       setIsGenerating(false)
+    }
+  }
+
+  const handleForceGenerate = async () => {
+    setIsForceGenerating(true)
+    setError(null)
+    try {
+      // Find lead IDs that don't have drafts yet
+      const draftCampaignLeadIds = new Set(drafts.map(d => d.id))
+      const missingLeadIds = campaignLeadIds.filter(id => !draftCampaignLeadIds.has(id))
+
+      if (missingLeadIds.length === 0) return
+
+      const response = await fetch(
+        `/api/campaigns/${campaignId}/generate-drafts`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            leadIds: missingLeadIds,
+            force: true,
+          }),
+        }
+      )
+      if (!response.ok) {
+        const data = await response.json().catch(() => ({}))
+        throw new Error(data.error || 'Failed to generate drafts')
+      }
+      setSelectedIds(new Set())
+      await fetchDrafts()
+      onDraftsChange?.()
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to generate drafts for skipped leads')
+    } finally {
+      setIsForceGenerating(false)
     }
   }
 
@@ -219,6 +266,7 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
   const selectedDraftIds = Array.from(selectedIds).filter((id) =>
     drafts.find((d) => d.id === id && d.status === 'DRAFT')
   )
+  const skippedCount = campaignLeadIds.length - drafts.length
 
   if (isLoading) {
     return (
@@ -237,7 +285,7 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
       <div className="flex items-center justify-between gap-4 flex-wrap">
         <Button
           onClick={handleGenerate}
-          disabled={isGenerating || isSending}
+          disabled={isGenerating || isSending || isForceGenerating}
         >
           {isGenerating ? (
             <Loader2 className="h-4 w-4 mr-2 animate-spin" />
@@ -281,6 +329,36 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
           </div>
         )}
       </div>
+
+      {/* Skipped leads banner */}
+      {skippedCount > 0 && drafts.length > 0 && (
+        <div className="rounded-lg border border-amber-200 bg-amber-50 px-4 py-3 flex items-start gap-3">
+          <AlertTriangle className="h-5 w-5 text-amber-600 shrink-0 mt-0.5" />
+          <div className="flex-1 min-w-0">
+            <p className="text-sm font-medium text-amber-800">
+              {skippedCount} lead{skippedCount !== 1 ? 's' : ''} skipped
+            </p>
+            <p className="text-xs text-amber-700 mt-0.5">
+              These leads were filtered out due to missing, placeholder, or generic email addresses.
+              You can force-generate drafts for them, then edit the email address before sending.
+            </p>
+          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            className="shrink-0 border-amber-300 text-amber-800 hover:bg-amber-100"
+            onClick={handleForceGenerate}
+            disabled={isForceGenerating || isGenerating || isSending}
+          >
+            {isForceGenerating ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Sparkles className="h-4 w-4 mr-2" />
+            )}
+            Generate for Skipped
+          </Button>
+        </div>
+      )}
 
       {/* Error display */}
       {error && (
@@ -336,6 +414,9 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
               draft.body.length > 100
                 ? draft.body.slice(0, 100) + '...'
                 : draft.body
+            const displayEmail = draft.overrideEmail || draft.lead.email
+            const hasOverride = !!draft.overrideEmail
+            const attachmentCount = draft.attachments?.length || 0
 
             return (
               <Card
@@ -366,15 +447,28 @@ export function DraftsTab({ campaignId, campaignLeadIds, onDraftsChange }: Draft
                         {draft.lead.firstName} {draft.lead.lastName}
                       </span>
                       <span className="text-xs text-muted-foreground truncate">
-                        {draft.lead.email}
+                        {displayEmail}
                       </span>
+                      {hasOverride && (
+                        <Badge variant="outline" className="text-xs bg-blue-50 text-blue-700 border-blue-200">
+                          edited
+                        </Badge>
+                      )}
                     </div>
                     <p className="text-sm font-semibold truncate">
                       {draft.subject}
                     </p>
-                    <p className="text-xs text-muted-foreground line-clamp-2">
-                      {bodyPreview}
-                    </p>
+                    <div className="flex items-center gap-2">
+                      <p className="text-xs text-muted-foreground line-clamp-2 flex-1">
+                        {bodyPreview}
+                      </p>
+                      {attachmentCount > 0 && (
+                        <Badge variant="outline" className="text-xs shrink-0">
+                          <Paperclip className="h-3 w-3 mr-1" />
+                          {attachmentCount}
+                        </Badge>
+                      )}
+                    </div>
                   </div>
 
                   {/* Status + actions */}

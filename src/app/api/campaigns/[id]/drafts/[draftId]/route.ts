@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { Prisma } from '@prisma/client'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
 import { updateDraftSchema } from '@/lib/validations/email-draft'
@@ -27,7 +28,11 @@ export async function PATCH(
     const updated = await prisma.emailDraft.update({
       where: { id: draftId },
       data: {
-        ...data,
+        subject: data.subject,
+        body: data.body,
+        overrideEmail: data.overrideEmail,
+        ccEmail: data.ccEmail,
+        attachments: data.attachments === null ? Prisma.JsonNull : data.attachments,
         editedByUser: true,
       },
       include: {

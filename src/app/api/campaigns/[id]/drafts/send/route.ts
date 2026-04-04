@@ -1,8 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { prisma } from '@/lib/db'
 import { handleApiError, ApiError } from '@/lib/api-error'
-import { sendEmail } from '@/lib/outreach/providers/resend'
-import { sendDraftsSchema } from '@/lib/validations/email-draft'
+import { sendEmail, EmailAttachment } from '@/lib/outreach/providers/resend'
+import { sendDraftsSchema, Attachment } from '@/lib/validations/email-draft'
+import { readFile } from 'fs/promises'
+import path from 'path'
 
 export async function POST(
   request: NextRequest,
@@ -51,12 +53,31 @@ export async function POST(
 
     for (const draft of drafts) {
       try {
+        // Use override email if set, otherwise fall back to lead email
+        const toEmail = draft.overrideEmail || draft.lead.email
+
+        // Build attachments from stored file references
+        const emailAttachments: EmailAttachment[] = []
+        if (draft.attachments && Array.isArray(draft.attachments)) {
+          for (const att of draft.attachments as Attachment[]) {
+            try {
+              const filePath = path.join(process.cwd(), 'public', att.path)
+              const content = await readFile(filePath)
+              emailAttachments.push({ filename: att.filename, content })
+            } catch {
+              // Skip attachments that can't be read
+            }
+          }
+        }
+
         const result = await sendEmail({
-          to: draft.lead.email,
+          to: toEmail,
           subject: draft.subject,
           html: draft.body,
           campaignId,
           leadId: draft.leadId,
+          cc: draft.ccEmail || undefined,
+          attachments: emailAttachments.length > 0 ? emailAttachments : undefined,
         })
 
         if (result.success) {
