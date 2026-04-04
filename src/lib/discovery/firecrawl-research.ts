@@ -414,6 +414,18 @@ function extractOrgName(title: string): string {
     .replace(/\s*[-–—|]\s*Safe Space Alliance$/i, '')
     .trim()
 
+  // Strip descriptions after colons: "Overboard: Boston a cappella group..." → "Overboard"
+  // Only if what's before the colon looks like a name (3+ chars) and what's after is descriptive
+  if (name.includes(':')) {
+    const beforeColon = name.split(':')[0].trim()
+    const afterColon = name.split(':').slice(1).join(':').trim().toLowerCase()
+    const descriptiveWords = ['boston', 'new york', 'group', 'singing', 'a cappella', 'vocal', 'pop', 'rock', 'jazz', 'contemporary', 'community', 'greater', 'performing']
+    const isDescriptive = descriptiveWords.some(w => afterColon.includes(w))
+    if (beforeColon.length >= 3 && isDescriptive) {
+      name = beforeColon
+    }
+  }
+
   // Remove leading "Home —", "Welcome to ", "About —" etc.
   name = name
     .replace(/^(?:Home|Welcome|About|Contact)\s*[-–—|:]\s*/i, '')
